@@ -16,7 +16,7 @@ function joinVC(vc: VoiceChannel): VoiceConnection {
 
 export const Join: Command = {
     name: "join",
-    description: "Joins a voice channel to begin playing",
+    description: "Joins a voice channel",
     type: "CHAT_INPUT",
     options: [
         {
