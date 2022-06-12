@@ -1,0 +1,21 @@
+{
+  "name": "playlistdj",
+  "version": "0.0.1",
+  "description": "Discord Bot to play music",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "discord"
+  ],
+  "author": "Pew",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^13.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.42",
+    "tslib": "^2.4.0"
+  }
+}
