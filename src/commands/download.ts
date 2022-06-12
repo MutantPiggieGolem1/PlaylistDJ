@@ -1,4 +1,5 @@
-import { ApplicationCommandType, BaseCommandInteraction, Client, Message } from "discord.js";
+import { BaseCommandInteraction, Client, Message } from "discord.js";
+import { reply } from "../util";
 import { Command } from "./Command";
 
 export const Download: Command = {
@@ -6,14 +7,8 @@ export const Download: Command = {
     description: "Downloads your playlist from youtube.",
     type: "CHAT_INPUT",
 
-    run: async (client: Client, ctx: BaseCommandInteraction | string[], msg?: Message) => {
-        if (ctx instanceof BaseCommandInteraction) { // slash command
-            await ctx.reply({
-                ephemeral: true,
-                content: "Downloading music.."
-            });
-        } else if (ctx instanceof Array<string>) { // normal command
-            await msg?.reply("Downloading music...")
-        }
+    run: async (ctx: BaseCommandInteraction | Message) => {
+        await ctx.channel?.sendTyping()
+        reply(ctx,"Downloading Music...");
     }
 };

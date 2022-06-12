@@ -12,6 +12,7 @@
   "author": "Pew",
   "license": "ISC",
   "dependencies": {
+    "@discordjs/voice": "^0.10.0",
     "discord.js": "^13.8.0"
   },
   "devDependencies": {
