@@ -1,4 +1,5 @@
-import { BaseCommandInteraction, Message } from "discord.js";
+import { getVoiceConnection } from "@discordjs/voice";
+import { BaseCommandInteraction, Message, VoiceBasedChannel } from "discord.js";
 import { reply } from "../util";
 import { Command } from "./Command";
 
@@ -9,7 +10,8 @@ export const Leave: Command = {
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild?.available) return;
-        let success: boolean | undefined = await ctx.guild.me?.voice.disconnect().then(() => Promise.resolve(true)).catch(() => Promise.resolve(false))
-        reply(ctx,success ? "Left voice channel!" : "Failed to leave voice channel.");
+        let voicechannel: VoiceBasedChannel | null | undefined = ctx.guild.me?.voice.channel
+        if (getVoiceConnection(ctx.guild.id)?.disconnect()) return reply(ctx,"Left "+voicechannel?.toString());
+        reply(ctx, "Failed to leave voice channel.");
     }
 };

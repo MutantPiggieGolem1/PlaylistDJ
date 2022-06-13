@@ -2,7 +2,7 @@ import { Client , Intents, Interaction, Message } from "discord.js";
 import { readFileSync } from "fs";
 import { Command } from "./commands/Command";
 import { Commands } from "./commands/Commands";
-const client: Client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES,Intents.FLAGS.GUILD_MESSAGES,Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
+export const client: Client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES,Intents.FLAGS.GUILD_MESSAGES,Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
 const TOKEN: string = readFileSync("./resources/token.txt").toString();
 const PREFIX: string = "dj";
 
