@@ -1,4 +1,4 @@
-import { AudioPlayer, AudioResource, createAudioPlayer, createAudioResource, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
+import { AudioPlayer, createAudioPlayer, createAudioResource, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
 import { BaseCommandInteraction, Message } from "discord.js";
 import { reply } from "../util";
 import { Command } from "./Command";

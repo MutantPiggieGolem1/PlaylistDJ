@@ -1,7 +1,7 @@
 import { BaseCommandInteraction, VoiceBasedChannel, Message, VoiceChannel } from "discord.js";
 import { ChannelTypes } from "discord.js/typings/enums";
 import { Command } from "./Command";
-import { joinVoiceChannel, VoiceConnection } from '@discordjs/voice';
+import { joinVoiceChannel } from '@discordjs/voice';
 import { reply } from "../util";
 
 export const Join: Command = {
