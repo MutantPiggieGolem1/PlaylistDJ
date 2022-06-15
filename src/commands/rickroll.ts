@@ -1,7 +1,7 @@
-import { AudioPlayer, createAudioPlayer, createAudioResource, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
+import { AudioPlayer, AudioResource, createAudioPlayer, createAudioResource, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
 import { BaseCommandInteraction, Message } from "discord.js";
 import { reply } from "../util";
-import { Command } from "./Command";
+import { Command } from "./Commands";
 
 const player: AudioPlayer = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}})
 
@@ -15,13 +15,17 @@ export const Rickroll: Command = {
         let conn: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
         if (!conn) {await reply(ctx,"Couldn't find voice connection!",true); return;}
 
-        player.play(createAudioResource("./resources/rr.mp3", {
+        let rr: AudioResource = createAudioResource("./resources/rr.mp3", {
             metadata: {
                 title: "Never Gonna Give You Up",
                 artist: "Rick Astley",
                 ytid: "dQw4w9WgXcQ"
-            }
-        }))
+            },
+            inlineVolume: true
+        })
+        rr.volume?.setVolumeDecibels(69)
+        player.play(rr)
+        conn.removeAllListeners();
         if (conn.subscribe(player)) {
             reply(ctx,"We participated in a miniscule amount of tomfoolery.",true);
         } else {

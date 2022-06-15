@@ -2,15 +2,15 @@ import { BaseCommandInteraction, ButtonInteraction, InteractionUpdateOptions, Me
 import { client } from "../index";
 import ytpl from "ytpl";
 import ytdl from "ytdl-core";
-import { editReply, reply, disableButtons } from "../util";
-import { Command } from "./Command";
+import { editReply, reply, disableButtons, Song, parseVideo, MusicJSON } from "../util";
+import { Command } from "./Commands";
 import fs from "fs";
-// https://www.npmjs.com/package/ytdl-core
 
 const commandname = "download";
 
 let idata: {[key: string]: {index: number, exclusions: Array<number>}} = {}
 
+// FIXME: Try to debug
 export const Download: Command = {
     name: commandname,
     description: "Downloads your playlist from youtube.",
@@ -106,7 +106,7 @@ export const Download: Command = {
     },
 
     interact: async (ctx: ButtonInteraction) => {
-        if (!ctx.guild || ctx.deferred) return;
+        if (!ctx.guild) return;
         if (!ctx.message.embeds[0].url) return reply(ctx,"Couldn't find playlist!")
         try {
             var playlist = await ytpl(ctx.message.embeds[0].url)
@@ -121,7 +121,6 @@ export const Download: Command = {
                 if (ctx.customId === 'cdownloadcustom') idata[ctx.guild.id] = {index:0,exclusions:[]}
                 let video = playlist.items[idata[ctx.guild.id].index];
                 if (video) {
-                    ctx.channel?.sendTyping()
                     ctx.update({
                         "content": "Keep this video?",
                         "components": [
@@ -195,30 +194,30 @@ export const Download: Command = {
                 ctx.channel?.sendTyping()
 
                 if (idata[ctx.guild.id]?.exclusions) {playlist.items = playlist.items.filter((_,i)=>!(idata[ctx.guild?.id ?? "-1"].exclusions.includes(i))); delete idata[ctx.guild.id]}
-                reply(ctx,`Downloading: ${playlist.items.length} songs total`)
-                let done: number = 0;
-                Promise.all(playlist.items.map((video,i) => {return new Promise<void>((resolve,reject) => {
-                    fs.mkdirSync(`./resources/music/${ctx.guild?.id ?? "unknown"}`, {recursive:true});
-                    fs.openSync(`./resources/music/${ctx.guild?.id ?? "unknown"}/${playlist.items[i].id}.ogg`,'w')
+
+                let pdata: MusicJSON = {};
+                fs.mkdirSync(`./resources/music/${ctx.guild?.id ?? "unknown"}`, {recursive:true});
+                let dir: fs.Dir = fs.opendirSync(`./resources/music/${ctx.guild?.id ?? "unknown"}/`)
+
+                Promise.all(playlist.items.map(video => {return new Promise<void>((resolve,reject) => {
+                    let file: string = dir.path+video.id+".ogg"
+                    fs.openSync(file,'w')
                     try {
-                        ytdl(video.url, {quality:"highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(`./resources/music/${ctx.guild?.id ?? "unknown"}/${playlist.items[i].id}.ogg`))
-                        .on('finish', () => {
-                            done++;
-                            editReply(ctx,`Downloading: ${done}/${playlist.items.length} songs`);
-                            resolve()
-                        }).on('error', reject)
+                        if (ytdl.validateURL(video.url)) {
+                            ytdl(video.url, {quality:"highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file))
+                            .on('finish', (...args) => {
+                                pdata[video.id] = {file, ...parseVideo(video)}
+                                editReply(ctx,`Downloaded: ${Object.keys(pdata).length}/${playlist.items.length} songs.`);
+                                resolve()
+                            }).on('error', reject)
+                        } else {
+                            editReply(ctx,`Downloaded: ${Object.keys(pdata).length}/${playlist.items.length} songs. [Invalid Video]`)
+                        }                        
                     } catch (e) {reject(e)}
                 })})).then(() => {
-                    editReply(ctx,{
-                        content: `Success! ${fs.readdirSync(`./resources/music/${ctx.guild?.id ?? "unknown"}`).length} files downloaded from '${playlist.title}'!`,
-                        components:[{"type": 1,"components": [{
-                            "style": 3,
-                            "label": `Download Complete!`,
-                            "customId": "disable",
-                            "disabled": true,
-                            "type": 2
-                        }]}]
-                    });
+                    fs.writeFileSync(dir.path+"data.json",JSON.stringify(pdata))
+                    editReply(ctx,`Success! ${fs.readdirSync(dir.path).length} files downloaded from '${playlist.title}'!`);
+                    dir.closeSync()
                 }).catch(e => {
                     console.error(e)
                     editReply(ctx,`An error occured.`);
