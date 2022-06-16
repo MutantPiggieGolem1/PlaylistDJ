@@ -104,3 +104,7 @@ resources/token.txt
 
 # Resources
 resources/music/
+
+# VSC
+.VSCodeCounter/*
+.VSCodeCounter

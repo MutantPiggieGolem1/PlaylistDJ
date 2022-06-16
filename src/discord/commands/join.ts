@@ -1,4 +1,4 @@
-import { BaseCommandInteraction, VoiceBasedChannel, Message, VoiceChannel } from "discord.js";
+import { BaseCommandInteraction, Message, VoiceChannel } from "discord.js";
 import { ChannelTypes } from "discord.js/typings/enums";
 import { Command } from "./Commands";
 import { joinVoiceChannel } from '@discordjs/voice';
