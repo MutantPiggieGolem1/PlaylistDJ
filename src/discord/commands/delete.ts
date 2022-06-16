@@ -1,9 +1,9 @@
-import { BaseCommandInteraction, Message, MessageActionRow, MessageActionRowComponent, MessageComponentInteraction, MessageSelectOptionData } from "discord.js";
+import { BaseCommandInteraction, Message } from "discord.js";
 import fs from "fs";
-import { getPlaylistFiles, MusicJSON, reply, setPlaylistFiles } from "../util";
+import { AUDIOFORMAT } from "../../youtube/util";
+import { Playlist } from "../../youtube/playlist";
+import { reply } from "../util";
 import { Command } from "./Commands";
-
-let idata: {[key: string]: {index: number, exclusions: Array<number>}} = {}
 
 export const Delete: Command = {
     name: "delete",
@@ -25,11 +25,12 @@ export const Delete: Command = {
         } else if (ctx instanceof Message) {
             id = ctx.content.replaceAll(/\s{2,}/g," ").split(" ")[2]
         }
-        if (!id || !fs.existsSync(dir+id+".ogg")) return reply(ctx, "Invalid Filename!")
-        
-        let playlistdata: MusicJSON = getPlaylistFiles(ctx.guild.id)[0];
-        if (Object.keys(playlistdata).includes(id)) delete playlistdata[id];
-        await setPlaylistFiles(ctx.guild.id,playlistdata);
-        fs.rm(dir+id+".ogg", () => {reply(ctx, "File Deleted!");})
+        if (!id || !fs.existsSync(dir+id+AUDIOFORMAT)) return reply(ctx, "Invalid Filename!")
+        let playlist: Playlist
+        try {
+            playlist = new Playlist(ctx.guild.id);
+        } catch { return reply(ctx, "Couldn't find playlist!") }
+        playlist.removeSong(id)
+        playlist.save()
     }
 };

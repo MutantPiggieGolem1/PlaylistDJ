@@ -1,7 +1,9 @@
-import { MessageOptions, BaseCommandInteraction, Interaction, Message, MessageActionRow, MessageActionRowComponent, MessageButton, MessageComponentInteraction, MessageEmbed, MessageSelectOptionData, InteractionUpdateOptions, EmbedField } from "discord.js";
-import { client } from "../index";
-import { getPlaylistFiles, MusicJSON, reply } from "../util";
+import { MessageOptions, BaseCommandInteraction, Interaction, Message, MessageActionRow, MessageActionRowComponent, MessageComponentInteraction, MessageEmbed, MessageSelectOptionData, InteractionUpdateOptions, EmbedField } from "discord.js";
+import { MusicJSON } from "../../youtube/util";
+import { client } from "../../index";
+import { reply } from "../util";
 import { Command } from "./Commands";
+import { Playlist } from "../../youtube/playlist";
 
 export const List: Command = {
     name: "list",
@@ -36,8 +38,8 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
     if (!ctx.guild) return {content:"Couldn't find guild!"} as T;
     let playlistdata: MusicJSON;
     try {
-        playlistdata = getPlaylistFiles(ctx.guild.id)[0];
-    } catch (e) { console.error(e); return {content:"Couldn't find playlist!"} as T; }
+        playlistdata = new Playlist(ctx.guild.id).playlistdata;
+    } catch (e) { return {content:"Couldn't find playlist!"} as T; }
     return {
         "content": "_",
         "components": [
@@ -55,10 +57,10 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
                         "style": "PRIMARY",
                         "label": `Next Page`,
                         "customId": `clistpageup`,
-                        "disabled": page >= Math.floor(Object.keys(playlistdata).length/25),
+                        "disabled": page >= Math.floor(playlistdata.items.length/25),
                         "type": "BUTTON"
                     } as MessageActionRowComponent,
-                    {
+                     {
                         "style": "DANGER",
                         "label": "Cancel",
                         "customId": "cancel",
@@ -71,10 +73,10 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
         "embeds": [
             {
                 "type": "rich",
-                "title": `All Songs (${Object.keys(playlistdata).length})`,
-                "description": `${ctx.guild.name.length > 16 ? ctx.guild.nameAcronym : ctx.guild.name} Server Playlist`,
+                "title": `All Songs (${playlistdata.items.length})`,
+                "description": `${ctx.guild.name.length > 20 ? ctx.guild.nameAcronym : ctx.guild.name} Server Playlist`,
                 "color": 0xff0000,
-                "fields": Object.values(playlistdata).slice(page*25,page*25+25).map(s => {return {
+                "fields": playlistdata.items.slice(page*25,page*25+25).map(s => {return {
                     "name": s.title,
                     "value": s.id,
                     "inline": true,

@@ -1,29 +1,26 @@
 import { BaseCommandInteraction, ButtonInteraction, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageEmbed, MessageOptions, MessagePayload } from "discord.js";
-import { client } from "../index";
-import ytpl from "ytpl";
-import ytdl from "ytdl-core";
-import { editReply, reply, disableButtons, Song, parseVideo, MusicJSON } from "../util";
+import { client } from "../../index";
+import { editReply, reply } from "../util";
 import { Command } from "./Commands";
-import fs from "fs";
+import { MusicJSON } from "../../youtube/util";
+import { WebPlaylist } from "../../youtube/playlist";
 
 const commandname = "download";
 
-let idata: {[key: string]: {index: number, exclusions: Array<number>}} = {}
+let idata: {[key: string]: {playlist: WebPlaylist, index: number, exclusions: Array<number>}} = {} // Option Cache
 
-// FIXME: Try to debug
 export const Download: Command = {
     name: commandname,
-    description: "Downloads your playlist from youtube.",
+    description: "Downloads music from youtube.",
     type: "CHAT_INPUT",
     options: [{
         name: "url",
-        description: "Youtube Playlist URL to Download",
+        description: "Youtube URL to Download From",
         type: 3, // string
         required: true,
     }],
 
     run: async (ctx: BaseCommandInteraction | Message) => {
-        await ctx.channel?.sendTyping()
         let url: string | null | undefined;
         if (ctx instanceof BaseCommandInteraction) {
             url = ctx.options.get("url", true).value?.toString()
@@ -31,15 +28,14 @@ export const Download: Command = {
             url = ctx.content.replaceAll(/\s{2,}/g," ").split(" ")[2]
         }
         if (!url) { reply(ctx, "Invalid arguments!"); return; }
-        if (!ytpl.validateID(url)) { reply(ctx, "Invalid YT URL!"); return; }
 
         reply(ctx, "Detecting Playlist...");
         ctx.channel?.sendTyping()
 
-        let playlist;
+        let playlist: WebPlaylist;
         try {
-            playlist = await ytpl(url, { limit: Number.POSITIVE_INFINITY })
-        } catch (e) {return editReply(ctx, "Couldn't find playlist!");}
+            playlist = await WebPlaylist.fromUrl(url);
+        } catch (e) {return reply(ctx,"An Error Occured: "+e)}
         
         let msg: MessageOptions = {
             "content": "Found!",
@@ -74,52 +70,51 @@ export const Download: Command = {
             "embeds": [
                 {
                     type: "rich",
-                    title: `${playlist.title} - ${playlist.estimatedItemCount} Items`,
-                    description: playlist.description,
+                    title: `${playlist.ytplaylist.title} - ${playlist.ytplaylist.estimatedItemCount} Items`,
+                    description: playlist.ytplaylist.description,
                     color: 0xFF0000,
                     "image": {
-                        "url": playlist.bestThumbnail.url ?? "",
-                        "height": playlist.bestThumbnail.height,
-                        "width": playlist.bestThumbnail.width
+                        "url": playlist.ytplaylist.bestThumbnail.url ?? "",
+                        "height": playlist.ytplaylist.bestThumbnail.height,
+                        "width": playlist.ytplaylist.bestThumbnail.width
                     },
-                    "author": {
-                        "name": playlist.author.name,
-                        "iconURL": playlist.author.bestAvatar.url,
-                        "url": playlist.author.url
-                    },
+                    "author": playlist.ytplaylist.author ? {
+                        "name": playlist.ytplaylist.author.name,
+                        "iconURL": playlist.ytplaylist.author.bestAvatar.url,
+                        "url": playlist.ytplaylist.author.url
+                    } : {"name": "Unknown Author"},
                     "footer": {
                         "text": `PlaylistDJ - Playlist Download`,
                         "iconURL": client.user?.avatarURL() ?? ""
                     },
-                    "url": playlist.url,
+                    "url": playlist.ytplaylist.url,
                 } as MessageEmbed
             ]
         } as MessageOptions
 
-        if (ctx instanceof BaseCommandInteraction) {
-            let m: any = msg;
-            m.attachments = msg.attachments?.values()
-            ctx.editReply(m as MessagePayload);
-        } else {
-            editReply(ctx,msg);
-        }
+        editReply(ctx,msg);
     },
 
     interact: async (ctx: ButtonInteraction) => {
         if (!ctx.guild) return;
-        if (!ctx.message.embeds[0].url) return reply(ctx,"Couldn't find playlist!")
-        try {
-            var playlist = await ytpl(ctx.message.embeds[0].url)
-        } catch (e) {return reply(ctx,"Couldn't find playlist!")}
+        let guildid = ctx.guild.id;
+        let playlist: WebPlaylist;
+        if (idata[ctx.guild.id]?.playlist) {
+            playlist = idata[ctx.guild.id].playlist
+        } else {
+            try {
+                if (!ctx.message.embeds[0].url) {return ctx.reply("Couldn't find playlist!")}
+                playlist = await WebPlaylist.fromUrl(ctx.message.embeds[0].url)
+            } catch (e) {return ctx.reply("Couldn't find playlist!")}
+        }
         switch (ctx.customId) {
             case 'cdownloadcustomskip':
-                if (!idata[ctx.guild.id]) idata[ctx.guild.id] = {index:0,exclusions:[]}
                 idata[ctx.guild.id].exclusions.push(idata[ctx.guild.id].index)
             case 'cdownloadcustomkeep':
                 idata[ctx.guild.id].index++;
             case 'cdownloadcustom':
-                if (ctx.customId === 'cdownloadcustom') idata[ctx.guild.id] = {index:0,exclusions:[]}
-                let video = playlist.items[idata[ctx.guild.id].index];
+                if (ctx.customId === 'cdownloadcustom') {idata[ctx.guild.id] = {index:0,exclusions:[],playlist}}
+                let video = playlist.ytplaylist.items[idata[ctx.guild.id].index];
                 if (video) {
                     ctx.update({
                         "content": "Keep this video?",
@@ -174,7 +169,7 @@ export const Download: Command = {
                                     "url": video.author.url
                                 },
                                 "footer": {
-                                    "text": `PlaylistDJ - Video Selection - Video ${idata[ctx.guild.id].index+1}/${playlist.items.length}`,
+                                    "text": `PlaylistDJ - Video Selection - Video ${idata[ctx.guild.id].index+1}/${playlist.ytplaylist.items.length}`,
                                     "iconURL": client.user?.avatarURL() ?? ""
                                 },
                                 "url": video.url,
@@ -184,43 +179,27 @@ export const Download: Command = {
                     break;
                 }
             case 'cdownloadcustomnone':
-                for (let i = idata[ctx.guild.id].index; i < playlist.items.length; i++) {
+                for (let i = idata[ctx.guild.id].index; i < playlist.ytplaylist.items.length; i++) {
                     idata[ctx.guild.id].exclusions.push(i);
                 }
             case 'cdownloadcustomall':
-                idata[ctx.guild.id].index = 0;
+                if (idata[ctx.guild?.id]?.exclusions) {playlist.remove(idata[guildid].exclusions)}
+                // FIXME: Disable custom selecton menu here
             case 'cdownloadall':
-                disableButtons(ctx, {content: "Downloading...", embeds: [], components: []});
-                ctx.channel?.sendTyping()
-
-                if (idata[ctx.guild.id]?.exclusions) {playlist.items = playlist.items.filter((_,i)=>!(idata[ctx.guild?.id ?? "-1"].exclusions.includes(i))); delete idata[ctx.guild.id]}
-
-                let pdata: MusicJSON = {};
-                fs.mkdirSync(`./resources/music/${ctx.guild?.id ?? "unknown"}`, {recursive:true});
-                let dir: fs.Dir = fs.opendirSync(`./resources/music/${ctx.guild?.id ?? "unknown"}/`)
-
-                Promise.all(playlist.items.map(video => {return new Promise<void>((resolve,reject) => {
-                    let file: string = dir.path+video.id+".ogg"
-                    fs.openSync(file,'w')
-                    try {
-                        if (ytdl.validateURL(video.url)) {
-                            ytdl(video.url, {quality:"highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file))
-                            .on('finish', (...args) => {
-                                pdata[video.id] = {file, ...parseVideo(video)}
-                                editReply(ctx,`Downloaded: ${Object.keys(pdata).length}/${playlist.items.length} songs.`);
-                                resolve()
-                            }).on('error', reject)
-                        } else {
-                            editReply(ctx,`Downloaded: ${Object.keys(pdata).length}/${playlist.items.length} songs. [Invalid Video]`)
-                        }                        
-                    } catch (e) {reject(e)}
-                })})).then(() => {
-                    fs.writeFileSync(dir.path+"data.json",JSON.stringify(pdata))
-                    editReply(ctx,`Success! ${fs.readdirSync(dir.path).length} files downloaded from '${playlist.title}'!`);
-                    dir.closeSync()
-                }).catch(e => {
-                    console.error(e)
-                    editReply(ctx,`An error occured.`);
+                delete idata[ctx.guild.id];
+                
+                if (!ctx.deferred && ctx.isRepliable()) ctx.deferReply({"ephemeral": true});
+                playlist.download(`./resources/music/${ctx.guild?.id ?? "unknown"}/`,false) // OVERWRITE MODE OFF
+                .once('start', (items) => {
+                    editReply(ctx,`Downloading: ${items?.length} songs.`)
+                }).on('progress', (pdata: MusicJSON) => {
+                    editReply(ctx,`Downloaded: ${pdata.items?.length}/${playlist.ytplaylist.items?.length} songs.`);
+                }).on('finish',(playlist: MusicJSON) => {
+                    editReply(ctx,`Success! ${playlist.items?.length} files downloaded (total)!`);
+                }).on('warn' , (e: Error) => {
+                    editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.name)
+                }).on('error', (e: Error) => {
+                    editReply(ctx,`Error: `+e.message);
                 })
             break;
         }
