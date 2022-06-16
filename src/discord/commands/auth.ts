@@ -27,6 +27,6 @@ export const Auth: Command = {
         if (!user) return reply(ctx, "Couldn't find user.")
 
         WHITELIST.add(user.id)
-        reply(ctx, `Added ${user.discriminator} to the whitelist.`)
+        reply(ctx, `Added ${user.tag} to the whitelist.`)
     }
 }

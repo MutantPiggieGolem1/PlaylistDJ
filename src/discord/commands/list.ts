@@ -57,7 +57,7 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
                         "style": "PRIMARY",
                         "label": `Next Page`,
                         "customId": `clistpageup`,
-                        "disabled": page >= Math.floor(playlistdata.songs.length/25),
+                        "disabled": page >= Math.floor(playlistdata.items.length/25),
                         "type": "BUTTON"
                     } as MessageActionRowComponent,
                      {
@@ -73,10 +73,10 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
         "embeds": [
             {
                 "type": "rich",
-                "title": `All Songs (${playlistdata.songs.length})`,
+                "title": `All Songs (${playlistdata.items.length})`,
                 "description": `${ctx.guild.name.length > 20 ? ctx.guild.nameAcronym : ctx.guild.name} Server Playlist`,
                 "color": 0xff0000,
-                "fields": playlistdata.songs.slice(page*25,page*25+25).map(s => {return {
+                "fields": playlistdata.items.slice(page*25,page*25+25).map(s => {return {
                     "name": s.title,
                     "value": s.id,
                     "inline": true,

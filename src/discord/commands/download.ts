@@ -2,7 +2,6 @@ import { BaseCommandInteraction, ButtonInteraction, InteractionUpdateOptions, Me
 import { client } from "../../index";
 import { editReply, reply } from "../util";
 import { Command } from "./Commands";
-import fs from "fs";
 import { MusicJSON } from "../../youtube/util";
 import { WebPlaylist } from "../../youtube/playlist";
 
@@ -12,11 +11,11 @@ let idata: {[key: string]: {playlist: WebPlaylist, index: number, exclusions: Ar
 
 export const Download: Command = {
     name: commandname,
-    description: "Downloads your playlist from youtube.",
+    description: "Downloads music from youtube.",
     type: "CHAT_INPUT",
     options: [{
         name: "url",
-        description: "Youtube Playlist URL to Download",
+        description: "Youtube URL to Download From",
         type: 3, // string
         required: true,
     }],
@@ -36,7 +35,7 @@ export const Download: Command = {
         let playlist: WebPlaylist;
         try {
             playlist = await WebPlaylist.fromUrl(url);
-        } catch (e) {return reply(ctx,"An Error Occured:"+e)}
+        } catch (e) {return reply(ctx,"An Error Occured: "+e)}
         
         let msg: MessageOptions = {
             "content": "Found!",
@@ -79,11 +78,11 @@ export const Download: Command = {
                         "height": playlist.ytplaylist.bestThumbnail.height,
                         "width": playlist.ytplaylist.bestThumbnail.width
                     },
-                    "author": {
+                    "author": playlist.ytplaylist.author ? {
                         "name": playlist.ytplaylist.author.name,
                         "iconURL": playlist.ytplaylist.author.bestAvatar.url,
                         "url": playlist.ytplaylist.author.url
-                    },
+                    } : {"name": "Unknown Author"},
                     "footer": {
                         "text": `PlaylistDJ - Playlist Download`,
                         "iconURL": client.user?.avatarURL() ?? ""
@@ -117,7 +116,7 @@ export const Download: Command = {
                 if (ctx.customId === 'cdownloadcustom') {idata[ctx.guild.id] = {index:0,exclusions:[],playlist}}
                 let video = playlist.ytplaylist.items[idata[ctx.guild.id].index];
                 if (video) {
-                    ctx.update({ // FIXME: DiscordAPIError: Unknown Interaction
+                    ctx.update({
                         "content": "Keep this video?",
                         "components": [
                             {
@@ -190,13 +189,13 @@ export const Download: Command = {
                 delete idata[ctx.guild.id];
                 
                 if (!ctx.deferred && ctx.isRepliable()) ctx.deferReply({"ephemeral": true});
-                playlist.download(`./resources/music/${ctx.guild?.id ?? "unknown"}/`,false)
+                playlist.download(`./resources/music/${ctx.guild?.id ?? "unknown"}/`,false) // OVERWRITE MODE OFF
                 .once('start', (items) => {
-                    editReply(ctx,`Downloading: ${items.length} songs.`)
+                    editReply(ctx,`Downloading: ${items?.length} songs.`)
                 }).on('progress', (pdata: MusicJSON) => {
-                    editReply(ctx,`Downloaded: ${Object.keys(pdata).length}/${playlist.ytplaylist.items.length} songs.`);
+                    editReply(ctx,`Downloaded: ${pdata.items?.length}/${playlist.ytplaylist.items?.length} songs.`);
                 }).on('finish',(playlist: MusicJSON) => {
-                    editReply(ctx,`Success! ${fs.readdirSync(`./resources/music/${guildid}/`).length} files downloaded from '${playlist.title}'!`);
+                    editReply(ctx,`Success! ${playlist.items?.length} files downloaded (total)!`);
                 }).on('warn' , (e: Error) => {
                     editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.name)
                 }).on('error', (e: Error) => {

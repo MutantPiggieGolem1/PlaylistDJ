@@ -1,5 +1,6 @@
 import { BaseCommandInteraction, Message } from "discord.js";
 import fs from "fs";
+import { AUDIOFORMAT } from "../../youtube/util";
 import { Playlist } from "../../youtube/playlist";
 import { reply } from "../util";
 import { Command } from "./Commands";
@@ -24,12 +25,12 @@ export const Delete: Command = {
         } else if (ctx instanceof Message) {
             id = ctx.content.replaceAll(/\s{2,}/g," ").split(" ")[2]
         }
-        if (!id || !fs.existsSync(dir+id+".ogg")) return reply(ctx, "Invalid Filename!")
+        if (!id || !fs.existsSync(dir+id+AUDIOFORMAT)) return reply(ctx, "Invalid Filename!")
         let playlist: Playlist
         try {
             playlist = new Playlist(ctx.guild.id);
         } catch { return reply(ctx, "Couldn't find playlist!") }
         playlist.removeSong(id)
-        playlist.saveTo(`./resources/music/${ctx.guild.id}/`)
+        playlist.save()
     }
 };

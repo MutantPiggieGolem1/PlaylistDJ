@@ -34,7 +34,7 @@ client.on("interactionCreate", async (interaction: Interaction) => {
     if ((!interaction.isButton() && !interaction.isSelectMenu()) || !WHITELIST.has(interaction.user.id)) return;
     // if (interaction.message instanceof Message && interaction.message.reference && interaction.user.id !== (await interaction.message.fetchReference())?.author?.id) return interaction.reply({"content":"'This menu is not for you' - Dank Memer","ephemeral":true})
     if (interaction.customId === "cancel") {
-        if (interaction?.message instanceof Message && interaction.message.deletable && !interaction.ephemeral) {interaction.message.delete(); return;}
+        if (interaction?.message instanceof Message && interaction.message.deletable && !interaction.ephemeral && interaction.message.flags.bitfield !== 64) {interaction.message.delete(); return;}
     } else if (interaction.customId === "disable") return;
     let command: Command | undefined | null = Commands.find(c=>interaction.customId.startsWith("c"+c.name))
     if (!command?.interact) return console.error("Didn't find valid command to process interaction: "+interaction.customId);

@@ -2,7 +2,8 @@ import { AudioPlayer } from "@discordjs/voice";
 import { BaseCommandInteraction, ButtonInteraction, Interaction, Message, MessageOptions, MessagePayload, InteractionUpdateOptions, MessageActionRow, MessageActionRowComponent, MessageButton, MessageSelectMenu, MessageActionRowOptions, MessageFlags } from "discord.js";
 import { client } from "../index";
 
-export const players: {[key:string]: AudioPlayer} = {};
+export const TRUTHY: string[] = ["true","yes","1","on"]
+export const players: {[key:string]: AudioPlayer} = {}; // TODO: Implement this
 
 export async function reply(ctx: BaseCommandInteraction | ButtonInteraction | Message, content: MessageOptions | string, eph?: boolean): Promise<void | Message<boolean>> {
     if (!ctx.channel) return;
