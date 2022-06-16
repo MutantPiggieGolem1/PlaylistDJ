@@ -44,7 +44,7 @@ function playSong(ctx: BaseCommandInteraction | Message, playlistdata: MusicJSON
     }]} as MessageOptions)
 }
 function playRandomSong(playlist: MusicJSON, player: AudioPlayer): Song {
-    let song: RealSong = playlist.songs[Math.round(Math.random()*playlist.songs.length)]
+    let song: RealSong = playlist.songs[Math.floor(Math.random()*playlist.songs.length)]
     let audio: AudioResource = createAudioResource(song.file,{
         metadata: song,
         inlineVolume: false

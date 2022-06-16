@@ -195,8 +195,10 @@ export const Download: Command = {
                     editReply(ctx,`Downloading: ${items.length} songs.`)
                 }).on('progress', (pdata: MusicJSON) => {
                     editReply(ctx,`Downloaded: ${Object.keys(pdata).length}/${playlist.ytplaylist.items.length} songs.`);
-                }).on('finish', (playlist: MusicJSON) => {
+                }).on('finish',(playlist: MusicJSON) => {
                     editReply(ctx,`Success! ${fs.readdirSync(`./resources/music/${guildid}/`).length} files downloaded from '${playlist.title}'!`);
+                }).on('warn' , (e: Error) => {
+                    editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.name)
                 }).on('error', (e: Error) => {
                     editReply(ctx,`Error: `+e.message);
                 })

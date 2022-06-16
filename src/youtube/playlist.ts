@@ -32,7 +32,7 @@ export class WebPlaylist {
             title: this.ytplaylist.title,
             directory: dir,
             url: this.ytplaylist.url,
-            songs: []
+            songs: clear ? [] : Playlist.getJSONSongs(dir)
         };
         ee.emit("start",this.ytplaylist.items)
         Promise.all(this.ytplaylist.items.map((playlistitem: ytpl.Item) => new Promise<void>(async (resolve, reject) => {
@@ -45,13 +45,10 @@ export class WebPlaylist {
                     ee.emit("progress",pdata)
                     resolve()
                 }).on('error', (e: Error) => {
-                    
+
                     reject(e);
                 })
-            }).catch((e: Error) => {
-                
-                reject(e);
-            })
+            }).catch((e: Error) => {ee.emit('warn', e); reject(e)})
         }))).then(() => {
             let playlist: Playlist = new Playlist(pdata);
             playlist.saveTo(dir)
@@ -65,6 +62,16 @@ export class Playlist { // Represents a youtube or data playlist
 
     public get playlistdata(): MusicJSON {
         return this.playlist;
+    }
+
+    public static getJSONSongs(dir: string) {
+        if (!fs.existsSync(dir+"data.json")) return [];
+        try {
+            return (JSON.parse(fs.readFileSync(dir+"data.json").toString()) as MusicJSON).songs;
+        } catch (e) {
+            console.warn(e)
+            return [];
+        }
     }
 
     public constructor(pl: MusicJSON | string) {
