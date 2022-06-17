@@ -3,7 +3,7 @@ import { client } from "../../index";
 import { editReply, reply } from "../util";
 import { Command } from "./Commands";
 import { MusicJSON } from "../../youtube/util";
-import { WebPlaylist } from "../../youtube/playlist";
+import { Playlist, WebPlaylist } from "../../youtube/playlist";
 
 const commandname = "download";
 
@@ -195,8 +195,8 @@ export const Download: Command = {
                     editReply(ctx,`Downloading: ${items?.length} songs.`)
                 }).on('progress', (pdata: MusicJSON) => {
                     editReply(ctx,`Downloaded: ${pdata.items?.length}/${playlist.ytplaylist.items?.length} songs.`);
-                }).on('finish',(playlist: MusicJSON) => {
-                    editReply(ctx,`Success! ${playlist.items?.length} files downloaded (total)!`);
+                }).on('finish',(playlist: Playlist) => {
+                    editReply(ctx,`Success! ${playlist.playlistdata.items.length} files downloaded (total)!`);
                 }).on('warn' , (e: Error) => {
                     editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.name)
                 }).on('error', (e: Error) => {

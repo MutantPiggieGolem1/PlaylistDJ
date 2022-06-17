@@ -47,8 +47,8 @@ export class WebPlaylist {
         }))).then(() => {
             let odata: MusicJSON | undefined = clear ? undefined : new Playlist(directory).playlistdata
             if (odata) {
-                pdata.url = pdata.url.concat(odata.url);
-                pdata.items = pdata.items.concat(odata.items)
+                pdata.url = [...new Set<string>([...pdata.url, ...odata.url])]
+                pdata.items = [...new Set<RealSong>([...pdata.items, ...odata.items])]
             }
             let playlist: Playlist = new Playlist(pdata);
             playlist.save()
