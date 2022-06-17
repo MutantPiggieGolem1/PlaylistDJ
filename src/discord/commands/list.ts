@@ -9,6 +9,7 @@ export const List: Command = {
     name: "list",
     description: "Lists music on your playlist.",
     type: "CHAT_INPUT",
+    public: true,
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;

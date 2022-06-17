@@ -9,6 +9,7 @@ export const Delete: Command = {
     name: "delete",
     description: "Deletes music from your playlist.",
     type: "CHAT_INPUT",
+    public: false,
     options: [{
         name: "id",
         description: "Song ID to remove",
