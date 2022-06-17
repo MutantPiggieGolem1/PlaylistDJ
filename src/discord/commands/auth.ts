@@ -5,28 +5,65 @@ import { Command } from "./Commands";
 
 export const Auth: Command = {
     name: "auth",
-    description: "Authorize another user to use the bot.",
+    description: "Authorize a user",
     type: "CHAT_INPUT",
-    options: [{
-        name: "user",
-        description: "User to authorize",
-        type: 6, // user
-        required: true,
-    }],
+    public: false,
+    options: [
+        {
+            "type": 1,
+            "name": "add",
+            "description": "Authorizes a user",
+            "options": [
+                {
+                    "type": 6,
+                    "name": "user",
+                    "description": "User to authorize",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "type": 1,
+            "name": "remove",
+            "description": "Deauthorizes a user",
+            "options": [
+                {
+                    "type": 6,
+                    "name": "user",
+                    "description": "User to deauthorize",
+                    "required": true
+                }
+            ]
+        }
+    ],
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
-        let user: User | undefined;
+        let user: User | undefined, option: string;
         if (ctx instanceof BaseCommandInteraction) {
-            user = ctx.options.get("user",true).user;
-        } else if (ctx instanceof Message) {
-            let u = ctx.content.replaceAll(/\s{2,}/g," ").split(" ")[2]
-            user = ctx.guild.members.resolve(u.replaceAll(/\D/g,""))?.user ??
-                ctx.guild.members.cache.find(m=>m.displayName===u)?.user
+            option = ctx.options.data[0].name
+            user = ctx.options.get("user", true).user;
+        } else {
+            let u: string;
+            [option,u] = ctx.content.replaceAll(/\s{2,}/g," ").split(" ").slice(2)
+            user = ctx.guild.members.resolve(u.replaceAll(/\D/g, ""))?.user ??
+                ctx.guild.members.cache.find(m => m.displayName === u)?.user
         }
-        if (!user) return reply(ctx, "Couldn't find user.")
+        if (!user) return reply(ctx, "Couldn't find user.");
 
-        WHITELIST.add(user.id)
-        reply(ctx, `Added ${user.tag} to the whitelist.`)
+        switch (option) {
+            case 'add':
+                WHITELIST.add(user.id)
+                reply(ctx, `Added ${user.tag} to the whitelist.`)
+                break;
+            case 'remove':
+                WHITELIST.delete(user.id)
+                reply(ctx, `Removed ${user.tag} from the whitelist.`)
+                break;
+            default:
+                reply(ctx, "Invalid arguments!");
+                break;
+        }
     }
 }
+

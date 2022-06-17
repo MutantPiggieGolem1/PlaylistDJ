@@ -9,13 +9,14 @@ export const Rickroll: Command = {
     name: "rr",
     description: "dQw4w9WgXcQ",
     type: "CHAT_INPUT",
+    public: false,
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
         let conn: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
         if (!conn) {await reply(ctx,"Couldn't find voice connection!",true); return;}
 
-        let rr: AudioResource = createAudioResource("./resources/rr.mp3", {
+        let rr: AudioResource = createAudioResource("./resources/rr.webm", {
             metadata: {
                 title: "Never Gonna Give You Up",
                 artist: "Rick Astley",

@@ -1,15 +1,16 @@
-import { AudioPlayer, AudioPlayerStatus, AudioResource, createAudioPlayer, createAudioResource, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
+import { AudioPlayer, AudioPlayerStatus, AudioResource, createAudioResource, getVoiceConnection, VoiceConnection } from "@discordjs/voice";
 import { BaseCommandInteraction, Message, MessageOptions} from "discord.js";
 import { Playlist } from "../../youtube/playlist";
 import { MusicJSON, RealSong, Song } from "../../youtube/util";
 import { client } from "../../index";
-import { reply, TRUTHY } from "../util";
+import { getPlayer, reply, TRUTHY } from "../util";
 import { Command } from "./Commands";
 
 export const Play: Command = {
     name: "play",
     description: "Begin playing music",
     type: "CHAT_INPUT",
+    public: true,
     options: [{
         name: "silent",
         description: "Broadcast current song?",
@@ -27,7 +28,7 @@ export const Play: Command = {
         } else if (ctx instanceof Message) {
             silent = TRUTHY.includes(ctx.content.replaceAll(/\s{2,}/g," ").split(" ")[2]?.toLowerCase())
         }
-        let player: AudioPlayer = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}})
+        let player: AudioPlayer = getPlayer(ctx.guild.id)
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
         if (!connection?.subscribe(player)) return reply(ctx,"Couldn't find voice connection!")
 

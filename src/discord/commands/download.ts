@@ -13,6 +13,7 @@ export const Download: Command = {
     name: commandname,
     description: "Downloads music from youtube.",
     type: "CHAT_INPUT",
+    public: false,
     options: [{
         name: "url",
         description: "Youtube URL to Download From",

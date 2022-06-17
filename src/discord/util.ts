@@ -1,9 +1,14 @@
-import { AudioPlayer } from "@discordjs/voice";
+import { AudioPlayer, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
 import { BaseCommandInteraction, ButtonInteraction, Interaction, Message, MessageOptions, MessagePayload, InteractionUpdateOptions, MessageActionRow, MessageActionRowComponent, MessageButton, MessageSelectMenu, MessageActionRowOptions, MessageFlags } from "discord.js";
 import { client } from "../index";
 
 export const TRUTHY: string[] = ["true","yes","1","on"]
-export const players: {[key:string]: AudioPlayer} = {}; // TODO: Implement this
+
+const players: {[key:string]: AudioPlayer} = {};
+export function getPlayer(guildid: string) {
+    if (!players[guildid]) players[guildid] = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}});
+    return players[guildid];
+}
 
 export async function reply(ctx: BaseCommandInteraction | ButtonInteraction | Message, content: MessageOptions | string, eph?: boolean): Promise<void | Message<boolean>> {
     if (!ctx.channel) return;
