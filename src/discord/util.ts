@@ -5,6 +5,7 @@ import { client } from "../index";
 export const TRUTHY: string[] = ["true","yes","1","on"]
 
 const players: {[key:string]: AudioPlayer} = {};
+export function getPlayer(guildid: string): AudioPlayer;
 export function getPlayer(guildid: string, create: true): AudioPlayer;
 export function getPlayer(guildid: string, create: false): AudioPlayer | undefined;
 export function getPlayer(guildid: string, create: boolean = true) {
