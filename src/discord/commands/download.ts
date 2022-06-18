@@ -58,7 +58,7 @@ export const Download: Command = {
                             "style": "PRIMARY",
                             "label": `Custom Download`,
                             "customId": `c${commandname}custom`,
-                            "disabled": false,
+                            "disabled": playlist.ytplaylist.items.length <= 1,
                             "type": "BUTTON",
                         } as MessageActionRowComponent,
                         {
@@ -110,7 +110,8 @@ export const Download: Command = {
     interact: async (ctx: ButtonInteraction) => {
         if (!ctx.guild) return;
         let guildid = ctx.guild.id;
-        let playlist: WebPlaylist = idata[ctx.guild.id].playlist;
+        let playlist: WebPlaylist | undefined = idata[ctx.guild.id]?.playlist;
+        if (!playlist) return reply(ctx,"Couldn't find webplaylist!")
         switch (ctx.customId) {
             case 'cdownloadcustomskip':
                 idata[ctx.guild.id].exclusions.push(idata[ctx.guild.id].index)
@@ -196,11 +197,11 @@ export const Download: Command = {
                 playlist.download(`./resources/music/${ctx.guild?.id ?? "unknown"}/`,ow) // OVERWRITE MODE OFF
                 .once('start', (items) => {
                     editReply(ctx,`Downloading: ${items?.length} songs.`)
-                }).on('progress', (pdata: MusicJSON) => {
-                    editReply(ctx,`Downloaded: ${pdata.items?.length}/${playlist.ytplaylist.items?.length} songs.`);
+                }).on('progress', (pdata: MusicJSON, totalsongs: number) => {
+                    editReply(ctx,`Downloaded: ${pdata.items?.length}/${totalsongs} songs.`);
                 }).on('finish',(playlist: Playlist | undefined) => {
-                    editReply(ctx,`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
                     playlist?.clean();
+                    editReply(ctx,`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
                 }).on('warn' , (e: Error) => {
                     editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.message)
                 }).on('error', (e: Error) => {

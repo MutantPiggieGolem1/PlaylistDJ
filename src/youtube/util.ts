@@ -17,13 +17,6 @@ export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
     } // TODO: Parse video information
 }
 
-export function isMusicJSON(arg: any): arg is MusicJSON { // good enough
-    return  typeof arg?.directory === "string" &&
-            arg.url?.every && arg.url.every((u: any)=>typeof u === "string") &&
-            typeof arg.items === "object"
-}
-
-
 export type MusicJSON = {
     directory: string,
     url: string[],

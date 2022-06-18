@@ -1,7 +1,7 @@
-import { BaseCommandInteraction, Message, User } from "discord.js";
-import { client, WHITELIST } from "../../index";
-import { reply } from "../util";
-import { Command } from "./Commands";
+import { BaseCommandInteraction, Message, User, MessageOptions } from "discord.js"
+import { client, WHITELIST } from "../../index"
+import { reply } from "../util"
+import { Command } from "./Commands"
 
 export const Auth: Command = {
     name: "auth",
@@ -43,36 +43,54 @@ export const Auth: Command = {
     ],
 
     run: async (ctx: BaseCommandInteraction | Message) => {
-        if (!ctx.guild) return;
-        if ((ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id !== "547624574070816799") return reply(ctx, "This command isnt for you loser");
-        let user: User | undefined, option: string;
+        if (!ctx.guild) return
+        if ((ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id !== "547624574070816799") return reply(ctx, "This command isnt for you loser")
+        let user: User | undefined, option: string
         if (ctx instanceof BaseCommandInteraction) {
             option = ctx.options.data[0].name
-            user = ctx.options.get("user", true).user;
+            user = ctx.options.get("user", true).user
         } else {
             let u: string;
-            [option,u] = ctx.content.replaceAll(/\s{2,}/g," ").split(" ").slice(2)
-            user = ctx.guild.members.resolve(u.replaceAll(/\D/g, ""))?.user ??
-                ctx.guild.members.cache.find(m => m.displayName === u)?.user
+            [option, u] = ctx.content.replaceAll(/\s{2,}/g, " ").split(" ").slice(2)
+            if (u) user = ctx.guild.members.resolve(u.replaceAll(/\D/g, ""))?.user ?? ctx.guild.members.cache.find(m => m.displayName === u)?.user
         }
 
         switch (option) {
             case 'add':
-                if (!user) return reply(ctx, "Couldn't find user.");
+                if (!user) return reply(ctx, "Couldn't find user.")
                 WHITELIST.add(user.id)
                 reply(ctx, `Added ${user.tag} to the whitelist.`)
-            break;
+                break
             case 'remove':
-                if (!user) return reply(ctx, "Couldn't find user.");
+                if (!user) return reply(ctx, "Couldn't find user.")
                 WHITELIST.delete(user.id)
                 reply(ctx, `Removed ${user.tag} from the whitelist.`)
-            break;
+                break
             case 'list':
-                reply(ctx, [...WHITELIST.keys()].map(id=>client.users.resolve(id)?.tag ?? `<@${id}>`).join("\n"))
-            break;
+                let msg: MessageOptions = {
+                    "content": `_`,
+                    "embeds": [
+                        {
+                            "type": "rich",
+                            "title": `Bot Administrators`,
+                            "description": "",
+                            "color": 0x123456,
+                            "fields": [...WHITELIST.keys()].map(id => {return {
+                                "name": client.users.resolve(id)?.tag,
+                                "value": id
+                            }}),
+                            "footer": {
+                                "text": "PlaylistDJ - Auth List",
+                                "iconURL": client.user?.avatarURL() ?? ""
+                            }
+                        }
+                    ]
+                } as MessageOptions
+                reply(ctx, msg)
+                break
             default:
-                reply(ctx, "Invalid arguments!");
-            break;
+                reply(ctx, "Invalid arguments!")
+                break
         }
     }
 }

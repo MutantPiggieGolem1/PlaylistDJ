@@ -8,7 +8,16 @@ import ytdl from "ytdl-core";
 export class WebPlaylist {
     public ytplaylist: ytpl.Result;
 
-    private constructor(r: ytpl.Result) {this.ytplaylist=r}
+    private constructor(r: ytpl.Result) {
+        let eids: Set<string> = new Set();
+        r.items.filter(i=>{
+            if (!eids.has(i.id)) {
+                eids.add(i.id)
+                return true
+            }
+        }) // Remove duplicate ids
+        this.ytplaylist=r
+    }
     public static async fromUrl(url: string): Promise<WebPlaylist> {
         if (ytpl.validateID(url)) return new WebPlaylist(await ytpl(url, { limit: Number.POSITIVE_INFINITY }))
         if (ytdl.validateURL(url)) {
@@ -55,7 +64,7 @@ export class WebPlaylist {
     }
 
     public remove(indices: number[]) {
-        this.ytplaylist.items = this.ytplaylist.items.filter((_,i)=>!indices.includes(i))
+        this.ytplaylist.items = this.ytplaylist.items.filter((_: ytpl.Item,i: number)=>!indices.includes(i))
     }
 
     public download(directory: string, clear?: boolean): EventEmitter {
@@ -79,17 +88,17 @@ export class WebPlaylist {
                 ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file))
                 .on('finish', () => {
                     pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RealSong)
-                    ee.emit("progress",pdata)
+                    ee.emit("progress",pdata,this.ytplaylist.items.length)
                     resolve(true)
                 }).on('error', reject)
             }).catch((e: Error) => {ee.emit('warn', e); reject(e)})
         }))).then((completion: Array<PromiseSettledResult<boolean>>) => {
             if (completion.every(r=>r.status==="rejected")) return ee.emit("finish",undefined);
-            let odata: MusicJSON | undefined = clear ? undefined : new Playlist(directory).playlistdata
-            if (odata) {
+            try {
+                let odata: MusicJSON = new Playlist(directory).playlistdata
                 pdata.url = [...new Set<string>([...pdata.url, ...odata.url])]
                 pdata.items = pdata.items.concat(odata.items.filter(i=>pdata.items.every(p=>p.id!==i.id)))
-            }
+            } catch (e) {console.warn(e)}
             let playlist: Playlist = new Playlist(pdata);
             playlist.save()
             ee.emit("finish",playlist)
@@ -106,25 +115,15 @@ export class Playlist { // Represents a youtube or data playlist
 
     public constructor(pl: MusicJSON | string) {
         if (typeof pl === "string") {
-            let file: string;
-            try {
-                file = fs.readFileSync(`./resources/music/${pl}/data.json`).toString()
-            } catch (e) {
-                try {
-                    file = fs.readFileSync(pl+"data.json").toString()
-                } catch (e) {
-                    throw new Error("Couldn't find playlist!");
-                }
-            }
-            this.playlist = JSON.parse(file) as MusicJSON
+            if (!fs.existsSync(pl+"data.json")) throw new Error("Couldn't find playlist!")
+            this.playlist = JSON.parse(fs.readFileSync(pl+"data.json").toString()) as MusicJSON
         } else {
             this.playlist = pl;
         }
     }
 
     public async clean() {
-        let paths: fs.Dirent[] = (await fs.promises.readdir(this.playlist.directory,{withFileTypes:true}))
-            .filter(dirent=>dirent.isFile()&&(!dirent.name.endsWith(".json"))&&this.playlist.items.every(i=>i.file!==this.playlist.directory+dirent.name))
+        let paths: fs.Dirent[] = (await fs.promises.readdir(this.playlist.directory,{withFileTypes:true})).filter(dirent=>dirent.isFile()&&(!dirent.name.endsWith(".json"))&&this.playlist.items.every(i=>i.file!==this.playlist.directory+dirent.name))
         return Promise.all(paths.map(p=>fs.promises.rm(this.playlist.directory+p.name)))
     }
 

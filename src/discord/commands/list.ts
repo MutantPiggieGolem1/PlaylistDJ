@@ -39,7 +39,7 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
     if (!ctx.guild) return {content:"Couldn't find guild!"} as T;
     let playlistdata: MusicJSON;
     try {
-        playlistdata = new Playlist(ctx.guild.id).playlistdata;
+        playlistdata = new Playlist(`./resources/music/${ctx.guild.id}/`).playlistdata;
     } catch (e) { return {content:"Couldn't find playlist!"} as T; }
     return {
         "content": page.toString(),

@@ -29,7 +29,7 @@ export const Delete: Command = {
         if (!id || !fs.existsSync(dir+id+AUDIOFORMAT)) return reply(ctx, "Invalid Filename!")
         let playlist: Playlist
         try {
-            playlist = new Playlist(ctx.guild.id);
+            playlist = new Playlist(`./resources/music/${ctx.guild.id}/`);
         } catch { return reply(ctx, "Couldn't find playlist!") }
         playlist.removeSong(id)
         playlist.save()

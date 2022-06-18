@@ -27,7 +27,7 @@ export const Play: Command = {
         if (!ctx.guild) return;
 
         try {
-            var playlist: MusicJSON = new Playlist(ctx.guild.id).playlistdata;
+            var playlist: MusicJSON = new Playlist(`./resources/music/${ctx.guild.id}/`).playlistdata;
         } catch { return reply(ctx, "Couldn't find playlist!") }
 
         let start: RealSong | undefined, silent: boolean;
@@ -37,7 +37,7 @@ export const Play: Command = {
             silent = !!ctx.options.get("silent",false)?.value
         } else {
             let si: string | undefined, ss: string | undefined;
-            [si,ss] = ctx.content.replaceAll(/\s{2,}/g," ").split(" ").slice(2)
+            [ss,si] = ctx.content.replaceAll(/\s{2,}/g," ").split(" ").slice(2)
             if (ss) start = playlist.items.find(s=>s.id===ss||s.title.toLowerCase()===ss?.toLowerCase())
             silent = TRUTHY.includes(si?.toLowerCase())
         }
