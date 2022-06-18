@@ -1,13 +1,13 @@
 import { BaseCommandInteraction, ButtonInteraction, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageEmbed, MessageOptions, MessagePayload } from "discord.js";
 import { client } from "../../index";
-import { editReply, reply } from "../util";
+import { editReply, reply, TRUTHY } from "../util";
 import { Command } from "./Commands";
 import { MusicJSON } from "../../youtube/util";
 import { Playlist, WebPlaylist } from "../../youtube/playlist";
 
 const commandname = "download";
 
-let idata: {[key: string]: {playlist: WebPlaylist, index: number, exclusions: Array<number>}} = {} // Option Cache
+let idata: {[key: string]: {playlist: WebPlaylist, overwrite: boolean, index: number, exclusions: Array<number>}} = {} // Option Cache
 
 export const Download: Command = {
     name: commandname,
@@ -19,14 +19,24 @@ export const Download: Command = {
         description: "Youtube URL to Download From",
         type: 3, // string
         required: true,
+    },{
+        name: "overwrite",
+        description: "Overwrite existing videos?",
+        type: "BOOLEAN",
+        required: false
     }],
 
     run: async (ctx: BaseCommandInteraction | Message) => {
+        if (!ctx.guild) return;
         let url: string | null | undefined;
+        let overwrite: boolean = false;
         if (ctx instanceof BaseCommandInteraction) {
             url = ctx.options.get("url", true).value?.toString()
-        } else if (ctx instanceof Message) {
-            url = ctx.content.replaceAll(/\s{2,}/g," ").split(" ")[2]
+            overwrite = !!ctx.options.get("overwrite", false)?.value
+        } else {
+            let o: string | undefined;
+            [url,o] = ctx.content.replaceAll(/\s{2,}/g," ").split(" ").slice(2)
+            overwrite = TRUTHY.includes(o?.toLowerCase());
         }
         if (!url) { reply(ctx, "Invalid arguments!"); return; }
 
@@ -93,28 +103,20 @@ export const Download: Command = {
             ]
         } as MessageOptions
 
+        idata[ctx.guild.id] = {playlist,overwrite,index:0,exclusions:[]}
         editReply(ctx,msg);
     },
 
     interact: async (ctx: ButtonInteraction) => {
         if (!ctx.guild) return;
         let guildid = ctx.guild.id;
-        let playlist: WebPlaylist;
-        if (idata[ctx.guild.id]?.playlist) {
-            playlist = idata[ctx.guild.id].playlist
-        } else {
-            try {
-                if (!ctx.message.embeds[0].url) {return ctx.reply("Couldn't find playlist!")}
-                playlist = await WebPlaylist.fromUrl(ctx.message.embeds[0].url)
-            } catch (e) {return ctx.reply("Couldn't find playlist!")}
-        }
+        let playlist: WebPlaylist = idata[ctx.guild.id].playlist;
         switch (ctx.customId) {
             case 'cdownloadcustomskip':
                 idata[ctx.guild.id].exclusions.push(idata[ctx.guild.id].index)
             case 'cdownloadcustomkeep':
                 idata[ctx.guild.id].index++;
             case 'cdownloadcustom':
-                if (ctx.customId === 'cdownloadcustom') {idata[ctx.guild.id] = {index:0,exclusions:[],playlist}}
                 let video = playlist.ytplaylist.items[idata[ctx.guild.id].index];
                 if (video) {
                     ctx.update({
@@ -187,18 +189,20 @@ export const Download: Command = {
                 if (idata[ctx.guild?.id]?.exclusions) {playlist.remove(idata[guildid].exclusions)}
                 // FIXME: Disable custom selecton menu here
             case 'cdownloadall':
+                let ow: boolean = idata[ctx.guild.id].overwrite;
                 delete idata[ctx.guild.id];
                 
                 if (!ctx.deferred && ctx.isRepliable()) ctx.deferReply({"ephemeral": true});
-                playlist.download(`./resources/music/${ctx.guild?.id ?? "unknown"}/`,false) // OVERWRITE MODE OFF
+                playlist.download(`./resources/music/${ctx.guild?.id ?? "unknown"}/`,ow) // OVERWRITE MODE OFF
                 .once('start', (items) => {
                     editReply(ctx,`Downloading: ${items?.length} songs.`)
                 }).on('progress', (pdata: MusicJSON) => {
                     editReply(ctx,`Downloaded: ${pdata.items?.length}/${playlist.ytplaylist.items?.length} songs.`);
-                }).on('finish',(playlist: Playlist) => {
-                    editReply(ctx,`Success! ${playlist.playlistdata.items.length} files downloaded (total)!`);
+                }).on('finish',(playlist: Playlist | undefined) => {
+                    editReply(ctx,`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
+                    playlist?.clean();
                 }).on('warn' , (e: Error) => {
-                    editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.name)
+                    editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.message)
                 }).on('error', (e: Error) => {
                     editReply(ctx,`Error: `+e.message);
                 })

@@ -5,8 +5,10 @@ import { client } from "../index";
 export const TRUTHY: string[] = ["true","yes","1","on"]
 
 const players: {[key:string]: AudioPlayer} = {};
-export function getPlayer(guildid: string) {
-    if (!players[guildid]) players[guildid] = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}});
+export function getPlayer(guildid: string, create: true): AudioPlayer;
+export function getPlayer(guildid: string, create: false): AudioPlayer | undefined;
+export function getPlayer(guildid: string, create: boolean = true) {
+    if (!players[guildid] && create) {players[guildid] = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}});players[guildid].setMaxListeners(1)}
     return players[guildid];
 }
 

@@ -28,7 +28,7 @@ export const Join: Command = {
         if (ctx instanceof BaseCommandInteraction) { // slash command
             voicechannel = ctx.options.get("channel",true).channel;
         } else if (ctx instanceof Message) { // normal command
-            let arg1: string = ctx.content.split(" ")[2];
+            let arg1: string = ctx.content.split(" ").slice(2).join(" ");
             if (arg1) {
                 let vcid: string = arg1.replaceAll(/\D/g,"");
                 

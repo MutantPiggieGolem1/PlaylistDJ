@@ -16,14 +16,7 @@ export const Rickroll: Command = {
         let conn: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
         if (!conn) {await reply(ctx,"Couldn't find voice connection!",true); return;}
 
-        let rr: AudioResource = createAudioResource("./resources/rr.webm", {
-            metadata: {
-                title: "Never Gonna Give You Up",
-                artist: "Rick Astley",
-                ytid: "dQw4w9WgXcQ"
-            },
-            inlineVolume: true
-        })
+        let rr: AudioResource = createAudioResource("./resources/rr.webm", {inlineVolume: true})
         rr.volume?.setVolumeDecibels(69)
         player.play(rr)
         conn.removeAllListeners();

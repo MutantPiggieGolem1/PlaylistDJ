@@ -12,6 +12,11 @@ export const Play: Command = {
     type: "CHAT_INPUT",
     public: true,
     options: [{
+        name: "song",
+        description: "Song ID to start with",
+        type: "STRING",
+        required: false,
+    },{
         name: "silent",
         description: "Broadcast current song?",
         type: 5, // boolean
@@ -21,48 +26,50 @@ export const Play: Command = {
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
 
-        if (!ctx.guild.me?.voice) return reply(ctx,"Not in a voice channel!")
-        let silent: boolean = false;
+        try {
+            var playlist: MusicJSON = new Playlist(ctx.guild.id).playlistdata;
+        } catch { return reply(ctx, "Couldn't find playlist!") }
+
+        let start: RealSong | undefined, silent: boolean;
         if (ctx instanceof BaseCommandInteraction) {
+            let ss: string | undefined = ctx.options.get("song",false)?.value?.toString()
+            if (ss) start = playlist.items.find(s=>s.id===ss||s.title.toLowerCase()===ss?.toLowerCase())
             silent = !!ctx.options.get("silent",false)?.value
-        } else if (ctx instanceof Message) {
-            silent = TRUTHY.includes(ctx.content.replaceAll(/\s{2,}/g," ").split(" ")[2]?.toLowerCase())
+        } else {
+            let si: string | undefined, ss: string | undefined;
+            [si,ss] = ctx.content.replaceAll(/\s{2,}/g," ").split(" ").slice(2)
+            if (ss) start = playlist.items.find(s=>s.id===ss||s.title.toLowerCase()===ss?.toLowerCase())
+            silent = TRUTHY.includes(si?.toLowerCase())
         }
+
         let player: AudioPlayer = getPlayer(ctx.guild.id)
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
         if (!connection?.subscribe(player)) return reply(ctx,"Couldn't find voice connection!")
-
-        let playlistdata: MusicJSON
-        try {
-            playlistdata = new Playlist(ctx.guild.id).playlistdata;
-        } catch { return reply(ctx, "Couldn't find playlist!") }
-
-        if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:!silent})
+        player.removeAllListeners()
         player.stop()
-        playSong(ctx,playlistdata,player,silent)
-        player.on(AudioPlayerStatus.Idle, () => playSong(ctx,playlistdata,player,silent))
-    }
-}
 
-function playSong(ctx: BaseCommandInteraction | Message, playlistdata: MusicJSON, player: AudioPlayer, silent: boolean) {
-    let song: Song = playRandomSong(playlistdata, player)
-    if (ctx.channel && !silent) ctx.channel.send({embeds:[{
-        type: "rich",
-        title: "Now Playing:",
-        description: `${song.title} - ${song.artist}`,
-        color: 0xff0000,
-        "footer": {
-            text: `PlaylistDJ - Playing Music`,
-            icon_url: client.user?.avatarURL() ?? ""
-        }
-    }]} as MessageOptions)
-}
-function playRandomSong(playlist: MusicJSON, player: AudioPlayer): Song {
-    let song: RealSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
-    let audio: AudioResource = createAudioResource(song.file,{
-        metadata: song,
-        inlineVolume: false
-    })
-    player.play(audio);
-    return song as Song;
+        let song: RealSong = start ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
+        player.play(createAudioResource(song.file,{
+            metadata: song as Song,
+            inlineVolume: false,
+        }))
+        if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:!silent})
+        player.on(AudioPlayerStatus.Idle, () => {
+            let song: RealSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
+            player.play(createAudioResource(song.file,{
+                metadata: song as Song,
+                inlineVolume: false,
+            }))
+            if (ctx.channel && !silent) ctx.channel.send({embeds:[{
+                type: "rich",
+                title: "Now Playing:",
+                description: `${song.title} - ${song.artist}`,
+                color: 0xff0000,
+                "footer": {
+                    text: `PlaylistDJ - Playing Music`,
+                    icon_url: client.user?.avatarURL() ?? ""
+                }
+            }]} as MessageOptions)
+        })
+    }
 }

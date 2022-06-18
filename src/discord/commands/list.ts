@@ -22,7 +22,7 @@ export const List: Command = {
         if (!ctx.guild) return;
         let page: number = 0;
         if (ctx.message.embeds.length > 0) {
-            page = Number.parseInt(ctx.message.embeds[0].footer?.text.replaceAll(/\D/g,"") ?? "") || 0
+            page = Number.parseInt(ctx.message.content) || 0
         }
         switch (ctx.customId) {
             case 'clistpageup':
@@ -42,7 +42,7 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
         playlistdata = new Playlist(ctx.guild.id).playlistdata;
     } catch (e) { return {content:"Couldn't find playlist!"} as T; }
     return {
-        "content": "_",
+        "content": page.toString(),
         "components": [
             {
                 "type": "ACTION_ROW",
@@ -83,7 +83,7 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
                     "inline": true,
                 } as EmbedField}),
                 "footer": {
-                    "text": `PlaylistDJ - Song List - Page ${page}`,
+                    "text": `PlaylistDJ - Song List - Page ${page+1}/${Math.ceil(playlistdata.items.length/25)}`,
                     "iconURL": client.user?.avatarURL() ?? ""
                 }
             } as MessageEmbed

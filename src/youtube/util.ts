@@ -2,14 +2,14 @@ import ytpl from "ytpl";
 import ytdl from "ytdl-core";
 export const AUDIOFORMAT = ".webm"
 
-export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {
+export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
     let titlesegments = video.title.split(" - ").slice(0,2)
     let artistindex = titlesegments.findIndex(segment => segment.includes(video.author.name) || video.author.name.toLowerCase().includes(segment.replaceAll(/\s/g,"").toLowerCase()))
     return {
         id: video.id,
 
         title: titlesegments[artistindex >= 0 ? (artistindex+1)%2 : 1]?.replace(/[([].*?Official.*?[\])]/i,"")?.trim() ?? video.title ?? "Unknown",
-        artist: titlesegments.length === 2 ? titlesegments[artistindex >= 0 ? artistindex : 0] : "Unknown Artist",
+        artist: titlesegments.length === 2 && artistindex >= 0 ? titlesegments[artistindex] : "Unknown Artist",
         genre: Genre.Unknown,
         length: video.durationSec ?? -1,
 
