@@ -108,3 +108,7 @@ resources/music/
 # VSC
 .VSCodeCounter/*
 .VSCodeCounter
+
+# Crossplatform Compat.
+node_modules/*
+node_modules/

@@ -8,7 +8,7 @@ import { Command } from "./Commands";
 
 export const Play: Command = {
     name: "play",
-    description: "Begin playing music",
+    description: "Begins playing music.",
     type: "CHAT_INPUT",
     public: true,
     options: [{
@@ -53,7 +53,7 @@ export const Play: Command = {
             metadata: song as Song,
             inlineVolume: false,
         }))
-        if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:!silent})
+        if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:silent})
         player.on(AudioPlayerStatus.Idle, () => {
             let song: RealSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
             player.play(createAudioResource(song.file,{
@@ -63,7 +63,7 @@ export const Play: Command = {
             if (ctx.channel && !silent) ctx.channel.send({embeds:[{
                 type: "rich",
                 title: "Now Playing:",
-                description: `${song.title} - ${song.artist}`,
+                description: `${song.title} - ${song.artist}\n\`${song.id}\``,
                 color: 0xff0000,
                 "footer": {
                     text: `PlaylistDJ - Playing Music`,

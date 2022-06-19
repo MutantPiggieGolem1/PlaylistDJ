@@ -1,8 +1,7 @@
 import { BaseCommandInteraction, Message } from "discord.js";
-import fs from "fs";
-import { AUDIOFORMAT } from "../../youtube/util";
+import { RealSong } from "../../youtube/util";
 import { Playlist } from "../../youtube/playlist";
-import { reply } from "../util";
+import { reply, truncateString } from "../util";
 import { Command } from "./Commands";
 
 export const Delete: Command = {
@@ -12,26 +11,25 @@ export const Delete: Command = {
     public: false,
     options: [{
         name: "id",
-        description: "Song ID to remove",
+        description: "Song ID(s) to remove",
         type: 3, // string
         required: true,
     }],
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
-        const dir = `./resources/music/${ctx.guild?.id ?? "unknown"}/`;
-        let id: string | undefined;
-        if (ctx instanceof BaseCommandInteraction) {
-            id = ctx.options.get("id",true).value?.toString()
-        } else if (ctx instanceof Message) {
-            id = ctx.content.replaceAll(/\s{2,}/g," ").split(" ")[2]
-        }
-        if (!id || !fs.existsSync(dir+id+AUDIOFORMAT)) return reply(ctx, "Invalid Filename!")
-        let playlist: Playlist
+        let inp: string | undefined = ctx instanceof BaseCommandInteraction
+            ? ctx.options.get("id",true).value?.toString()
+            : ctx.content.split(/\s+/g)[2]
+        if (!inp) return reply(ctx, "Invalid Arguments!")
+
+        let ids: string[] = inp.split(",").slice(undefined,10).map(id=>id.trim())
         try {
-            playlist = new Playlist(`./resources/music/${ctx.guild.id}/`);
+            var playlist: Playlist = new Playlist(`./resources/music/${ctx.guild.id}/`);
         } catch { return reply(ctx, "Couldn't find playlist!") }
-        playlist.removeSong(id)
-        playlist.save()
+        let songs: RealSong[] | undefined = await playlist.removeSongs(ids);
+        if (!songs) return reply(ctx, "Couldn't find song!");
+        await playlist.save();
+        reply(ctx,`Success! Removed ${songs.length} song${songs.length===1?"":"s"}:\n ${songs.map(i=>truncateString(i.title,12)).join(", ")}`)
     }
-};
+}

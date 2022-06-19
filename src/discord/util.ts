@@ -1,5 +1,5 @@
 import { AudioPlayer, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
-import { BaseCommandInteraction, ButtonInteraction, Interaction, Message, MessageOptions, MessagePayload, InteractionUpdateOptions, MessageActionRow, MessageActionRowComponent, MessageButton, MessageSelectMenu, MessageActionRowOptions, MessageFlags } from "discord.js";
+import { BaseCommandInteraction, ButtonInteraction, Interaction, Message, MessageOptions, MessagePayload } from "discord.js";
 import { client } from "../index";
 
 export const TRUTHY: string[] = ["true","yes","1","on"]
@@ -56,3 +56,7 @@ export async function editReply(ctx: BaseCommandInteraction | ButtonInteraction 
 //         console.error(e)
 //     }
 // }
+
+export function truncateString(str: string, len: number): string {
+    return (str.length > len) ? str.slice(0, len-1)+".." : str;
+}

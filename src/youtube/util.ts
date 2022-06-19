@@ -39,13 +39,13 @@ export type Song = {
 }
 
 export enum Genre {
-    Unknown   ,
-    Pop       ,// Shake it Off - Taylor Swift
-    Meme      ,// Plastic Bag - Paty Kerry
-    Minecraft ,// Dragonhearted- TryHardNinja
-    EDM       ,// Base After Base - DJVI
-    House     ,// 
-    Instrumental,// 
-    Japanese  ,// Nausicaa on the Valley of the Wind - Joe Hisaishi
-    Eurobeat  ,// Running in the 90s
+    Unknown = 'Unknown'             ,
+    Pop = 'Pop'                     ,// Shake it Off - Taylor Swift
+    Meme = 'Meme'                   ,// Plastic Bag - Paty Kerry
+    Minecraft = 'Minecraft'         ,// Dragonhearted - TryHardNinja
+    Electronic = 'Electronic'       ,// Base After Base - DJVI
+    Instrumental = 'Instrumental'   ,// 
+    Japanese = 'Japanese'           ,// YOASABI - Into the Night
+    Chinese = 'Chinese'             ,// 
+    Eurobeat = 'Eurobeat'           ,// Running in the 90s
 } // Philter, TheFatRat

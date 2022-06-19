@@ -5,7 +5,7 @@ import { Command } from "./Commands"
 
 export const Auth: Command = {
     name: "auth",
-    description: "Authorize a user",
+    description: "Modifies users with administrator privileges.",
     type: "CHAT_INPUT",
     public: false,
     options: [
@@ -48,7 +48,7 @@ export const Auth: Command = {
         let user: User | undefined, option: string
         if (ctx instanceof BaseCommandInteraction) {
             option = ctx.options.data[0].name
-            user = ctx.options.get("user", true).user
+            user = ctx.options.get("user", false)?.user
         } else {
             let u: string;
             [option, u] = ctx.content.replaceAll(/\s{2,}/g, " ").split(" ").slice(2)

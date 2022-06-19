@@ -1,4 +1,4 @@
-import { AUDIOFORMAT, MusicJSON, parseVideo, RealSong } from "./util";
+import { AUDIOFORMAT, Genre, MusicJSON, parseVideo, RealSong } from "./util";
 import fs from "fs"
 import { EventEmitter } from "stream";
 import * as ytdsc from "ytdl-core-discord";
@@ -10,7 +10,7 @@ export class WebPlaylist {
 
     private constructor(r: ytpl.Result) {
         let eids: Set<string> = new Set();
-        r.items.filter(i=>{
+        r.items = r.items.filter(i=>{
             if (!eids.has(i.id)) {
                 eids.add(i.id)
                 return true
@@ -84,7 +84,6 @@ export class WebPlaylist {
             let file: string = directory + playlistitem.id + AUDIOFORMAT
             fs.openSync(file, 'w') // create if not exists
             ytdl.getInfo(playlistitem.url).then((videoinfo: ytdl.videoInfo) => {
-                videoinfo.tag_for_children_directed ||
                 ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file))
                 .on('finish', () => {
                     pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RealSong)
@@ -113,10 +112,18 @@ export class Playlist { // Represents a youtube or data playlist
         return this.playlist;
     }
 
+    public set setSong(meta: RealSong) {
+        let index: number = this.playlist.items.findIndex(i => i.id === meta.id)
+        if (index < 0) return;
+        this.playlist.items[index] = meta;
+    }
+
     public constructor(pl: MusicJSON | string) {
         if (typeof pl === "string") {
             if (!fs.existsSync(pl+"data.json")) throw new Error("Couldn't find playlist!")
-            this.playlist = JSON.parse(fs.readFileSync(pl+"data.json").toString()) as MusicJSON
+            let pdata = JSON.parse(fs.readFileSync(pl+"data.json").toString());
+            pdata.items.map((i: any)=>{i.genre = Object.values(Genre).includes(i.genre) ? i.genre as Genre : Genre.Unknown;return i;}) // remedy 0 -> unknown switch
+            this.playlist = pdata as MusicJSON
         } else {
             this.playlist = pl;
         }
@@ -127,11 +134,15 @@ export class Playlist { // Represents a youtube or data playlist
         return Promise.all(paths.map(p=>fs.promises.rm(this.playlist.directory+p.name)))
     }
 
-    public async removeSong(id: string) {
-        let song: RealSong;
-        [song] = this.playlist.items.splice(this.playlist.items.findIndex(rs=>rs.id===id),1)
-        if (!song) return false;
-        return fs.promises.rm(song.file)
+    public async removeSongs(ids: string[]): Promise<undefined | RealSong[]> {
+        let dqueue: string[] = []; // not strictly neccesarry, ends up identical to ids
+        let songs: RealSong[] = await Promise.all(this.playlist.items.filter(rs=>ids.includes(rs.id)).map(async (i): Promise<RealSong>=>{
+            dqueue.push(i.id);
+            if (fs.existsSync(i.file)) await fs.promises.rm(i.file)
+            return i
+        }))
+        this.playlist.items = this.playlist.items.filter((i)=>!dqueue.includes(i.id));
+        return songs;
     }
 
     public async save() {

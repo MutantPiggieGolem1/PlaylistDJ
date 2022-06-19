@@ -6,7 +6,7 @@ import { reply } from "../util";
 
 export const Join: Command = {
     name: "join",
-    description: "Joins a voice channel",
+    description: "Joins a voice channel.",
     type: "CHAT_INPUT",
     public: true,
     options: [
