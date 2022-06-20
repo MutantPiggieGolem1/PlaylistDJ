@@ -14,7 +14,7 @@ export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
         length: video.durationSec ?? -1,
 
         score: 0,
-    } // TODO: Parse video information
+    }
 }
 
 export type MusicJSON = {

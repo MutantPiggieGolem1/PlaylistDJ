@@ -1,15 +1,16 @@
 import { AudioPlayer, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
 import { BaseCommandInteraction, ButtonInteraction, Interaction, Message, MessageOptions, MessagePayload } from "discord.js";
+import { RealSong } from "../youtube/util";
 import { client } from "../index";
 
 export const TRUTHY: string[] = ["true","yes","1","on"]
 
-const players: {[key:string]: AudioPlayer} = {};
-export function getPlayer(guildid: string): AudioPlayer;
-export function getPlayer(guildid: string, create: true): AudioPlayer;
-export function getPlayer(guildid: string, create: false): AudioPlayer | undefined;
+const players: {[key:string]: {player?:AudioPlayer,playing?:RealSong}} = {}
+export function getPlayer(guildid: string)               : {player:AudioPlayer,playing?:RealSong}
+export function getPlayer(guildid: string, create: true) : {player:AudioPlayer,playing?:RealSong}
+export function getPlayer(guildid: string, create: false): {player?:AudioPlayer,playing?:RealSong}
 export function getPlayer(guildid: string, create: boolean = true) {
-    if (!players[guildid] && create) {players[guildid] = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}});players[guildid].setMaxListeners(1)}
+    if (!players[guildid]) {players[guildid] = {player: create ? createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}}).setMaxListeners(1) : undefined}}
     return players[guildid];
 }
 
@@ -35,27 +36,6 @@ export async function editReply(ctx: BaseCommandInteraction | ButtonInteraction 
         await ctx.reply(content);
     }
 }
-
-// function disableButtons(ctx: ButtonInteraction, options?: InteractionUpdateOptions): void {
-//     if (ctx.deferred || ctx.message.flags === MessageFlags.FLAGS.EPHEMERAL) return console.warn("Attempted to disable buttons on deferred context.")
-//     try {
-//         if (!(ctx.message instanceof Message && ctx.message.components && ctx.message.components instanceof Array<MessageActionRow<MessageButton | MessageSelectMenu>>)) return;
-//         let jmsg: InteractionUpdateOptions | any = ctx.message;
-//         if (ctx.message.nonce === null) jmsg.nonce = undefined;
-//         let audited: InteractionUpdateOptions = {};
-//         audited = Object.assign(audited,jmsg)
-//         if (!options?.components) audited.components = ctx.message.components?.map(a=>{
-//             return new MessageActionRow({components: a.components.map(c=>{
-//                 c.disabled=true;return c as MessageActionRowComponent
-//             })} as MessageActionRowOptions<MessageActionRowComponent>)
-//         })
-//         if (!options?.attachments) audited.attachments = [...ctx.message.attachments.values()]
-//         if (options) audited = Object.assign(audited,options);
-//         ctx.update(audited)
-//     } catch (e) {
-//         console.error(e)
-//     }
-// }
 
 export function truncateString(str: string, len: number): string {
     return (str.length > len) ? str.slice(0, len-1)+".." : str;

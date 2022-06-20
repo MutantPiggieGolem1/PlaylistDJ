@@ -118,6 +118,12 @@ export class Playlist { // Represents a youtube or data playlist
         this.playlist.items[index] = meta;
     }
 
+    public vote(songid: string, voteup: boolean) {
+        let index: number = this.playlist.items.findIndex(i => i.id === songid)
+        if (index < 0) return;
+        this.playlist.items[index].score += voteup ? 1 : -1;
+    }
+
     public constructor(pl: MusicJSON | string) {
         if (typeof pl === "string") {
             if (!fs.existsSync(pl+"data.json")) throw new Error("Couldn't find playlist!")
@@ -149,4 +155,10 @@ export class Playlist { // Represents a youtube or data playlist
         if (!fs.existsSync(this.playlist.directory)) {fs.mkdirSync(this.playlist.directory, { recursive: true })} 
         return fs.promises.writeFile(this.playlist.directory+"data.json",JSON.stringify(this.playlist))
     }
+}
+
+const playlists: {[key: string]: Playlist} = {};
+export function getPlaylist(guildid: string): Playlist {
+    if (!playlists[guildid]) playlists[guildid] = new Playlist(`./resources/music/${guildid}/`);
+    return playlists[guildid];
 }

@@ -1,6 +1,6 @@
 import { BaseCommandInteraction, Message } from "discord.js";
 import { RealSong } from "../../youtube/util";
-import { Playlist } from "../../youtube/playlist";
+import { getPlaylist, Playlist } from "../../youtube/playlist";
 import { reply, truncateString } from "../util";
 import { Command } from "./Commands";
 
@@ -25,7 +25,7 @@ export const Delete: Command = {
 
         let ids: string[] = inp.split(",").slice(undefined,10).map(id=>id.trim())
         try {
-            var playlist: Playlist = new Playlist(`./resources/music/${ctx.guild.id}/`);
+            var playlist: Playlist = getPlaylist(ctx.guild.id);
         } catch { return reply(ctx, "Couldn't find playlist!") }
         let songs: RealSong[] | undefined = await playlist.removeSongs(ids);
         if (!songs) return reply(ctx, "Couldn't find song!");

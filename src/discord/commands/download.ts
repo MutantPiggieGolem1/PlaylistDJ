@@ -35,7 +35,7 @@ export const Download: Command = {
             overwrite = !!ctx.options.get("overwrite", false)?.value
         } else {
             let o: string | undefined;
-            [url,o] = ctx.content.replaceAll(/\s{2,}/g," ").split(" ").slice(2)
+            [url,o] = ctx.content.split(/\s+/g).slice(2)
             overwrite = TRUTHY.includes(o?.toLowerCase());
         }
         if (!url) { reply(ctx, "Invalid arguments!"); return; }

@@ -1,6 +1,6 @@
-import { BaseCommandInteraction, ButtonInteraction, EmbedField, Message, MessageActionRow, MessageActionRowComponent, MessageComponentInteraction, MessageOptions } from "discord.js";
+import { BaseCommandInteraction, ButtonInteraction, EmbedField, Message, MessageActionRow, MessageActionRowComponent, MessageOptions } from "discord.js";
 import { Genre, RealSong } from "../../youtube/util";
-import { Playlist } from "../../youtube/playlist";
+import { getPlaylist, Playlist } from "../../youtube/playlist";
 import { reply } from "../util";
 import { Command } from "./Commands";
 import { client } from "../../index";
@@ -37,13 +37,13 @@ export const Edit: Command = {
         } else {
             let args: string[] = ctx.content.split(/\s+/g);
             id = args[2]
-            field = args[4]?.toLowerCase()
+            field = args[3]?.toLowerCase()
             value = args.slice(4)?.join(" ")
         }
         if (!id) return reply(ctx, "Invalid Arguments!")
 
         try {
-            var playlist: Playlist = new Playlist(`./resources/music/${ctx.guild.id}/`);
+            var playlist: Playlist = getPlaylist(ctx.guild.id);
         } catch { return reply(ctx, "Couldn't find playlist!") }
         let songindex: number = playlist.playlistdata.items.findIndex(i => i.id === id)
         if (songindex < 0) return reply(ctx, "Couldn't find song!")
@@ -94,6 +94,11 @@ export const Edit: Command = {
                         "inline": true
                     } as EmbedField,
                     {
+                        "name": `Score:`,
+                        "value": song.score.toString(),
+                        "inline": true
+                    } as EmbedField,
+                    {
                         "name": `Tags:`,
                         "value": song.tags?.join(", ") ?? "None",
                         inline: false
@@ -131,10 +136,10 @@ export const Edit: Command = {
         if (!ctx.guild) return;
 
         try {
-            await new Playlist(`./resources/music/${ctx.guild.id}/`).save()
+            await getPlaylist(ctx.guild.id).save()
         } catch (e) {
             return reply(ctx,"An Error Occured: "+e);
         }
-        ctx.update({content:"Saved!",components:[]}) // FIXME: What if setting an interaction to ephemeral is causing the unknown interaction issue
+        ctx.update({content:"Saved!",components:[]})
     }
 }

@@ -1,9 +1,9 @@
-import { MessageOptions, BaseCommandInteraction, Interaction, Message, MessageActionRow, MessageActionRowComponent, MessageComponentInteraction, MessageEmbed, MessageSelectOptionData, InteractionUpdateOptions, EmbedField } from "discord.js";
+import { MessageOptions, BaseCommandInteraction, Interaction, Message, MessageActionRow, MessageActionRowComponent, MessageComponentInteraction, MessageEmbed, InteractionUpdateOptions, EmbedField } from "discord.js";
 import { MusicJSON } from "../../youtube/util";
 import { client } from "../../index";
 import { reply } from "../util";
 import { Command } from "./Commands";
-import { Playlist } from "../../youtube/playlist";
+import { getPlaylist } from "../../youtube/playlist";
 
 export const List: Command = {
     name: "list",
@@ -25,7 +25,7 @@ export const List: Command = {
             search = ctx.options.get("name",false)?.value?.toString()
         } else {
             search = ctx.content.split(" ").slice(2).join(" ");
-        }
+        } // TODO: Top-ranked music
 
         let m: MessageOptions;
         if ((m = getMessage<MessageOptions>(ctx,search))) reply(ctx,m);
@@ -50,10 +50,9 @@ export const List: Command = {
 
 function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, searchterm?: string, page = 0): T {
     if (!ctx.guild) return {content:"Couldn't find guild!"} as T;
-    let playlistdata: MusicJSON;
     try {
-        playlistdata = new Playlist(`./resources/music/${ctx.guild.id}/`).playlistdata;
-    } catch (e) { return {content:"Couldn't find playlist!"} as T; }
+        var playlistdata: MusicJSON = getPlaylist(ctx.guild.id).playlistdata;
+    } catch (e) { console.error(e); return {content:"Couldn't find playlist!"} as T; }
     let items = searchterm ? playlistdata.items.filter(i=>i.title.includes(searchterm)) : playlistdata.items;
     return {
         "content": page.toString(),
