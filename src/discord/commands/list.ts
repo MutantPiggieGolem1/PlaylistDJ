@@ -52,7 +52,7 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
     if (!ctx.guild) return {content:"Couldn't find guild!"} as T;
     try {
         var playlistdata: MusicJSON = getPlaylist(ctx.guild.id).playlistdata;
-    } catch (e) { console.error(e); return {content:"Couldn't find playlist!"} as T; }
+    } catch (e) { return {content:"Couldn't find playlist!"} as T; }
     let items = searchterm ? playlistdata.items.filter(i=>i.title.includes(searchterm)) : playlistdata.items;
     return {
         "content": page.toString(),

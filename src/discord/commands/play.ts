@@ -34,12 +34,12 @@ export const Play: Command = {
         let start: RealSong | undefined, silent: boolean;
         if (ctx instanceof BaseCommandInteraction) {
             let ss: string | undefined = ctx.options.get("song",false)?.value?.toString()
-            if (ss) start = playlist.items.find(s=>s.id===ss||s.title.toLowerCase()===ss?.toLowerCase())
+            if (ss) start = playlist.items.find(s=>s.id===ss)
             silent = !!ctx.options.get("silent",false)?.value
         } else {
             let si: string | undefined, ss: string | undefined;
             [ss,si] = ctx.content.split(/\s+/g).slice(2)
-            if (ss) start = playlist.items.find(s=>s.id===ss||s.title.toLowerCase()===ss?.toLowerCase())
+            if (ss) start = playlist.items.find(s=>s.id===ss)
             silent = TRUTHY.includes(si?.toLowerCase())
         }
 
@@ -52,11 +52,13 @@ export const Play: Command = {
 
         let song: RealSong = start ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:silent})
-        if (ctx.channel && !silent) return ctx.channel.send(play(player, song))
+        let msg: MessageOptions = play(player, song);
+        if (ctx.channel && !silent) ctx.channel.send(msg);
         player.player.on(AudioPlayerStatus.Idle, () => {
-            resetVotes();
             let song: RealSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
-            if (ctx.channel && !silent) ctx.channel.send(play(player, song))
+            let msg: MessageOptions = play(player, song);
+            if (ctx.channel && !silent) ctx.channel.send(msg);
+            resetVotes();
         })
     }
 }
