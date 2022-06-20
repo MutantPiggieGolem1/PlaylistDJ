@@ -67,21 +67,20 @@ export class WebPlaylist {
         this.ytplaylist.items = this.ytplaylist.items.filter((_: ytpl.Item,i: number)=>!indices.includes(i))
     }
 
-    public download(directory: string, clear?: boolean): EventEmitter {
-        let ee: EventEmitter = new EventEmitter()
+    public download(guildid: string): EventEmitter {
+        let ee: EventEmitter = new EventEmitter();
 
-        if (!fs.existsSync(directory)) {
-            fs.mkdirSync(directory, { recursive: true });
-        } else if (clear) {
-            fs.readdirSync(directory).forEach((file: string) => {
-                fs.rmSync(directory+file);
-            });
-        }
+        const directory = `./resources/playlists/${guildid}.json`
+        let pdata: MusicJSON = {guildid, url: [this.ytplaylist.url], items: []};
+        if (fs.existsSync(directory)) {try {
+            let odata: MusicJSON = new Playlist(guildid).playlistdata;
+            pdata.url = [...new Set<string>([...pdata.url, ...odata.url])]
+            pdata.items = odata.items
+        } catch (e) {}}
 
-        let pdata: MusicJSON = {directory, url: [this.ytplaylist.url], items: []};
         ee.emit("start",this.ytplaylist.items)
         Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => new Promise<boolean>(async (resolve, reject) => {
-            let file: string = directory + playlistitem.id + AUDIOFORMAT
+            const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
             fs.openSync(file, 'w') // create if not exists
             ytdl.getInfo(playlistitem.url).then((videoinfo: ytdl.videoInfo) => {
                 ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file))
@@ -93,11 +92,6 @@ export class WebPlaylist {
             }).catch((e: Error) => {ee.emit('warn', e); reject(e)})
         }))).then((completion: Array<PromiseSettledResult<boolean>>) => {
             if (completion.every(r=>r.status==="rejected")) return ee.emit("finish",undefined);
-            try {
-                let odata: MusicJSON = new Playlist(directory).playlistdata
-                pdata.url = [...new Set<string>([...pdata.url, ...odata.url])]
-                pdata.items = pdata.items.concat(odata.items.filter(i=>pdata.items.every(p=>p.id!==i.id)))
-            } catch (e) {console.warn(e)}
             let playlist: Playlist = new Playlist(pdata);
             playlist.save()
             ee.emit("finish",playlist)
@@ -105,7 +99,8 @@ export class WebPlaylist {
         return ee;
     }
 }
-export class Playlist { // Represents a youtube or data playlist
+
+export class Playlist { // Represents a playlist stored on the filesystem
     private playlist: MusicJSON;
 
     public get playlistdata(): MusicJSON {
@@ -124,20 +119,14 @@ export class Playlist { // Represents a youtube or data playlist
         this.playlist.items[index].score += voteup ? 1 : -1;
     }
 
-    public constructor(pl: MusicJSON | string) {
-        if (typeof pl === "string") {
-            if (!fs.existsSync(pl+"data.json")) throw new Error("Couldn't find playlist!")
-            let pdata = JSON.parse(fs.readFileSync(pl+"data.json").toString());
-            pdata.items.map((i: any)=>{i.genre = Object.values(Genre).includes(i.genre) ? i.genre as Genre : Genre.Unknown;return i;}) // remedy 0 -> unknown switch
+    public constructor(guildid: MusicJSON | string) {
+        if (typeof guildid === "string") {
+            if (!fs.existsSync(`./resources/playlists/${guildid}.json`)) throw new Error("Couldn't find playlist!")
+            let pdata = JSON.parse(fs.readFileSync(`./resources/playlists/${guildid}.json`).toString());
             this.playlist = pdata as MusicJSON
         } else {
-            this.playlist = pl;
+            this.playlist = guildid;
         }
-    }
-
-    public async clean() {
-        let paths: fs.Dirent[] = (await fs.promises.readdir(this.playlist.directory,{withFileTypes:true})).filter(dirent=>dirent.isFile()&&(!dirent.name.endsWith(".json"))&&this.playlist.items.every(i=>i.file!==this.playlist.directory+dirent.name))
-        return Promise.all(paths.map(p=>fs.promises.rm(this.playlist.directory+p.name)))
     }
 
     public async removeSongs(ids: string[]): Promise<undefined | RealSong[]> {
@@ -152,13 +141,12 @@ export class Playlist { // Represents a youtube or data playlist
     }
 
     public async save() {
-        if (!fs.existsSync(this.playlist.directory)) {fs.mkdirSync(this.playlist.directory, { recursive: true })} 
-        return fs.promises.writeFile(this.playlist.directory+"data.json",JSON.stringify(this.playlist))
+        return fs.promises.writeFile(`./resources/playlists/${this.playlist.guildid}.json`,JSON.stringify(this.playlist))
     }
 }
 
 const playlists: {[key: string]: Playlist} = {};
 export function getPlaylist(guildid: string): Playlist {
-    if (!playlists[guildid]) playlists[guildid] = new Playlist(`./resources/music/${guildid}/`);
+    if (!playlists[guildid]) playlists[guildid] = new Playlist(guildid);
     return playlists[guildid];
 }

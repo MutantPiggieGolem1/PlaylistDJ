@@ -18,7 +18,7 @@ export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
 }
 
 export type MusicJSON = {
-    directory: string,
+    guildid: string,
     url: string[],
 
     items: Array<RealSong>,

@@ -52,7 +52,7 @@ export const Play: Command = {
 
         let song: RealSong = start ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:silent})
-        let msg: MessageOptions = play(player, song);
+        let msg: MessageOptions = play(player, song)
         if (ctx.channel && !silent) ctx.channel.send(msg);
         player.player.on(AudioPlayerStatus.Idle, () => {
             let song: RealSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
