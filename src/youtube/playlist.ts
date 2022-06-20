@@ -79,18 +79,30 @@ export class WebPlaylist {
         } catch (e) {}}
 
         ee.emit("start",this.ytplaylist.items)
-        Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => new Promise<boolean>(async (resolve, reject) => {
+        Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
             const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
-            fs.openSync(file, 'w') // create if not exists
-            ytdl.getInfo(playlistitem.url).then((videoinfo: ytdl.videoInfo) => {
-                ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file))
-                .on('finish', () => {
-                    pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RealSong)
-                    ee.emit("progress",pdata,this.ytplaylist.items.length)
-                    resolve(true)
-                }).on('error', reject)
-            }).catch((e: Error) => {ee.emit('warn', e); reject(e)})
-        }))).then((completion: Array<PromiseSettledResult<boolean>>) => {
+            return Promise.race([new Promise<void>((resolve,reject) => {
+                ytdl.getInfo(playlistitem.url).then((videoinfo: ytdl.videoInfo) => {
+                    if (fs.existsSync(file)) {
+                        pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RealSong)
+                        return resolve();
+                    }
+                    fs.openSync(file, 'w')
+                    ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file))
+                    .on('finish', () => {
+                        pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RealSong)
+                        ee.emit("progress",pdata,this.ytplaylist.items.length)
+                        resolve()
+                    }).on('error', reject)
+                }).catch((e: Error) => {ee.emit('warn', e); reject(e)})
+            }),new Promise<void>((_,reject) => {
+                setTimeout(()=>{
+                    fs.rmSync(file)
+                    ee.emit('warn',new Error(`Skipped \`${playlistitem.id}\` (timeout).`))
+                    reject()
+                },150*1000)
+            })])
+        })).then((completion: Array<PromiseSettledResult<void>>) => {
             if (completion.every(r=>r.status==="rejected")) return ee.emit("finish",undefined);
             let playlist: Playlist = new Playlist(pdata);
             playlist.save()

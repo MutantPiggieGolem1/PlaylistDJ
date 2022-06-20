@@ -190,8 +190,9 @@ export const Download: Command = {
                     editReply(ctx,`Downloaded: ${pdata.items?.length}/${totalsongs} songs.`);
                 }).on('finish',(playlist: Playlist | undefined) => {
                     editReply(ctx,`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
-                }).on('warn' , (e: Error) => {
-                    editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.message)
+                }).on('warn' , (e: Error, pdata?: MusicJSON) => {
+                    if (pdata) editReply(ctx, `Downloaded: ${pdata.items?.length} songs. (Non-Fatal: ${e.message})`)
+                    editReply(ctx,`Downloaded: Non-Fatal Error Occured: `+e.message)
                 }).on('error', (e: Error) => {
                     editReply(ctx,`Error: `+e.message);
                 })
