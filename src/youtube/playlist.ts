@@ -78,6 +78,7 @@ export class WebPlaylist {
             });
         }
 
+<<<<<<< Updated upstream
         let pdata: MusicJSON = {directory, url: [this.ytplaylist.url], items: []};
         ee.emit("start",this.ytplaylist.items)
         Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => new Promise<boolean>(async (resolve, reject) => {
@@ -92,6 +93,32 @@ export class WebPlaylist {
                 }).on('error', reject)
             }).catch((e: Error) => {ee.emit('warn', e); reject(e)})
         }))).then((completion: Array<PromiseSettledResult<boolean>>) => {
+=======
+        let done: number, total: number = this.ytplaylist.items.length;
+        ee.emit("start",this.ytplaylist.items)
+        Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
+            const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
+            if (fs.existsSync(file)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RealSong);total--;return Promise.resolve();}
+            return Promise.race([new Promise<void>(async (resolve,reject) => {
+                try {
+                    let videoinfo: ytdl.videoInfo = await ytdl.getInfo(playlistitem.url)
+                    ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file, {
+                        fd: fs.openSync(file, 'w'), flags: "w"
+                    })).on('finish', () => {
+                        pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RealSong)
+                        ee.emit("progress",++done,total);
+                        resolve()
+                    })
+                } catch (e) {ee.emit('warn', done, --total, e); return reject(e)}
+            }),new Promise<void>((_,reject) => {
+                setTimeout(()=>{
+                    if (fs.existsSync(file)) fs.rmSync(file); // cleanup partial progress
+                    ee.emit('warn', done, --total, new Error(`Skipped \`${playlistitem.id}\` (timeout).`))
+                    reject()
+                },150*1000)
+            })])
+        })).then((completion: Array<PromiseSettledResult<void>>) => {
+>>>>>>> Stashed changes
             if (completion.every(r=>r.status==="rejected")) return ee.emit("finish",undefined);
             try {
                 let odata: MusicJSON = new Playlist(directory).playlistdata
@@ -124,12 +151,19 @@ export class Playlist { // Represents a youtube or data playlist
         this.playlist.items[index].score += voteup ? 1 : -1;
     }
 
+<<<<<<< Updated upstream
     public constructor(pl: MusicJSON | string) {
         if (typeof pl === "string") {
             if (!fs.existsSync(pl+"data.json")) throw new Error("Couldn't find playlist!")
             let pdata = JSON.parse(fs.readFileSync(pl+"data.json").toString());
             pdata.items.map((i: any)=>{i.genre = Object.values(Genre).includes(i.genre) ? i.genre as Genre : Genre.Unknown;return i;}) // remedy 0 -> unknown switch
             this.playlist = pdata as MusicJSON
+=======
+    public constructor(guildid: MusicJSON | string) {
+        if (typeof guildid === "string") {
+            if (!fs.existsSync(`./resources/playlists/${guildid}.json`)) throw new Error("Couldn't find playlist!")
+            this.playlist = JSON.parse(fs.readFileSync(`./resources/playlists/${guildid}.json`).toString()) as MusicJSON
+>>>>>>> Stashed changes
         } else {
             this.playlist = pl;
         }

@@ -2,7 +2,7 @@ import ytpl from "ytpl";
 import ytdl from "ytdl-core";
 export const AUDIOFORMAT = ".webm"
 
-export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
+export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {
     let titlesegments = video.title.split(" - ").slice(0,2)
     let artistindex = titlesegments.findIndex(segment => segment.includes(video.author.name) || video.author.name.toLowerCase().includes(segment.replaceAll(/\s/g,"").toLowerCase()))
     return {

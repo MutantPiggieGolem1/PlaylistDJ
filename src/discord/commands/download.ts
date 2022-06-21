@@ -197,13 +197,18 @@ export const Download: Command = {
                 playlist.download(`./resources/music/${ctx.guild?.id ?? "unknown"}/`,ow) // OVERWRITE MODE OFF
                 .once('start', (items) => {
                     editReply(ctx,`Downloading: ${items?.length} songs.`)
-                }).on('progress', (pdata: MusicJSON, totalsongs: number) => {
-                    editReply(ctx,`Downloaded: ${pdata.items?.length}/${totalsongs} songs.`);
+                }).on('progress', (cur: number, total: number) => {
+                    editReply(ctx,`Downloaded: ${cur}/${total} songs.`);
                 }).on('finish',(playlist: Playlist | undefined) => {
                     playlist?.clean();
                     editReply(ctx,`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
+<<<<<<< Updated upstream
                 }).on('warn' , (e: Error) => {
                     editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.message)
+=======
+                }).on('warn' , (cur: number, total: number, error: Error) => {
+                    editReply(ctx,`Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
+>>>>>>> Stashed changes
                 }).on('error', (e: Error) => {
                     editReply(ctx,`Error: `+e.message);
                 })
