@@ -6,6 +6,7 @@ import { client } from "../../index";
 import { getPlayer, reply, TRUTHY } from "../util";
 import { Command } from "./Commands";
 import { resetVotes } from "./vote";
+import { createReadStream } from "fs"
 
 export const Play: Command = {
     name: "play",
@@ -49,22 +50,22 @@ export const Play: Command = {
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
         if (!connection?.subscribe(player.player)) return reply(ctx,"Couldn't find voice connection!")
         
-
-        let song: RealSong = start ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
+        let song: RealSong = start ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
         let msg: MessageOptions = play(player, song)
         if (ctx.channel && !silent) ctx.channel.send(msg);
+        let gid: string = ctx.guild.id;
         player.player.on(AudioPlayerStatus.Idle, () => {
             let song: RealSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
             let msg: MessageOptions = play(player, song);
             if (ctx.channel && !silent) ctx.channel.send(msg);
-            resetVotes();
+            resetVotes(gid);
         })
     }
 }
 
 function play(player: {player:AudioPlayer,playing?:RealSong}, song: RealSong): MessageOptions {
-    player.player.play(createAudioResource(song.file,{
+    player.player.play(createAudioResource(createReadStream(song.file),{
         inputType: StreamType.WebmOpus,
         metadata: song as Song,
         inlineVolume: false,
