@@ -103,6 +103,7 @@ dist
 resources/token.txt
 
 # Resources
+resources/music/
 resources/music/*
 resources/playlists/*
 resources/playlists/

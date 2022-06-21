@@ -4,8 +4,8 @@ import { RealSong } from "../../youtube/util";
 import { getPlayer, reply, truncateString } from "../util";
 import { Command } from "./Commands";
 
-const voted: Set<String> = new Set();
-export function resetVotes() {voted.clear()}
+const voted: {[key:string]: Set<String>} = {};
+export function resetVotes(gid: string) {voted[gid]?.clear()}
 
 export const Vote: Command = {
     name: "vote",
@@ -21,7 +21,7 @@ export const Vote: Command = {
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild || !(ctx.member instanceof GuildMember)) return;
-        if (voted.has(ctx.member.user.id)) return reply(ctx,"You've already voted!");
+        if (voted[ctx.guild.id]?.has(ctx.member.user.id)) return reply(ctx,"You've already voted!");
         let arg1: string | undefined = (ctx instanceof BaseCommandInteraction ?
             ctx.options.get("vote",true).value?.toString() :
             ctx.content.split(/\s+/g)[2])?.toLowerCase()
@@ -33,7 +33,8 @@ export const Vote: Command = {
         let song: RealSong | undefined = getPlayer(ctx.guild.id,false)?.playing
         if (!song) return reply(ctx,"Couldn't find song!")
         
-        voted.add(ctx.member.user.id);
+        if (!voted[ctx.guild.id]) voted[ctx.guild.id] = new Set<string>();
+        voted[ctx.guild.id].add(ctx.member.user.id);
         playlist.vote(song.id,arg1==="up");
         reply(ctx,`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.playlistdata.items.find(i=>i.id===song?.id)?.score} score)`)
     }
