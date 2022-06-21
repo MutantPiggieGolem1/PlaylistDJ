@@ -103,19 +103,10 @@ dist
 resources/token.txt
 
 # Resources
-<<<<<<< HEAD
-<<<<<<< Updated upstream
 resources/music/
-=======
 resources/music/*
 resources/playlists/*
 resources/playlists/
->>>>>>> Stashed changes
-=======
-resources/music/*
-resources/playlists/*
-resources/playlists/
->>>>>>> d327dab04d2ddf48c6d147baea95864a6a6cbc98
 
 # VSC
 .VSCodeCounter/*

@@ -190,18 +190,8 @@ export const Download: Command = {
                     editReply(ctx,`Downloaded: ${cur}/${total} songs.`);
                 }).on('finish',(playlist: Playlist | undefined) => {
                     editReply(ctx,`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-                }).on('warn' , (e: Error) => {
-                    editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.message)
-=======
                 }).on('warn' , (cur: number, total: number, error: Error) => {
                     editReply(ctx,`Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
->>>>>>> Stashed changes
-=======
-                }).on('warn' , (cur: number, total: number, error: Error) => {
-                    editReply(ctx,`Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
->>>>>>> d327dab04d2ddf48c6d147baea95864a6a6cbc98
                 }).on('error', (e: Error) => {
                     editReply(ctx,`Error: `+e.message);
                 })

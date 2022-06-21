@@ -5,7 +5,7 @@ import { getPlayer, reply, truncateString } from "../util";
 import { Command } from "./Commands";
 
 const voted: {[key:string]: Set<String>} = {};
-export function resetVotes(gid: string) {voted[gid].clear()}
+export function resetVotes(gid: string) {voted[gid]?.clear()}
 
 export const Vote: Command = {
     name: "vote",

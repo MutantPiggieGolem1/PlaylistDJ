@@ -130,14 +130,12 @@ export class Playlist { // Represents a playlist stored on the filesystem
         this.playlist.items[index].score += voteup ? 1 : -1;
     }
 
-    public constructor(pl: MusicJSON | string) {
-        if (typeof pl === "string") {
-            if (!fs.existsSync(pl+"data.json")) throw new Error("Couldn't find playlist!")
-            let pdata = JSON.parse(fs.readFileSync(pl+"data.json").toString());
-            pdata.items.map((i: any)=>{i.genre = Object.values(Genre).includes(i.genre) ? i.genre as Genre : Genre.Unknown;return i;}) // remedy 0 -> unknown switch
-            this.playlist = pdata as MusicJSON
+    public constructor(arg: MusicJSON | string) {
+        if (typeof arg === "string") {
+            if (!fs.existsSync(`./resources/playlists/${arg}.json`)) throw new Error("Couldn't find playlist!")
+            this.playlist = JSON.parse(fs.readFileSync(`./resources/playlists/${arg}.json`).toString()) as MusicJSON
         } else {
-            this.playlist = pl;
+            this.playlist = arg;
         }
     }
 
