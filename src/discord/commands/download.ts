@@ -19,25 +19,15 @@ export const Download: Command = {
         description: "Youtube URL to Download From",
         type: 3, // string
         required: true,
-    },{
-        name: "overwrite",
-        description: "Overwrite existing videos?",
-        type: "BOOLEAN",
-        required: false
     }],
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
         let url: string | null | undefined;
         let overwrite: boolean = false;
-        if (ctx instanceof BaseCommandInteraction) {
-            url = ctx.options.get("url", true).value?.toString()
-            overwrite = !!ctx.options.get("overwrite", false)?.value
-        } else {
-            let o: string | undefined;
-            [url,o] = ctx.content.split(/\s+/g).slice(2)
-            overwrite = TRUTHY.includes(o?.toLowerCase());
-        }
+        url = ctx instanceof BaseCommandInteraction ?
+            ctx.options.get("url", true).value?.toString() :
+            ctx.content.split(/\s+/g)[2]
         if (!url) { reply(ctx, "Invalid arguments!"); return; }
 
         reply(ctx, "Detecting Playlist...");
@@ -190,18 +180,17 @@ export const Download: Command = {
                 if (idata[ctx.guild?.id]?.exclusions) {playlist.remove(idata[guildid].exclusions)}
                 // FIXME: Disable custom selecton menu here
             case 'cdownloadall':
-                let ow: boolean = idata[ctx.guild.id].overwrite;
                 delete idata[ctx.guild.id];
                 
                 if (!ctx.deferred && ctx.isRepliable()) ctx.deferReply({"ephemeral": true});
-                playlist.download(`./resources/music/${ctx.guild?.id ?? "unknown"}/`,ow) // OVERWRITE MODE OFF
+                playlist.download(ctx.guild?.id)
                 .once('start', (items) => {
                     editReply(ctx,`Downloading: ${items?.length} songs.`)
                 }).on('progress', (cur: number, total: number) => {
                     editReply(ctx,`Downloaded: ${cur}/${total} songs.`);
                 }).on('finish',(playlist: Playlist | undefined) => {
-                    playlist?.clean();
                     editReply(ctx,`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
+<<<<<<< HEAD
 <<<<<<< Updated upstream
                 }).on('warn' , (e: Error) => {
                     editReply(ctx,`Downloading: Non-Fatal Error Occured: `+e.message)
@@ -209,6 +198,10 @@ export const Download: Command = {
                 }).on('warn' , (cur: number, total: number, error: Error) => {
                     editReply(ctx,`Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
 >>>>>>> Stashed changes
+=======
+                }).on('warn' , (cur: number, total: number, error: Error) => {
+                    editReply(ctx,`Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
+>>>>>>> d327dab04d2ddf48c6d147baea95864a6a6cbc98
                 }).on('error', (e: Error) => {
                     editReply(ctx,`Error: `+e.message);
                 })
