@@ -1,7 +1,7 @@
 import { MessageOptions, BaseCommandInteraction, Interaction, Message, MessageActionRow, MessageActionRowComponent, MessageComponentInteraction, MessageEmbed, InteractionUpdateOptions, EmbedField } from "discord.js";
-import { MusicJSON } from "../../youtube/util";
+import { MusicJSON, RealSong } from "../../youtube/util";
 import { client } from "../../index";
-import { reply } from "../util";
+import { reply, truncateString } from "../util";
 import { Command } from "./Commands";
 import { getPlaylist } from "../../youtube/playlist";
 
@@ -20,15 +20,19 @@ export const List: Command = {
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
-        let search: string | undefined;
+        let arg1: string | undefined;
         if (ctx instanceof BaseCommandInteraction) {
-            search = ctx.options.get("name",false)?.value?.toString()
+            arg1 = ctx.options.get("name",false)?.value?.toString()
         } else {
-            search = ctx.content.split(" ").slice(2).join(" ");
-        } // TODO: Top-ranked music
+            arg1 = ctx.content.split(" ").slice(2).join(" ");
+        }
+
+        let options: GetMessageOptions = {};
+        if (arg1 === "top") {options.filter = (a:RealSong)=>a.score>0; options.sort = (a:RealSong,b:RealSong)=>b.score-a.score;}
+        else if (arg1) {options.filter = (i:RealSong)=>i.title.includes(arg1 ?? "")}
 
         let m: MessageOptions;
-        if ((m = getMessage<MessageOptions>(ctx,search))) reply(ctx,m);
+        if ((m = getMessage<MessageOptions>(ctx,options))) reply(ctx,m);
     },
 
     interact: async (ctx: MessageComponentInteraction) => {
@@ -48,12 +52,18 @@ export const List: Command = {
     }
 };
 
-function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, searchterm?: string, page = 0): T {
+type GetMessageOptions = {
+    filter?: (value: RealSong, index: number, array: RealSong[]) => unknown,
+    sort?: (a: RealSong, b: RealSong) => number
+}
+
+function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, options?: GetMessageOptions, page = 0): T {
     if (!ctx.guild) return {content:"Couldn't find guild!"} as T;
     try {
         var playlistdata: MusicJSON = getPlaylist(ctx.guild.id).playlistdata;
     } catch (e) { return {content:"Couldn't find playlist!"} as T; }
-    let items = searchterm ? playlistdata.items.filter(i=>i.title.includes(searchterm)) : playlistdata.items;
+    if (options?.filter) playlistdata.items = playlistdata.items.filter(options.filter);
+    if (options?.sort) playlistdata.items = playlistdata.items.sort(options.sort);
     return {
         "content": page.toString(),
         "components": [{"type": "ACTION_ROW","components": [
@@ -68,7 +78,7 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
                 "style": "PRIMARY",
                 "label": `Next Page`,
                 "customId": `clistpageup`,
-                "disabled": page >= Math.floor(items.length/25),
+                "disabled": page >= Math.floor(playlistdata.items.length/25),
                 "type": "BUTTON"
             } as MessageActionRowComponent,
                 {
@@ -81,16 +91,16 @@ function getMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: In
         ]} as MessageActionRow],
         "embeds": [{
             "type": "rich",
-            "title": `All ${searchterm ? "Results" : "Songs"} (${items.length})`,
+            "title": `${options?.sort ? "Top" : "All"} ${options?.filter ? "Results" : "Songs"} (${playlistdata.items.length})`,
             "description": `${ctx.guild.name.length > 20 ? ctx.guild.nameAcronym : ctx.guild.name} Server Playlist`,
             "color": 0xff0000,
-            "fields": items.slice(page*25,page*25+25).map(s => {return {
-                "name": s.title,
+            "fields": playlistdata.items.slice(page*25,page*25+25).map(s => {return {
+                "name": options?.sort ? `[${s.score} Score] ${truncateString(s.title,25)}` : s.title,
                 "value": s.id,
                 "inline": true,
             } as EmbedField}) || {"name": "No Results", "value": "Out Of Bounds", "inline": false} as EmbedField,
             "footer": {
-                "text": `PlaylistDJ - Song List - Page ${page+1}/${Math.ceil(items.length/25)}`,
+                "text": `PlaylistDJ - Song List - Page ${page+1}/${Math.ceil(playlistdata.items.length/25)}`,
                 "iconURL": client.user?.avatarURL() ?? ""
             }
         } as MessageEmbed]

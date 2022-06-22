@@ -1,5 +1,6 @@
 import { BaseCommandInteraction, ChatInputApplicationCommandData, Message, MessageComponentInteraction } from "discord.js";
 import { Auth } from "./auth";
+import { Clean } from "./clean";
 import { Delete } from "./delete";
 import { Download } from "./download";
 import { Edit } from "./edit";
@@ -15,4 +16,4 @@ export interface Command extends ChatInputApplicationCommandData {
     run(ctx: BaseCommandInteraction | Message): void;
     interact?(ctx: MessageComponentInteraction): void;
 }
-export const Commands: Command[] = [Auth,Delete,Download,Edit,Join,Leave,List,Play,Rickroll,Vote]; // Pause
+export const Commands: Command[] = [Auth,Clean,Delete,Download,Edit,Join,Leave,List,Play,Rickroll,Vote]; // Pause
