@@ -50,7 +50,6 @@ export const Play: Command = {
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
         if (!connection?.subscribe(player.player)) return reply(ctx,"Couldn't find voice connection!")
         
-
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
         let song: RealSong = start ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
         let msg: MessageOptions = play(player, song)
