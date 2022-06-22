@@ -31,6 +31,7 @@ export const Play: Command = {
         try {
             var playlist: MusicJSON = getPlaylist(ctx.guild.id).playlistdata;
         } catch { return reply(ctx, "Couldn't find playlist!") }
+        if (!playlist.items) return reply(ctx, "Couldn't find songs!")
 
         let start: RealSong | undefined, silent: boolean;
         if (ctx instanceof BaseCommandInteraction) {

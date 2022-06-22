@@ -177,7 +177,7 @@ export const Download: Command = {
                 }
             case 'cdownloadcustomall':
                 if (idata[ctx.guild?.id]?.exclusions) {playlist.remove(idata[guildid].exclusions)}
-                ctx.update({content:"Beginning Download!",embeds:[],components:[]})
+                // ctx.update({content:"Beginning Download!",embeds:[],components:[]})
             case 'cdownloadall':
                 delete idata[ctx.guild.id];
                 

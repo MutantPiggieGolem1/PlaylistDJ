@@ -1,4 +1,4 @@
-import { AUDIOFORMAT, Genre, MusicJSON, parseVideo, RealSong } from "./util";
+import { AUDIOFORMAT, MusicJSON, parseVideo, RealSong } from "./util";
 import fs from "fs"
 import { EventEmitter } from "stream";
 import * as ytdsc from "ytdl-core-discord";
