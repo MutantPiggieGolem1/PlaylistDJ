@@ -27,8 +27,8 @@ export const Delete: Command = {
         try {
             var playlist: Playlist = getPlaylist(ctx.guild.id);
         } catch { return reply(ctx, "Couldn't find playlist!") }
-        let songs: RealSong[] | undefined = await playlist.removeSongs(ids);
-        if (!songs) return reply(ctx, "Couldn't find song!");
+        let songs: RealSong[] = playlist.removeSongs(ids);
+        if (songs.length <= 0) return reply(ctx, "Couldn't find songs!");
         await playlist.save();
         reply(ctx,`Success! Removed ${songs.length} song${songs.length===1?"":"s"}:\n ${songs.map(i=>truncateString(i.title,12)).join(", ")}`)
     }

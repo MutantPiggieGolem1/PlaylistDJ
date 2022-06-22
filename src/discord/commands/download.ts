@@ -177,7 +177,7 @@ export const Download: Command = {
                 }
             case 'cdownloadcustomall':
                 if (idata[ctx.guild?.id]?.exclusions) {playlist.remove(idata[guildid].exclusions)}
-                // FIXME: Disable custom selecton menu here
+                ctx.update({content:"Beginning Download!",embeds:[],components:[]})
             case 'cdownloadall':
                 delete idata[ctx.guild.id];
                 

@@ -139,19 +139,45 @@ export class Playlist { // Represents a playlist stored on the filesystem
         }
     }
 
-    public async removeSongs(ids: string[]): Promise<undefined | RealSong[]> {
-        let dqueue: string[] = []; // not strictly neccesarry, ends up identical to ids
-        let songs: RealSong[] = await Promise.all(this.playlist.items.filter(rs=>ids.includes(rs.id)).map(async (i): Promise<RealSong>=>{
-            dqueue.push(i.id);
-            if (fs.existsSync(i.file)) await fs.promises.rm(i.file)
-            return i
-        }))
-        this.playlist.items = this.playlist.items.filter((i)=>!dqueue.includes(i.id));
-        return songs;
+    public removeSongs(ids: string[]): RealSong[] {
+        let removed: RealSong[] = [];
+        this.playlist.items = this.playlist.items.filter(i=>{if (!ids.includes(i.id)) {return true}; removed.push(i)});
+        return removed;
     }
 
-    public async save() {
+    public async save() { 
         return fs.promises.writeFile(`./resources/playlists/${this.playlist.guildid}.json`,JSON.stringify(this.playlist))
+    }
+
+    public static clean() {
+        const ee = new EventEmitter();
+        ee.emit('start')
+        Promise.all([
+            fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
+                ents.filter(ent=>ent.isFile()).map(file=>JSON.parse(fs.readFileSync(`./resources/playlists/${file.name}`).toString()) as MusicJSON)
+            ).then((playlists: MusicJSON[]) => 
+                playlists.flatMap(pl=>pl.items)
+            ).then((items: RealSong[]) => {
+                ee.emit('progress','Located all references!')
+                return new Set<string>(items.map(i=>i.file))
+            }),
+            fs.promises.readdir(`./resources/music/`,{withFileTypes:true}).then(ents=>{
+                ee.emit('progress','Located all music files!')
+                return ents.filter(ent=>ent.isFile()).map((f: fs.Dirent)=>`./resources/music/${f.name}`)
+            })
+        ]).then(([refs, files]) => 
+            Promise.all(files.filter(f=>!refs.has(f)).map(f=>fs.promises.rm(f).then(_=>f))) // remove all unrefrenced files
+            .then((rmfiles: string[])=>{
+                ee.emit('progress',`Removed all unrefrenced files (${rmfiles.length})!`)
+                return [refs,files.filter(f=>!rmfiles.includes(f))]
+            }) // pass the args along to continue chaining
+        ).then(([refs,files]) => {
+            // TODO: improper lengths => redownload
+            return [refs,files]
+        }).then(([_,files])=>{
+            ee.emit('finish',files)
+        }).catch((e: Error) => ee.emit('error', e))
+        return ee;
     }
 }
 
