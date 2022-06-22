@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { Command, Commands } from "./discord/commands/Commands";
 export const client: Client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES,Intents.FLAGS.GUILD_MESSAGES,Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
 const TOKEN: string = readFileSync("./resources/token.txt").toString();
-const PREFIX: string = "kt";
+const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
 client.on("ready", async () => {

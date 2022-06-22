@@ -78,11 +78,11 @@ export class WebPlaylist {
             pdata.items = odata.items
         } catch (e) {}}
 
-        let done: number, total: number = this.ytplaylist.items.length;
+        let done: number = 0, total: number = this.ytplaylist.items.length;
         ee.emit("start",this.ytplaylist.items)
         Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
             const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
-            if (fs.existsSync(file)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RealSong);total--;return Promise.resolve();}
+            if (fs.existsSync(file)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RealSong);done++;return Promise.resolve();}
             return Promise.race([new Promise<void>(async (resolve,reject) => {
                 try {
                     let videoinfo: ytdl.videoInfo = await ytdl.getInfo(playlistitem.url)
@@ -96,8 +96,10 @@ export class WebPlaylist {
                 } catch (e) {ee.emit('warn', done, --total, e); return reject(e)}
             }),new Promise<void>((_,reject) => {
                 setTimeout(()=>{
-                    if (fs.existsSync(file)) fs.rmSync(file); // cleanup partial progress
-                    ee.emit('warn', done, --total, new Error(`Skipped \`${playlistitem.id}\` (timeout).`))
+                    let index: number = pdata.items.findIndex(i=>i.file===file); // cleanup partial progress
+                    if (index) pdata.items.splice(index,1)                       //    |
+                    if (fs.existsSync(file)) fs.rmSync(file);                    // ___/
+                    ee.emit('warn', done, total, new Error(`Skipped \`${playlistitem.id}\` (timeout).`)) // !important! May have to decrement here but i err on the safe si
                     reject()
                 },150*1000)
             })])
