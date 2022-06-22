@@ -17,7 +17,7 @@ export const Clean: Command = {
         }).on('progress', (message: string) => {
             editReply(ctx, message)
         }).on('finish', (remainder: string[]) => {
-            editReply(ctx, `Clean Complete! Deleted ${remainder.length} files!`)
+            editReply(ctx, `Clean Complete! ${remainder.length} files remaining!`)
         }).on('error', (e: Error) => {
             editReply(ctx, `Error: ${e.message}`)
         })
