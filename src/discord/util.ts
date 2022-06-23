@@ -1,14 +1,14 @@
 import { AudioPlayer, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
-import { BaseCommandInteraction, ButtonInteraction, Interaction, Message, MessageOptions, MessagePayload } from "discord.js";
-import { RealSong } from "../youtube/util";
-import { client } from "../index";
+import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, Message, MessageOptions, MessagePayload } from "discord.js";
+import { RatedSong } from "../youtube/util";
+import { client, WHITELIST } from "../index";
 
 export const TRUTHY: string[] = ["true","yes","1","on"]
 
-const players: {[key:string]: {player?:AudioPlayer,playing?:RealSong}} = {}
-export function getPlayer(guildid: string)               : {player:AudioPlayer,playing?:RealSong}
-export function getPlayer(guildid: string, create: true) : {player:AudioPlayer,playing?:RealSong}
-export function getPlayer(guildid: string, create: false): {player?:AudioPlayer,playing?:RealSong}
+const players: {[key:string]: {player?:AudioPlayer,playing?:RatedSong}} = {}
+export function getPlayer(guildid: string)               : {player:AudioPlayer,playing?:RatedSong}
+export function getPlayer(guildid: string, create: true) : {player:AudioPlayer,playing?:RatedSong}
+export function getPlayer(guildid: string, create: false): {player?:AudioPlayer,playing?:RatedSong}
 export function getPlayer(guildid: string, create: boolean = true) {
     if (!players[guildid]) {players[guildid] = {player: create ? createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}}).setMaxListeners(1) : undefined}}
     return players[guildid];
@@ -39,4 +39,8 @@ export async function editReply(ctx: BaseCommandInteraction | ButtonInteraction 
 
 export function truncateString(str: string, len: number): string {
     return (str.length > len) ? str.slice(0, len-1)+".." : str;
+}
+
+export function isWhitelisted(ctx: BaseCommandInteraction<CacheType> | ButtonInteraction<CacheType> | Message<boolean>) {
+    return WHITELIST.has((ctx instanceof Message ? ctx.author : ctx.user).id)
 }

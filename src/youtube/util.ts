@@ -12,30 +12,25 @@ export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {
         artist: titlesegments.length === 2 && artistindex >= 0 ? titlesegments[artistindex] : "Unknown Artist",
         genre: Genre.Unknown,
         length: video.durationSec ?? -1,
-
-        score: 0,
     }
 }
 
 export type MusicJSON = {
     guildid: string,
-    url: string[],
+    url?: string[],
 
-    items: Array<RealSong>,
+    items: Array<RatedSong>,
 }
 
-export type RealSong = Song & {file: string, url: string}
-
-export type Song = {
+export type RatedSong = SongReference & {tags?: Array<string>, score: number}
+export type SongReference = Song & {file: string,url: string}
+export type Song = { // objective properties
     id: string,
 
     title: string,
     artist: string,
     genre: Genre,
     length: number, // Song Duration (Seconds)
-
-    tags?: Array<string>,
-    score: number,
 }
 
 export enum Genre {

@@ -7,7 +7,7 @@ const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
 client.on("ready", async () => {
-    if (!client.user) throw new Error("Could not obtain a user for the client.");
+    if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
     console.info(`Bot Ready! [${client.user.tag}]`);
@@ -22,7 +22,7 @@ client.on("messageCreate", (msg: Message) => {
     command.run(msg);
 })
 
-client.on("interactionCreate", async (interaction: Interaction) => {
+client.on("interactionCreate", (interaction: Interaction) => {
     if (!interaction.isCommand() && !interaction.isContextMenu()) return; // Restrict usage to me only
     let command: Command | undefined | null = Commands.find(c=>c.name===interaction.commandName);
     if (!command) return interaction.reply({"content":"Command not recognized.","ephemeral":true});

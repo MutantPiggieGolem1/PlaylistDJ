@@ -1,4 +1,4 @@
-import { AUDIOFORMAT, MusicJSON, parseVideo, RealSong } from "./util";
+import { AUDIOFORMAT, MusicJSON, parseVideo, RatedSong, Song, SongReference } from "./util";
 import fs from "fs"
 import { EventEmitter } from "stream";
 import * as ytdsc from "ytdl-core-discord";
@@ -70,26 +70,32 @@ export class WebPlaylist {
     public download(guildid: string): EventEmitter {
         let ee: EventEmitter = new EventEmitter();
 
-        const directory = `./resources/playlists/${guildid}.json`
+        const datafile = `./resources/playlists/${guildid}.json`
         let pdata: MusicJSON = {guildid, url: [this.ytplaylist.url], items: []};
-        if (fs.existsSync(directory)) {try {
-            let odata: MusicJSON = new Playlist(guildid).playlistdata;
-            pdata.url = [...new Set<string>([...pdata.url, ...odata.url])]
-            pdata.items = odata.items
-        } catch (e) {}}
+
+        if (!fs.existsSync(`./resources/music/`)) fs.mkdirSync(`./resources/music/`,{recursive:true});
+        if (!fs.existsSync("./resources/playlists")) {fs.mkdirSync("./resources/playlists",{recursive:true})}
+        else if (fs.existsSync(datafile)) {
+            let opl: Playlist | undefined = getPlaylist(guildid);
+            if (opl) {
+                let odata = opl.playlistdata
+                if (odata.url) pdata.url = [...new Set<string>([...pdata.url??[], ...odata.url])]
+                pdata.items = odata.items
+            }
+        }
 
         let done: number = 0, total: number = this.ytplaylist.items.length;
         ee.emit("start",this.ytplaylist.items)
         Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
             const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
-            if (fs.existsSync(file)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RealSong);done++;return Promise.resolve();}
+            if (fs.existsSync(file)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);done++;return Promise.resolve();}
             return Promise.race([new Promise<void>(async (resolve,reject) => {
                 try {
                     let videoinfo: ytdl.videoInfo = await ytdl.getInfo(playlistitem.url)
                     ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file, {
                         fd: fs.openSync(file, 'w'), flags: "w"
                     })).on('finish', () => {
-                        pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RealSong)
+                        pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RatedSong)
                         ee.emit("progress",++done,total);
                         resolve()
                     })
@@ -97,16 +103,17 @@ export class WebPlaylist {
             }),new Promise<void>((_,reject) => {
                 setTimeout(()=>{
                     let index: number = pdata.items.findIndex(i=>i.file===file); // cleanup partial progress
-                    if (index) pdata.items.splice(index,1)                       //    |
-                    if (fs.existsSync(file)) fs.rmSync(file);                    // ___/
+                    if (index) pdata.items.splice(index,1)                       // /
                     ee.emit('warn', done, total, new Error(`Skipped \`${playlistitem.id}\` (timeout).`)) // !important! May have to decrement here but i err on the safe si
                     reject()
-                },150*1000)
+                },14*60*1000)
             })])
         })).then((completion: Array<PromiseSettledResult<void>>) => {
-            if (completion.every(r=>r.status==="rejected")) return ee.emit("finish",undefined);
-            let playlist: Playlist = new Playlist(pdata);
-            playlist.save()
+            let playlist: Playlist | undefined;
+            if (completion.some(r=>r.status==="fulfilled")) {
+                playlist = new Playlist(pdata);
+                playlist.save()
+            } // TODO: Need to write to master DB
             ee.emit("finish",playlist)
         }).catch(e=>ee.emit("error",e))
         return ee;
@@ -115,16 +122,7 @@ export class WebPlaylist {
 
 export class Playlist { // Represents a playlist stored on the filesystem
     private playlist: MusicJSON;
-
-    public get playlistdata(): MusicJSON {
-        return this.playlist;
-    }
-
-    public set setSong(meta: RealSong) {
-        let index: number = this.playlist.items.findIndex(i => i.id === meta.id)
-        if (index < 0) return;
-        this.playlist.items[index] = meta;
-    }
+    public get playlistdata(): MusicJSON {return this.playlist}
 
     public vote(songid: string, voteup: boolean) {
         let index: number = this.playlist.items.findIndex(i => i.id === songid)
@@ -132,23 +130,55 @@ export class Playlist { // Represents a playlist stored on the filesystem
         this.playlist.items[index].score += voteup ? 1 : -1;
     }
 
-    public constructor(arg: MusicJSON | string) {
-        if (typeof arg === "string") {
-            if (!fs.existsSync(`./resources/playlists/${arg}.json`)) throw new Error("Couldn't find playlist!")
-            this.playlist = JSON.parse(fs.readFileSync(`./resources/playlists/${arg}.json`).toString()) as MusicJSON
-        } else {
-            this.playlist = arg;
-        }
+    public constructor(arg: MusicJSON) {
+        this.playlist = arg;
     }
 
-    public removeSongs(ids: string[]): RealSong[] {
-        let removed: RealSong[] = [];
+    public static create(guildid: string, ids: string[], url?: string): Playlist {
+        if (getPlaylist(guildid)) throw new Error("This guild already has a playlist!")
+        let items: RatedSong[] = ids.filter(id=>Object.keys(MUSICINDEX).includes(id)).map(id=>{return {score:0,...MUSICINDEX[id]}})
+        return new Playlist({guildid,url,items} as MusicJSON)
+    }
+
+    public async delete() {
+        delete playlists[this.playlist.guildid]
+        return await fs.promises.rm(`./resources/playlists/${this.playlist.guildid}.json`)
+    }
+
+    public addSongs(ids: string[]): RatedSong[] {
+        let added: RatedSong[] = ids.filter(id=>Object.keys(MUSICINDEX).includes(id)).map(id=>{return {score:0,...MUSICINDEX[id]}})
+        this.playlist.items = this.playlist.items.concat(added)
+        return added;
+    }
+
+    public removeSongs(ids: string[]): RatedSong[] {
+        let removed: RatedSong[] = [];
         this.playlist.items = this.playlist.items.filter(i=>{if (!ids.includes(i.id)) {return true}; removed.push(i)});
         return removed;
     }
 
+    public editSong(meta: RatedSong) {
+        let index: number = this.playlist.items.findIndex(i => i.id === meta.id)
+        if (index < 0) return;
+        this.playlist.items[index] = meta;
+    }
+
     public async save() { 
         return fs.promises.writeFile(`./resources/playlists/${this.playlist.guildid}.json`,JSON.stringify(this.playlist))
+    }
+
+    public static async delete(ids: string[]) {
+        await fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
+            ents.filter(ent=>ent.isFile()&&ent.name.endsWith(".json"))
+        ).then(jsonfiles=>
+            jsonfiles.map(file=>getPlaylist(file.name.replace(".json","")))
+        ).then(playlists => 
+            Promise.all(playlists.map(pl=>{if (pl) {pl.removeSongs(ids);return pl.save()}}))
+        )
+        await Promise.all(ids.map(id=>{
+            let file = `./resources/music/${id}${AUDIOFORMAT}`;
+            if (fs.existsSync(file)) fs.promises.rm(file)
+        }))
     }
 
     public static clean() {
@@ -159,7 +189,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
                 ents.filter(ent=>ent.isFile()).map(file=>JSON.parse(fs.readFileSync(`./resources/playlists/${file.name}`).toString()) as MusicJSON)
             ).then((playlists: MusicJSON[]) => 
                 playlists.flatMap(pl=>pl.items)
-            ).then((items: RealSong[]) => {
+            ).then((items: RatedSong[]) => {
                 ee.emit('progress','Located all references!')
                 return new Set<string>(items.map(i=>i.file))
             }),
@@ -184,7 +214,12 @@ export class Playlist { // Represents a playlist stored on the filesystem
 }
 
 const playlists: {[key: string]: Playlist} = {};
-export function getPlaylist(guildid: string): Playlist {
-    if (!playlists[guildid]) playlists[guildid] = new Playlist(guildid);
+export function getPlaylist(guildid: string): Playlist | undefined {
+    if (!playlists[guildid]) {
+        const ppath = `./resources/playlists/${guildid}.json`;
+        if (fs.existsSync(ppath)) playlists[guildid] = new Playlist(JSON.parse(fs.readFileSync(ppath).toString()) as MusicJSON)
+    }
     return playlists[guildid];
 }
+
+export const MUSICINDEX: {[key: string]: SongReference} = {}; // TODO: Placeholder

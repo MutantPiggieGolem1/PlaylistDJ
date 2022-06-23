@@ -42,7 +42,7 @@ export const Auth: Command = {
         }
     ],
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return
         if (ctx.member?.user.id !== "547624574070816799") return reply(ctx, "This command isnt for you loser")
         let user: User | undefined, option: string

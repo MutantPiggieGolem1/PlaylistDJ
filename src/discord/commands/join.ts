@@ -22,7 +22,7 @@ export const Join: Command = {
         }
     ],
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild?.available) return;
         let voicechannel;
         if (ctx instanceof BaseCommandInteraction) { // slash command
@@ -42,8 +42,8 @@ export const Join: Command = {
                 voicechannel = ctx.member.voice.channel;
             }
         }
-        if (!voicechannel || !(voicechannel instanceof VoiceChannel)) {await reply(ctx,"Couldn't find voice channel!"); return;}
-        if (!voicechannel.joinable) {await reply(ctx,"Couldn't join voice channel! (Insufficent Permissions)"); return;}
+        if (!voicechannel || !(voicechannel instanceof VoiceChannel)) {reply(ctx,"Couldn't find voice channel!"); return;}
+        if (!voicechannel.joinable) {reply(ctx,"Couldn't join voice channel! (Insufficent Permissions)"); return;}
         joinVoiceChannel({
             channelId: voicechannel.id,
             guildId: voicechannel.guild.id,
