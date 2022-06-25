@@ -340,7 +340,7 @@ const Download: SubCommand = {
             ctx.content.split(/\s+/g)[3]
         if (!url) return error(ctx, ERRORS.INVALID_ARGUMENTS);
 
-        reply(ctx, "Detecting Playlist...");
+        await reply(ctx, "Detecting Playlist...");
         ctx.channel?.sendTyping()
 
         try {
@@ -485,13 +485,12 @@ const Download: SubCommand = {
             case 'cplaylistdownloadcustomall':
                 if (idata[ctx.guild?.id]?.exclusions) { webplaylist.remove(idata[ctx.guild.id].exclusions) }
             case 'cplaylistdownloadall':
+                // Disable buttons here (ctx.update({components:[]}))
                 delete idata[ctx.guild.id];
-
-                // if (!ctx.deferred && ctx.isRepliable()) ctx.deferReply({ "ephemeral": true });
+                
+                if (!ctx.deferred && ctx.isRepliable()) await ctx.deferReply({ "ephemeral": true });
                 webplaylist.download(ctx.guild?.id)
-                    .once('start', (items) => {
-                        ctx.reply(`Downloading: ${items?.length} songs.`)
-                    }).on('progress', (cur: number, total: number) => {
+                      .on('progress', (cur: number, total: number) => {
                         ctx.editReply(`Downloaded: ${cur}/${total} songs.`);
                     }).on('finish', (playlist: yt.Playlist | undefined) => {
                         ctx.editReply(`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);

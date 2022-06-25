@@ -38,7 +38,7 @@ export async function editReply(ctx: BaseCommandInteraction | Message, content: 
         if (m) {return m.edit(content)}
         return ctx.reply(content);
     }
-    if (ctx.replied) return ctx.editReply(content)
+    if (ctx.replied || ctx.deferred) return ctx.editReply(content)
     return ctx.reply(typeof content === "string" ? {content, "ephemeral": true} : {...content,"ephemeral": true})
 }
 
