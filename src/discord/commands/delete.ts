@@ -1,6 +1,6 @@
 import { BaseCommandInteraction, Message } from "discord.js";
 import { Playlist } from "../../youtube/playlist";
-import { reply } from "../util";
+import { editReply, error, ERRORS } from "../util";
 import { Command } from "./Commands";
 
 export const Delete: Command = {
@@ -17,14 +17,15 @@ export const Delete: Command = {
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
+        // Argument Processing
         let inp: string | undefined = ctx instanceof BaseCommandInteraction
             ? ctx.options.get("id",true).value?.toString()
             : ctx.content.split(/\s+/g)[2]
-        if (!inp) return reply(ctx, "Invalid Arguments!")
-
+        if (!inp) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         let ids: string[] = inp.split(",").slice(undefined,10).map(id=>id.trim())
-        if (ids.length <= 0) return reply(ctx, "Invalid Arguments!")
+        if (ids.length <= 0) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        // Action Execution
         await Playlist.delete(ids);
-        reply(ctx,`Success! Deleted ${ids.length} song(s).`)
+        await editReply(ctx,`Success! Deleted ${ids.length} song(s).`)
     }
 }

@@ -1,8 +1,8 @@
-import { BaseCommandInteraction, ButtonInteraction, EmbedField, Interaction, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageEmbed, MessageOptions } from "discord.js"
+import { BaseCommandInteraction, ButtonInteraction, EmbedField, Interaction, InteractionReplyOptions, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageEmbed, MessageOptions, ReplyMessageOptions } from "discord.js"
 import { client } from "../../index"
 import * as yt from "../../youtube/playlist"
 import { Genre, RatedSong } from "../../youtube/util"
-import { editReply, isWhitelisted, reply, truncateString } from "../util"
+import { editReply, error, ERRORS, isWhitelisted, truncateString } from "../util"
 import { Command, SubCommand } from "./Commands"
 
 let idata: { [key: string]: { playlist: yt.WebPlaylist, index: number, exclusions: Array<number> } } = {} // Option Cache
@@ -22,17 +22,15 @@ const Create: SubCommand = {
     run: (ctx: BaseCommandInteraction | Message) => { // dj playlist create 123,456,789
         if (!ctx.guild) return;
         let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
-            ctx.options.get("ids",true).value?.toString() :
+            ctx.options.get("ids", true).value?.toString() :
             ctx.content.split(/\s+/g).slice(3).join("")
-        if (!arg1) return reply(ctx,"Invalid Arguments!")
-        let ids = arg1.split(",").map(i=>i.trim());
+        if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS)
+        let ids = arg1.split(",").map(i => i.trim());
 
         try {
-            let playlist: yt.Playlist = yt.Playlist.create(ctx.guild.id,ids)
+            let playlist: yt.Playlist = yt.Playlist.create(ctx.guild.id, ids)
             reply(ctx, `Created a new playlist with ${playlist.playlistdata.items.length} song(s)!`)
-        } catch (e) {
-            reply(ctx, "Error: "+(e as Error).message)
-        }
+        } catch (e) { error(ctx, e as Error) }
     }
 }
 const Delete: SubCommand = {
@@ -44,15 +42,49 @@ const Delete: SubCommand = {
 
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
+        reply(ctx, {
+            content: "_",
+            components: [{
+                "type": "ACTION_ROW",
+                "components": [
+                    {
+                        "style": "SUCCESS",
+                        "label": `Confirm`,
+                        "custom_id": `cplaylistdeleteconfirm`,
+                        "disabled": false,
+                        "type": "BUTTON"
+                    },
+                    {
+                        "style": "DANGER",
+                        "label": `Cancel`,
+                        "custom_id": `cancel`,
+                        "disabled": ctx instanceof BaseCommandInteraction,
+                        "type": "BUTTON"
+                    }
+                ]
+            }],
+            embeds: [{
+                title: "Are you sure you want to delete your playlist?",
+                description: "This action is permanent and irreversible.",
+                color: 0xFF0000,
+                footer: {
+                    text: "PlaylistDJ - Confirmation Dialog",
+                    icon_url: client.user?.avatarURL() ?? ""
+                }
+            }],
+            fetchReply: true
+        })
+    },
+
+    interact: (ctx: ButtonInteraction) => {
+        if (!ctx.guild) return;
         // Playlist Locating
         let playlist = yt.getPlaylist(ctx.guild.id)
-        if (!playlist) return reply(ctx, "Couldn't find playlist!")
+        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
-        playlist.delete().then(_=>{
+        playlist.delete().then(_ => {
             reply(ctx, `Deleted your playlist.`)
-        }).catch((e: Error) => {
-            reply(ctx, "Error: "+(e as Error).message)
-        })
+        }).catch((e: Error) => error(ctx, e))
     }
 }
 const Add: SubCommand = {
@@ -72,16 +104,16 @@ const Add: SubCommand = {
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ? 
+        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
             ctx.options.get("ids")?.value?.toString() :
             ctx.content.split(/\s+/g)[3]
-        if (!arg1) return reply(ctx, "Invalid arguments!")
+        if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating
         let playlist = yt.getPlaylist(ctx.guild.id)
-        if (!playlist) return reply(ctx, "Couldn't find playlist!")
+        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
-        let added: RatedSong[] = playlist.addSongs(arg1.split(",").map(i=>i.trim()))
-        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs=>truncateString(rs.title,10)).join(", ")}`)
+        let added: RatedSong[] = playlist.addSongs(arg1.split(",").map(i => i.trim()))
+        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, 10)).join(", ")}`)
     }
 }
 const Remove: SubCommand = {
@@ -101,16 +133,16 @@ const Remove: SubCommand = {
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ? 
+        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
             ctx.options.get("ids")?.value?.toString() :
             ctx.content.split(/\s+/g)[3]
-        if (!arg1) return reply(ctx, "Invalid arguments!")
+        if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating
         let playlist = yt.getPlaylist(ctx.guild.id)
-        if (!playlist) return reply(ctx, "Couldn't find playlist!")
+        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
-        let removed: RatedSong[] = playlist.removeSongs(arg1.split(",").map(i=>i.trim()))
-        reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> ${removed.map(rs=>truncateString(rs.title,10)).join(", ")}`)
+        let removed: RatedSong[] = playlist.removeSongs(arg1.split(",").map(i => i.trim()))
+        reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> ${removed.map(rs => truncateString(rs.title, 10)).join(", ")}`)
     }
 }
 const List: SubCommand = {
@@ -134,8 +166,8 @@ const List: SubCommand = {
         if (arg1 === "top") { options.filter = (a: RatedSong) => a.score > 0; options.sort = (a: RatedSong, b: RatedSong) => b.score - a.score; }
         else if (arg1) { options.filter = (i: RatedSong) => i.title.toLowerCase().includes(arg1?.toLowerCase() ?? "") }
 
-        let m: MessageOptions;
-        if ((m = listMessage<MessageOptions>(ctx, options))) reply(ctx, m);
+        let m: ReplyMessageOptions & { fetchReply: true };
+        if ((m = listMessage<ReplyMessageOptions & { fetchReply: true }>(ctx, options))) reply(ctx, m);
     },
 
     interact: (ctx: ButtonInteraction) => {
@@ -158,12 +190,12 @@ const Edit: SubCommand = {
         description: "Song ID to edit",
         type: "STRING",
         required: true,
-    },{
+    }, {
         name: "field",
         description: "Field to edit",
         type: "STRING",
         required: false
-    },{
+    }, {
         name: "value",
         description: "Value to assign",
         type: "STRING",
@@ -185,13 +217,13 @@ const Edit: SubCommand = {
             field = args[1]?.toLowerCase()
             value = args.slice(2)?.join(" ")
         }
-        if (!id || (field && !value)) return reply(ctx, "Invalid Arguments!")
+        if (!id || (field && !value)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating
         let playlist = yt.getPlaylist(ctx.guild.id)
-        if (!playlist) return reply(ctx, "Couldn't find playlist!")
+        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
         let songindex: number = playlist.playlistdata.items.findIndex(i => i.id === id)
-        if (songindex < 0) return reply(ctx, "Couldn't find song!")
+        if (songindex < 0) return error(ctx, ERRORS.NO_SONG);
         let song: RatedSong = playlist.playlistdata.items[songindex]
 
         if (field && value) {
@@ -203,14 +235,14 @@ const Edit: SubCommand = {
                     song.artist = value;
                     break;
                 case "genre":
-                    if (!Object.keys(Genre).includes(value)) return reply(ctx, `Couldn't identify genre ${value}!`)
+                    if (!Object.keys(Genre).includes(value)) return error(ctx, new Error(`Couldn't identify genre ${value}!`))
                     song.genre = <Genre>(<any>Genre)[value];
                     break;
                 case "tags":
                     song.tags = value.split(",").map(v => v.trim())
                     break;
                 default:
-                    return reply(ctx, `Invalid field '${field}'!`);
+                    return error(ctx, ERRORS.INVALID_ARGUMENTS);
             }
         }
         playlist.editSong(song);
@@ -269,12 +301,24 @@ const Edit: SubCommand = {
                         "style": "DANGER",
                         "label": `Cancel`,
                         "customId": `cancel`,
-                        "disabled": false,
+                        "disabled": ctx instanceof BaseCommandInteraction,
                         "type": "BUTTON",
                     } as MessageActionRowComponent
                 ]
-            } as MessageActionRow]
-        } as MessageOptions)
+            } as MessageActionRow],
+            fetchReply: true
+        } as ReplyMessageOptions & { fetchReply: true })
+    },
+    
+    interact: (ctx: ButtonInteraction) => {
+        if (!ctx.guild) return;
+        // Playlist Locating
+        let playlist = yt.getPlaylist(ctx.guild.id)
+        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
+        // Action Execution
+        playlist.save().then(_=>{
+            ctx.update({content: "Saved!", components:[]})
+        })
     },
 }
 const Download: SubCommand = {
@@ -294,17 +338,17 @@ const Download: SubCommand = {
         let url: string | null | undefined = ctx instanceof BaseCommandInteraction ?
             ctx.options.get("url", true).value?.toString() :
             ctx.content.split(/\s+/g)[2]
-        if (!url) { reply(ctx, "Invalid arguments!"); return; }
+        if (!url) return error(ctx, ERRORS.INVALID_ARGUMENTS);
 
         reply(ctx, "Detecting Playlist...");
         ctx.channel?.sendTyping()
 
         try {
             var webplaylist: yt.WebPlaylist = await yt.WebPlaylist.fromUrl(url);
-        } catch (e) { return reply(ctx, "An Error Occured: " + e) }
+        } catch (e) { return error(ctx, e as Error) }
 
         idata[ctx.guild.id] = { playlist: webplaylist, index: 0, exclusions: [] }
-        editReply(ctx, {
+        await editReply(ctx, {
             "content": "Found!",
             "components": [
                 {
@@ -328,7 +372,7 @@ const Download: SubCommand = {
                             "style": "DANGER",
                             "label": `Cancel`,
                             "customId": `cancel`,
-                            "disabled": false,
+                            "disabled": ctx instanceof BaseCommandInteraction,
                             "type": "BUTTON",
                         } as MessageActionRowComponent
                     ]
@@ -363,7 +407,7 @@ const Download: SubCommand = {
     interact: async (ctx: ButtonInteraction) => {
         if (!ctx.guild) return;
         const webplaylist: yt.WebPlaylist | undefined = idata[ctx.guild.id]?.playlist;
-        if (!webplaylist) return reply(ctx, "Couldn't find webplaylist!")
+        if (!webplaylist) return error(ctx,ERRORS.NO_PLAYLIST);
         switch (ctx.customId) {
             case 'cplaylistdownloadcustomskip':
                 idata[ctx.guild.id].exclusions.push(idata[ctx.guild.id].index)
@@ -443,18 +487,18 @@ const Download: SubCommand = {
             case 'cplaylistdownloadall':
                 delete idata[ctx.guild.id];
 
-                if (!ctx.deferred && ctx.isRepliable()) ctx.deferReply({ "ephemeral": true });
+                // if (!ctx.deferred && ctx.isRepliable()) ctx.deferReply({ "ephemeral": true });
                 webplaylist.download(ctx.guild?.id)
                     .once('start', (items) => {
-                        editReply(ctx, `Downloading: ${items?.length} songs.`)
+                        ctx.reply(`Downloading: ${items?.length} songs.`)
                     }).on('progress', (cur: number, total: number) => {
-                        editReply(ctx, `Downloaded: ${cur}/${total} songs.`);
+                        ctx.editReply(`Downloaded: ${cur}/${total} songs.`);
                     }).on('finish', (playlist: yt.Playlist | undefined) => {
-                        editReply(ctx, `Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
+                        ctx.editReply(`Success! ${playlist ? playlist.playlistdata.items.length : 0} files downloaded (${playlist ? 'total' : 'non-fatal fail'})!`);
                     }).on('warn', (cur: number, total: number, error: Error) => {
-                        editReply(ctx, `Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
+                        ctx.editReply(`Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
                     }).on('error', (e: Error) => {
-                        editReply(ctx, `Error: ` + e.message);
+                        ctx.editReply(`Error: ` + e.message);
                     })
                 break;
         }
@@ -467,15 +511,12 @@ const Clean: SubCommand = {
     public: false,
 
     run: (ctx: BaseCommandInteraction | Message) => {
-        yt.Playlist.clean().once('start', () => {
-            reply(ctx, "Began clean operation!")
-        }).on('progress', (message: string) => {
-            editReply(ctx, message)
-        }).on('finish', (remainder: string[]) => {
-            editReply(ctx, `Clean Complete! ${remainder.length} files remaining!`)
-        }).on('error', (e: Error) => {
-            editReply(ctx, `Error: ${e.message}`)
-        })
+        yt.Playlist.clean()
+            .on('progress', async (message: string) => {
+                await editReply(ctx, message)
+            }).once('finish', (remainder: string[]) => {
+                editReply(ctx, `Clean Complete! ${remainder.length} files remaining!`)
+            }).once('error', async (e: Error) => { await error(ctx, e) })
     }
 }
 
@@ -492,22 +533,21 @@ export const Playlist: Command = {
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
         let option: string = ctx instanceof BaseCommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
-        let subcommand: SubCommand | undefined = SubCommands.find(sc=>sc.name===option)
+        let subcommand: SubCommand | undefined = SubCommands.find(sc => sc.name === option)
 
-        if (!subcommand) return reply(ctx,"Invalid Arguments!");
-        if (!subcommand.public && !isWhitelisted(ctx)) return reply(ctx,"Insufficent Permissions!")
-        subcommand.run(ctx);
+        if (!subcommand) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        if (!subcommand.public && !isWhitelisted(ctx)) return error(ctx, ERRORS.NO_PERMS);
+        return subcommand.run(ctx);
     },
 
     interact: (ctx: ButtonInteraction) => {
         if (!ctx.guild) return;
         let choice = ctx.customId.slice('cplaylist'.length)
-        let subcommand: SubCommand | undefined = SubCommands.find(sc=>choice.startsWith(sc.name))
-        
-        if (!subcommand) return reply(ctx,"Invalid Arguments!");
-        if (!subcommand.public && !isWhitelisted(ctx)) return reply(ctx,"Insufficent Permissions!")
-        if (subcommand.interact) subcommand.interact(ctx);
-        ctx.reply("Unrecognized Interaction!");
+        let subcommand: SubCommand | undefined = SubCommands.find(sc => choice.startsWith(sc.name)&&sc.interact)
+
+        if (!subcommand?.interact) return console.error("Didn't find valid subcommand to process interaction: " + ctx.customId);
+        if (!subcommand.public && !isWhitelisted(ctx)) return error(ctx,ERRORS.NO_PERMS);
+        subcommand.interact(ctx);
     }
 }
 
@@ -515,10 +555,10 @@ type GetMessageOptions = {
     filter?: (value: RatedSong, index: number, array: RatedSong[]) => unknown,
     sort?: (a: RatedSong, b: RatedSong) => number
 }
-function listMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, options?: GetMessageOptions, page = 0): T {
+function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, options?: GetMessageOptions, page = 0): T {
     if (!ctx.guild) return { content: "Couldn't find guild!" } as T;
     let pl = yt.getPlaylist(ctx.guild.id)
-    if (!pl) return {content: "Couldn't find playlist!"} as T;
+    if (!pl) return { content: "Couldn't find playlist!" } as T;
     let playlist = pl.playlistdata;
     if (options?.filter) playlist.items = playlist.items.filter(options.filter);
     if (options?.sort) playlist.items = playlist.items.sort(options.sort);
@@ -544,7 +584,7 @@ function listMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: I
                     "style": "DANGER",
                     "label": "Cancel",
                     "customId": "cancel",
-                    "disabled": false,
+                    "disabled": ctx instanceof BaseCommandInteraction,
                     "type": "BUTTON"
                 } as MessageActionRowComponent,
             ]
@@ -567,4 +607,10 @@ function listMessage<T extends MessageOptions | InteractionUpdateOptions>(ctx: I
             }
         } as MessageEmbed]
     } as T
+}
+
+function reply(ctx: BaseCommandInteraction | ButtonInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> & { fetchReply: true } | Omit<InteractionReplyOptions, "flags"> & { fetchReply: true } | string): Promise<any> {
+    if (typeof content === "string") content = { content, fetchReply: true }
+    if (ctx instanceof ButtonInteraction) return ctx.reply({ ...content, ephemeral: true });
+    return ctx.reply({ ...content, ephemeral: true })
 }

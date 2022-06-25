@@ -4,7 +4,7 @@ import { createReadStream, existsSync } from "fs";
 import { client } from "../../index";
 import { getPlaylist } from "../../youtube/playlist";
 import { MusicJSON, RatedSong, Song } from "../../youtube/util";
-import { getPlayer, reply, TRUTHY } from "../util";
+import { error, ERRORS, getPlayer, TRUTHY } from "../util";
 import { Command } from "./Commands";
 import { resetVotes } from "./vote";
 
@@ -21,39 +21,46 @@ export const Play: Command = {
     },{
         name: "silent",
         description: "Broadcast current song?",
-        type: 5, // boolean
+        type: "BOOLEAN",
         required: false,
+    },{
+        name: "timeout",
+        description: "Duration music should play for (minutes)",
+        type: "NUMBER",
+        required: false
     }],
 
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
-
+        // Playlist Locating
         let pl = getPlaylist(ctx.guild.id)
-        if (!pl) return reply(ctx, "Couldn't find playlist!")
+        if (!pl) return error(ctx,ERRORS.NO_PLAYLIST);
         let playlist: MusicJSON = pl.playlistdata;
-        if (!playlist.items) return reply(ctx, "Couldn't find songs!")
-
-        let start: RatedSong | undefined, silent: boolean;
+        if (!playlist.items) return error(ctx,ERRORS.NO_SONG);
+        // Argument Processing
+        let arg1: string | undefined, arg2: boolean, arg3: string | undefined;
         if (ctx instanceof BaseCommandInteraction) {
-            let ss: string | undefined = ctx.options.get("song",false)?.value?.toString()
-            if (ss) start = playlist.items.find(s=>s.id===ss)
-            silent = !!ctx.options.get("silent",false)?.value
+            arg1 = ctx.options.get("song",false)?.value?.toString()
+            arg2 = !!ctx.options.get("silent",false)?.value
+            arg3 = ctx.options.get("timeout",false)?.value?.toString()
         } else {
-            let si: string | undefined, ss: string | undefined;
-            [ss,si] = ctx.content.split(/\s+/g).slice(2)
-            if (ss) start = playlist.items.find(s=>s.id===ss)
-            silent = TRUTHY.includes(si?.toLowerCase())
+            let a2: string | undefined;
+            [arg1,a2,arg3] = ctx.content.split(/\s+/g).slice(2)
+            arg2 = TRUTHY.includes(a2?.toLowerCase())
         }
-
+        let start: RatedSong, silent: boolean, timeout: number;
+        start = playlist.items.find(s=>s.id===arg1) ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
+        silent = arg2;
+        timeout = (arg3 && !Number.isNaN(arg3)) ? Number.parseInt(arg3)*60*1000 : -1;
+        // Condition Validation
         let player: {player:AudioPlayer,playing?:RatedSong} = getPlayer(ctx.guild.id)
         player.player.removeAllListeners()
         player.player.stop()
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
-        if (!connection?.subscribe(player.player)) return reply(ctx,"Couldn't find voice connection!")
-        
+        if (!connection?.subscribe(player.player)) return error(ctx,ERRORS.NO_CONNECTION)
+        // Action Execution
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
-        let song: RatedSong = start ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
-        let msg: MessageOptions = play(player, song)
+        let msg: MessageOptions = play(player, start)
         if (ctx.channel && !silent) ctx.channel.send(msg);
         player.player.on(AudioPlayerStatus.Idle, () => {
             let song: RatedSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
@@ -61,6 +68,12 @@ export const Play: Command = {
             if (ctx.channel && !silent) ctx.channel.send(msg);
             if (ctx.guild?.id) resetVotes(ctx.guild.id);
         })
+        if (timeout > 0) setTimeout(() => {
+            player.player.removeAllListeners()
+            player.player.stop()
+            player.playing = undefined;
+            ctx.channel?.send("Finished Playing!")
+        }, timeout);
     }
 }
 

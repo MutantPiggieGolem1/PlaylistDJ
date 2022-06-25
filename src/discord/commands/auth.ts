@@ -1,6 +1,6 @@
 import { BaseCommandInteraction, Message, User, MessageOptions } from "discord.js"
 import { client, WHITELIST } from "../../index"
-import { reply } from "../util"
+import { editReply, error, ERRORS } from "../util"
 import { Command } from "./Commands"
 
 export const Auth: Command = {
@@ -44,7 +44,7 @@ export const Auth: Command = {
 
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return
-        if (ctx.member?.user.id !== "547624574070816799") return reply(ctx, "This command isnt for you loser")
+        if (ctx.member?.user.id !== "547624574070816799") return error(ctx,ERRORS.NO_PERMS)
         let user: User | undefined, option: string
         if (ctx instanceof BaseCommandInteraction) {
             option = ctx.options.data[0].name
@@ -57,21 +57,21 @@ export const Auth: Command = {
 
         switch (option) {
             case 'add':
-                if (!user) return reply(ctx, "Couldn't find user.")
+                if (!user) return error(ctx, ERRORS.NO_USER);
                 if (!WHITELIST.has(user.id)) {
                     WHITELIST.add(user.id)
-                    reply(ctx, `Added ${user.tag} to the whitelist.`)
+                    editReply(ctx, `Added ${user.tag} to the whitelist.`)
                 } else {
-                    reply(ctx, `${user.tag} was already on the whitelist.`)
+                    error(ctx, new Error(`${user.tag} was already on the whitelist.`))
                 }
-                break
+                break;
             case 'remove':
-                if (!user) return reply(ctx, "Couldn't find user.")
+                if (!user) return error(ctx, ERRORS.NO_USER);
                 if (WHITELIST.has(user.id)) {
                     WHITELIST.delete(user.id)
-                    reply(ctx, `Removed ${user.tag} from the whitelist.`)
+                    editReply(ctx, `Removed ${user.tag} from the whitelist.`)
                 } else {
-                    reply(ctx, `${user.tag} wasn't on the whitelist.`)
+                    error(ctx, new Error(`${user.tag} wasn't on the whitelist.`))
                 }
                 break
             case 'list':
@@ -94,10 +94,10 @@ export const Auth: Command = {
                         }
                     ]
                 } as MessageOptions
-                reply(ctx, msg)
+                editReply(ctx, msg)
                 break
             default:
-                reply(ctx, "Invalid arguments!")
+                error(ctx, ERRORS.INVALID_ARGUMENTS);
                 break
         }
     }

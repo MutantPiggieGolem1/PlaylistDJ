@@ -1,49 +1,37 @@
-import { BaseCommandInteraction, Message, VoiceChannel } from "discord.js";
+import { BaseCommandInteraction, Message, VoiceChannel, StageChannel, GuildBasedChannel } from "discord.js";
 import { ChannelTypes } from "discord.js/typings/enums";
 import { Command } from "./Commands";
 import { joinVoiceChannel } from '@discordjs/voice';
-import { reply } from "../util";
+import { error } from "../util";
 
 export const Join: Command = {
     name: "join",
     description: "Joins a voice channel.",
     type: "CHAT_INPUT",
     public: true,
-    options: [
-        {
+    options: [{
             name: "channel",
             description: "Voice channel to join",
-            type: 7, // ApplicationCommandOptionType.CHANNEL
+            type: "CHANNEL",
             channelTypes: [
                 ChannelTypes.GUILD_VOICE,
                 ChannelTypes.GUILD_STAGE_VOICE
             ],
             required: true
-        }
-    ],
+    }],
 
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild?.available) return;
-        let voicechannel;
-        if (ctx instanceof BaseCommandInteraction) { // slash command
-            voicechannel = ctx.options.get("channel",true).channel;
-        } else if (ctx instanceof Message) { // normal command
-            let arg1: string = ctx.content.split(" ").slice(2).join(" ");
-            if (arg1) {
-                let vcid: string = arg1.replaceAll(/\D/g,"");
-                
-                if (vcid.length === 18 && !Number.isNaN(vcid)) {
-                    voicechannel = ctx.guild.channels.resolve(vcid);
-                } else {
-                    voicechannel = ctx.guild.channels.cache.find(c=>c.isVoice()&&c.name.toLowerCase()===arg1.toLowerCase())
-                }
-            }
-            if (!voicechannel && ctx.member) {
-                voicechannel = ctx.member.voice.channel;
-            }
-        }
-        if (!voicechannel || !(voicechannel instanceof VoiceChannel)) {reply(ctx,"Couldn't find voice channel!"); return;}
-        if (!voicechannel.joinable) {reply(ctx,"Couldn't join voice channel! (Insufficent Permissions)"); return;}
+        // Argument Processing
+        let voicechannel: GuildBasedChannel | null | undefined = ctx instanceof BaseCommandInteraction ? 
+            ctx.options.get("channel",true).channel as GuildBasedChannel : (() => {
+                let arg1: string = ctx.content.split(/\s+/g).slice(2).join(" ");
+                return ctx.guild.channels.resolve(arg1.replaceAll(/\D/g,"")) ?? 
+                    ctx.guild.channels.cache.find(c=>c.isVoice()&&c.name.toLowerCase()===arg1.toLowerCase()) ??
+                    ctx.member?.voice?.channel;
+            })();
+        if (!(voicechannel instanceof VoiceChannel || voicechannel instanceof StageChannel) || !voicechannel?.joinable) return error(ctx, new Error("Couldn't join voice channel!"));
+        // Action Execution
         joinVoiceChannel({
             channelId: voicechannel.id,
             guildId: voicechannel.guild.id,
@@ -51,6 +39,6 @@ export const Join: Command = {
             selfMute: false,
             selfDeaf: true,
         });
-        reply(ctx, "Joined "+voicechannel.toString());
+        if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Joined "+voicechannel.toString(),ephemeral: true});
     }
 };

@@ -1,9 +1,9 @@
-import { AUDIOFORMAT, MusicJSON, parseVideo, RatedSong, Song, SongReference } from "./util";
-import fs from "fs"
+import fs from "fs";
 import { EventEmitter } from "stream";
+import ytdl from "ytdl-core";
 import * as ytdsc from "ytdl-core-discord";
 import ytpl from "ytpl";
-import ytdl from "ytdl-core";
+import { AUDIOFORMAT, MusicJSON, parseVideo, RatedSong, SongReference } from "./util";
 
 export class WebPlaylist {
     public ytplaylist: ytpl.Result;
@@ -68,7 +68,7 @@ export class WebPlaylist {
     }
 
     public download(guildid: string): EventEmitter {
-        let ee: EventEmitter = new EventEmitter();
+        const ee: EventEmitter = new EventEmitter();
 
         const datafile = `./resources/playlists/${guildid}.json`
         let pdata: MusicJSON = {guildid, url: [this.ytplaylist.url], items: []};
@@ -89,7 +89,7 @@ export class WebPlaylist {
         Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
             const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
             if (fs.existsSync(file)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);done++;return Promise.resolve();}
-            return Promise.race([new Promise<void>(async (resolve,reject) => {
+            return new Promise<void>(async (resolve,reject) => {
                 try {
                     let videoinfo: ytdl.videoInfo = await ytdl.getInfo(playlistitem.url)
                     ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file, {
@@ -100,22 +100,27 @@ export class WebPlaylist {
                         resolve()
                     })
                 } catch (e) {ee.emit('warn', done, --total, e); return reject(e)}
-            }),new Promise<void>((_,reject) => {
+            })
+            /*
+            return Promise.race([
+            <Download Promise>,
+            new Promise<void>((_,reject) => {
                 setTimeout(()=>{
                     let index: number = pdata.items.findIndex(i=>i.file===file); // cleanup partial progress
                     if (index) pdata.items.splice(index,1)                       // /
                     ee.emit('warn', done, total, new Error(`Skipped \`${playlistitem.id}\` (timeout).`)) // !important! May have to decrement here but i err on the safe si
                     reject()
                 },14*60*1000)
-            })])
-        })).then((completion: Array<PromiseSettledResult<void>>) => {
-            let playlist: Playlist | undefined;
-            if (completion.some(r=>r.status==="fulfilled")) {
-                playlist = new Playlist(pdata);
-                playlist.save()
-            } // TODO: Need to write to master DB
-            ee.emit("finish",playlist)
-        }).catch(e=>ee.emit("error",e))
+            })]) TODO: Fix this not cancelling on others' completion
+            */
+        })).then(async (completion: Array<PromiseSettledResult<void>>) => {
+            if (completion.every(r=>r.status==="rejected")) return;
+            pdata.items.forEach(rs=>MUSICINDEX[rs.id]=(rs as SongReference))
+            await setMusicIndex();
+            let playlist: Playlist = new Playlist(pdata);
+            await playlist.save();
+            return playlist;
+        }).then((playlist: Playlist | undefined)=>{ee.emit("finish",playlist)}).catch(e=>ee.emit("error",e))
         return ee;
     }
 }
@@ -131,12 +136,19 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
 
     public constructor(arg: MusicJSON) {
+        let eids: Set<string> = new Set<string>();
+        arg.items = arg.items.filter(rs=>{
+            if (eids.has(rs.id)) return false;
+            eids.add(rs.id)
+            return true;
+        })
         this.playlist = arg;
     }
 
     public static create(guildid: string, ids: string[], url?: string): Playlist {
         if (getPlaylist(guildid)) throw new Error("This guild already has a playlist!")
         let items: RatedSong[] = ids.filter(id=>Object.keys(MUSICINDEX).includes(id)).map(id=>{return {score:0,...MUSICINDEX[id]}})
+        if (items.length <= 0) throw new Error("Couldn't find any songs!")
         return new Playlist({guildid,url,items} as MusicJSON)
     }
 
@@ -165,20 +177,6 @@ export class Playlist { // Represents a playlist stored on the filesystem
 
     public async save() { 
         return fs.promises.writeFile(`./resources/playlists/${this.playlist.guildid}.json`,JSON.stringify(this.playlist))
-    }
-
-    public static async delete(ids: string[]) {
-        await fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
-            ents.filter(ent=>ent.isFile()&&ent.name.endsWith(".json"))
-        ).then(jsonfiles=>
-            jsonfiles.map(file=>getPlaylist(file.name.replace(".json","")))
-        ).then(playlists => 
-            Promise.all(playlists.map(pl=>{if (pl) {pl.removeSongs(ids);return pl.save()}}))
-        )
-        await Promise.all(ids.map(id=>{
-            let file = `./resources/music/${id}${AUDIOFORMAT}`;
-            if (fs.existsSync(file)) fs.promises.rm(file)
-        }))
     }
 
     public static clean() {
@@ -211,6 +209,22 @@ export class Playlist { // Represents a playlist stored on the filesystem
         }).catch((e: Error) => ee.emit('error', e))
         return ee;
     }
+
+    public static async delete(ids: string[]) {
+        ids.forEach(id=>delete MUSICINDEX[id]);
+        await setMusicIndex();
+        await fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
+            ents.filter(ent=>ent.isFile()&&ent.name.endsWith(".json"))
+        ).then(jsonfiles=>
+            jsonfiles.map(file=>getPlaylist(file.name.replace(".json","")))
+        ).then(playlists => 
+            Promise.all(playlists.map(pl=>{if (pl) {pl.removeSongs(ids);return pl.save()}}))
+        )
+        await Promise.all(ids.map(id=>{
+            let file = `./resources/music/${id}${AUDIOFORMAT}`;
+            if (fs.existsSync(file)) fs.promises.rm(file)
+        }))
+    }
 }
 
 const playlists: {[key: string]: Playlist} = {};
@@ -222,4 +236,5 @@ export function getPlaylist(guildid: string): Playlist | undefined {
     return playlists[guildid];
 }
 
-export const MUSICINDEX: {[key: string]: SongReference} = {}; // TODO: Placeholder
+export const MUSICINDEX: {[key: string]: SongReference} = JSON.parse(fs.readFileSync('./resources/music.json','utf8'));
+export async function setMusicIndex() {return fs.promises.writeFile('./resources/music.json',JSON.stringify(MUSICINDEX))}
