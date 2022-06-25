@@ -3,7 +3,7 @@ import { EventEmitter } from "stream";
 import ytdl from "ytdl-core";
 import * as ytdsc from "ytdl-core-discord";
 import ytpl from "ytpl";
-import { AUDIOFORMAT, MusicJSON, parseVideo, RatedSong, SongReference } from "./util";
+import { AUDIOFORMAT, Genre, MusicJSON, parseVideo, RatedSong, SongReference } from "./util";
 
 export class WebPlaylist {
     public ytplaylist: ytpl.Result;
@@ -99,7 +99,13 @@ export class WebPlaylist {
                         ee.emit("progress",++done,total);
                         resolve()
                     })
-                } catch (e) {ee.emit('warn', done, --total, e); return reject(e)}
+                } catch (e) {
+                    ee.emit('warn', done, --total, e);
+                    if (fs.existsSync(file)) await fs.promises.rm(file);
+                    let index = pdata.items.findIndex(rs=>rs.file===file);
+                    if (index >= 0) pdata.items.splice(index,1)
+                    return reject(e)
+                }
             })
             /*
             return Promise.race([
@@ -141,6 +147,12 @@ export class Playlist { // Represents a playlist stored on the filesystem
             if (eids.has(rs.id)) return false;
             eids.add(rs.id)
             return true;
+        }).map(rs=>{
+            if (!rs.artist) rs.artist = "Unknown Artist";
+            if (!rs.genre) rs.genre = Genre.Unknown;
+            if (!rs.score) rs.score = 0;
+            if (!rs.title) rs.title = "Unknown"
+            return rs;
         })
         this.playlist = arg;
     }
