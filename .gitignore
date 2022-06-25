@@ -111,6 +111,7 @@ resources/playlists/
 # VSC
 .VSCodeCounter/*
 .VSCodeCounter
+*.code-workspace
 
 # Crossplatform Compat.
 node_modules/*

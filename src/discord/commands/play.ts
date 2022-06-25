@@ -69,8 +69,8 @@ export const Play: Command = {
             if (ctx.guild?.id) resetVotes(ctx.guild.id);
         })
         if (timeout > 0) setTimeout(() => {
-            player.player.removeAllListeners()
-            player.player.stop()
+            player.player?.removeAllListeners()
+            player.player?.stop()
             player.playing = undefined;
             ctx.channel?.send("Finished Playing!")
         }, timeout);

@@ -337,7 +337,7 @@ const Download: SubCommand = {
         if (!ctx.guild) return;
         let url: string | null | undefined = ctx instanceof BaseCommandInteraction ?
             ctx.options.get("url", true).value?.toString() :
-            ctx.content.split(/\s+/g)[2]
+            ctx.content.split(/\s+/g)[3]
         if (!url) return error(ctx, ERRORS.INVALID_ARGUMENTS);
 
         reply(ctx, "Detecting Playlist...");
