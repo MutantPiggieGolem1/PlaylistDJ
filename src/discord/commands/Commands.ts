@@ -1,6 +1,5 @@
 import { ApplicationCommandSubCommandData, BaseCommandInteraction, ChatInputApplicationCommandData, Message, MessageComponentInteraction } from "discord.js";
 import { Auth } from "./auth";
-import { Delete } from "./delete";
 import { Join } from "./join";
 import { Leave } from "./leave";
 import { Play } from "./play";
@@ -21,7 +20,7 @@ export interface SubCommand extends ApplicationCommandSubCommandData {
 }
 
 export const Commands: Command[] = [
-    Auth,Delete,Rickroll, // Admin Commands
+    Auth,Rickroll,        // Admin Commands
     Playlist,             // Management Commands [Playlist **MUST** Precede Play in order for interaction seeking to work]
     Join,Leave,Play,Vote, // Public Commands
 ]

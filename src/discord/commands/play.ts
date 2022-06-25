@@ -6,6 +6,7 @@ import { getPlaylist } from "../../youtube/playlist";
 import { MusicJSON, RatedSong, Song } from "../../youtube/util";
 import { error, ERRORS, getPlayer, TRUTHY } from "../util";
 import { Command } from "./Commands";
+import { leave } from "./leave"
 import { resetVotes } from "./vote";
 
 export const Play: Command = {
@@ -68,12 +69,10 @@ export const Play: Command = {
             if (ctx.channel && !silent) ctx.channel.send(msg);
             if (ctx.guild?.id) resetVotes(ctx.guild.id);
         })
-        if (timeout > 0) setTimeout(() => {
-            player.player?.removeAllListeners()
-            player.player?.stop()
-            player.playing = undefined;
+        if (timeout > 0) setTimeout(() => {try {
+            leave(ctx)
             ctx.channel?.send("Finished Playing!")
-        }, timeout);
+        } catch (e) {ctx.channel?.send(`Finished Playing! [Error: ${(e as Error).message}]`)}}, timeout);
     }
 }
 

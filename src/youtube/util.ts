@@ -23,7 +23,7 @@ export type MusicJSON = {
 }
 
 export type RatedSong = SongReference & {tags?: Array<string>, score: number}
-export type SongReference = Song & {file: string,url: string}
+export type SongReference = Song & {file: string, url: string}
 export type Song = { // objective properties
     id: string,
 

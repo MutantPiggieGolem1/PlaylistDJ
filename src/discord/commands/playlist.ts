@@ -1,11 +1,11 @@
 import { BaseCommandInteraction, ButtonInteraction, EmbedField, Interaction, InteractionReplyOptions, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageEmbed, MessageOptions, ReplyMessageOptions } from "discord.js"
 import { client } from "../../index"
 import * as yt from "../../youtube/playlist"
-import { Genre, RatedSong } from "../../youtube/util"
+import { Genre, RatedSong, Song, SongReference } from "../../youtube/util"
 import { editReply, error, ERRORS, isWhitelisted, truncateString } from "../util"
 import { Command, SubCommand } from "./Commands"
 
-let idata: { [key: string]: { playlist: yt.WebPlaylist, index: number, exclusions: Array<number> } } = {} // Option Cache
+let idata: { [key: string]: { playlist: yt.WebPlaylist, index: number, exclusions: Array<number> } } = {} // Option Cache for Download
 
 const Create: SubCommand = {
     type: "SUB_COMMAND",
@@ -162,7 +162,7 @@ const List: SubCommand = {
             ctx.options.get("term", false)?.value?.toString() :
             ctx.content.split(/\s+/g).slice(3).join(" ");
 
-        let options: GetMessageOptions = {};
+        let options: GetMessageOptions = {global:false,page:0};
         if (arg1 === "top") { options.filter = (a: RatedSong) => a.score > 0; options.sort = (a: RatedSong, b: RatedSong) => b.score - a.score; }
         else if (arg1) { options.filter = (i: RatedSong) => i.title.toLowerCase().includes(arg1?.toLowerCase() ?? "") }
 
@@ -173,10 +173,10 @@ const List: SubCommand = {
     interact: (ctx: ButtonInteraction) => {
         switch (ctx.customId) {
             case 'cplaylistlistpageup':
-                ctx.update(listMessage<InteractionUpdateOptions>(ctx, undefined, (Number.parseInt(ctx.message.content) || 0) + 1))
+                ctx.update(listMessage<InteractionUpdateOptions>(ctx, {page:(Number.parseInt(ctx.message.content) || 0) + 1,global:false}))
                 break;
             case 'cplaylistlistpagedown':
-                ctx.update(listMessage<InteractionUpdateOptions>(ctx, undefined, (Number.parseInt(ctx.message.content) || 0) - 1))
+                ctx.update(listMessage<InteractionUpdateOptions>(ctx, {page:(Number.parseInt(ctx.message.content) || 0) - 1,global:false}))
                 break;
         }
     }
@@ -317,6 +317,160 @@ const Edit: SubCommand = {
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
         playlist.save().then(_=>{
+            ctx.update({content: "Saved!", components:[]})
+        })
+    },
+}
+const Index: SubCommand = {
+    type: "SUB_COMMAND",
+    name: "index",
+    description: "Lists music in the music database",
+    options: [{
+        "type": "STRING",
+        "name": "term",
+        "description": "Term to search for",
+        "required": false
+    }],
+    public: true,
+
+    run: (ctx: BaseCommandInteraction | Message) => {
+        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
+            ctx.options.get("term", false)?.value?.toString() :
+            ctx.content.split(/\s+/g).slice(3).join(" ");
+
+        let options: GetMessageOptions = {global:true,page:0};
+        if (arg1) { options.filter = (i: RatedSong) => i.title.toLowerCase().includes(arg1?.toLowerCase() ?? "") }
+
+        let m: ReplyMessageOptions & { fetchReply: true };
+        if ((m = listMessage<ReplyMessageOptions & { fetchReply: true }>(ctx, options))) reply(ctx, m);
+    },
+
+    interact: (ctx: ButtonInteraction) => {
+        switch (ctx.customId) {
+            case 'cplaylistindexpageup':
+                ctx.update(listMessage<InteractionUpdateOptions>(ctx, {page:(Number.parseInt(ctx.message.content) || 0) + 1,global:true}))
+                break;
+            case 'cplaylistindexpagedown':
+                ctx.update(listMessage<InteractionUpdateOptions>(ctx, {page:(Number.parseInt(ctx.message.content) || 0) - 1,global:true}))
+                break;
+        }
+    }
+}
+const Amend: SubCommand = {
+    type: "SUB_COMMAND",
+    name: "amend",
+    description: "Modifies music metadata in the music database.",
+    options: [{
+        name: "id",
+        description: "Song ID to edit",
+        type: "STRING",
+        required: true,
+    }, {
+        name: "field",
+        description: "Field to edit",
+        type: "STRING",
+        required: false
+    }, {
+        name: "value",
+        description: "Value to assign",
+        type: "STRING",
+        required: false
+    }],
+    public: false,
+
+    run: (ctx: BaseCommandInteraction | Message) => {
+        if (!ctx.guild) return;
+        // Argument Processing
+        let id: string | undefined, field: string | undefined, value: string | undefined;
+        if (ctx instanceof BaseCommandInteraction) {
+            id = ctx.options.get("id", true).value?.toString()
+            field = ctx.options.get("field", false)?.value?.toString()?.toLowerCase()
+            value = ctx.options.get("value", false)?.value?.toString()
+        } else {
+            let args: string[] = ctx.content.split(/\s+/g).slice(3);
+            id = args[0]
+            field = args[1]?.toLowerCase()
+            value = args.slice(2)?.join(" ")
+        }
+        if (!id || (field && !value)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        // Playlist Locating (ish)
+        let song: SongReference | undefined = yt.Playlist.INDEX[id]
+        if (!song) return error(ctx, ERRORS.NO_SONG);
+        // Action Execution
+        if (field && value) {
+            switch (field) {
+                case "title":
+                    song.title = value;
+                    break;
+                case "artist":
+                    song.artist = value;
+                    break;
+                case "genre":
+                    if (!Object.keys(Genre).includes(value)) return error(ctx, new Error(`Couldn't identify genre ${value}!`))
+                    song.genre = <Genre>(<any>Genre)[value];
+                    break;
+                default:
+                    return error(ctx, ERRORS.INVALID_ARGUMENTS);
+            }
+        }
+
+        reply(ctx, {
+            "content": "_",
+            "embeds": [{
+                "type": "rich",
+                "title": "Song ID: " + song.id,
+                "description": "Song Metadata",
+                "color": 0xff0000,
+                "fields": [
+                    {
+                        "name": `Title:`,
+                        "value": song.title,
+                        "inline": true
+                    } as EmbedField,
+                    {
+                        "name": `Artist:`,
+                        "value": song.artist,
+                        "inline": true
+                    } as EmbedField,
+                    {
+                        "name": `Genre:`,
+                        "value": song.genre.toString() ?? "Unknown",
+                        "inline": true
+                    } as EmbedField
+                ],
+                "footer": {
+                    "text": `PlaylistDJ - Global Metadata Editor`,
+                    "icon_url": client.user?.avatarURL() ?? ""
+                },
+                "url": song.url
+            }],
+            "components": [{
+                "type": "ACTION_ROW",
+                "components": [
+                    {
+                        "style": "SUCCESS",
+                        "label": `Save`,
+                        "customId": `cplaylistamendsave`,
+                        "disabled": false,
+                        "type": "BUTTON",
+                    } as MessageActionRowComponent,
+                    {
+                        "style": "DANGER",
+                        "label": `Cancel`,
+                        "customId": `cancel`,
+                        "disabled": ctx instanceof BaseCommandInteraction,
+                        "type": "BUTTON",
+                    } as MessageActionRowComponent
+                ]
+            } as MessageActionRow],
+            fetchReply: true
+        } as ReplyMessageOptions & { fetchReply: true })
+    },
+    
+    interact: (ctx: ButtonInteraction) => {
+        if (!ctx.guild) return;
+        // Action Execution
+        yt.Playlist.setMusicIndex().then(_=>{
             ctx.update({content: "Saved!", components:[]})
         })
     },
@@ -518,10 +672,36 @@ const Clean: SubCommand = {
             }).once('error', async (e: Error) => { await error(ctx, e) })
     }
 }
+const Destroy: SubCommand = {
+    type: "SUB_COMMAND",
+    name: "destroy",
+    description: "Deletes music from the filesystem.",
+    public: false,
+    options: [{
+        name: "id",
+        description: "Song ID(s) to delete",
+        type: 3, // string
+        required: true,
+    }],
+
+    run: async (ctx: BaseCommandInteraction | Message) => {
+        if (!ctx.guild) return;
+        // Argument Processing
+        let inp: string | undefined = ctx instanceof BaseCommandInteraction
+            ? ctx.options.get("id",true).value?.toString()
+            : ctx.content.split(/\s+/g)[3]
+        if (!inp) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        let ids: string[] = inp.split(",").slice(undefined,10).map(id=>id.trim())
+        if (ids.length <= 0) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        // Action Execution
+        await yt.Playlist.delete(ids);
+        await editReply(ctx,`Success! Destroyed ${ids.length} song(s).`)
+    }
+}
 
 const SubCommands: SubCommand[] = [
     Create, Delete, Add, Remove, List, Edit,
-    Download, Clean
+    Index, Amend, Download, Clean, Destroy
 ]
 export const Playlist: Command = {
     name: "playlist",
@@ -551,32 +731,40 @@ export const Playlist: Command = {
 }
 
 type GetMessageOptions = {
+    global: boolean,
     filter?: (value: RatedSong, index: number, array: RatedSong[]) => unknown,
-    sort?: (a: RatedSong, b: RatedSong) => number
+    sort?: (a: RatedSong, b: RatedSong) => number,
+    page: number,
 }
-function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, options?: GetMessageOptions, page = 0): T {
+function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, options: GetMessageOptions): T {
     if (!ctx.guild) return { content: "Couldn't find guild!" } as T;
-    let pl = yt.getPlaylist(ctx.guild.id)
-    if (!pl) return { content: "Couldn't find playlist!" } as T;
-    let playlist = pl.playlistdata;
-    if (options?.filter) playlist.items = playlist.items.filter(options.filter);
-    if (options?.sort) playlist.items = playlist.items.sort(options.sort);
+    let items: RatedSong[];
+    if (options.global) {
+        items = Object.values(yt.Playlist.INDEX).map(sr=>{return {...sr,score:-1} as RatedSong})
+        if (options?.filter) items = items.filter(options.filter);
+    } else {
+        let pl = yt.getPlaylist(ctx.guild.id)
+        if (!pl) return { content: "Couldn't find playlist!" } as T;
+        items = pl.playlistdata.items;
+        if (options?.filter) items = items.filter(options.filter);
+        if (options?.sort) items = items.sort(options.sort);
+    }
     return {
-        "content": page.toString(),
+        "content": options.page.toString(),
         "components": [{
             "type": "ACTION_ROW", "components": [
                 {
                     "style": "PRIMARY",
                     "label": `Prev Page`,
-                    "customId": `cplaylistlistpagedown`,
-                    "disabled": page <= 0,
+                    "customId": `cplaylist${global ? "index" : "list"}pagedown`,
+                    "disabled": options.page <= 0,
                     "type": "BUTTON"
                 } as MessageActionRowComponent,
                 {
                     "style": "PRIMARY",
                     "label": `Next Page`,
-                    "customId": `cplaylistlistpageup`,
-                    "disabled": page >= Math.floor(playlist.items.length / 25),
+                    "customId": `cplaylist${global ? "index" : "list"}pageup`,
+                    "disabled": options.page >= Math.floor(items.length / 25),
                     "type": "BUTTON"
                 } as MessageActionRowComponent,
                 {
@@ -590,18 +778,18 @@ function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(c
         } as MessageActionRow],
         "embeds": [{
             "type": "rich",
-            "title": `${options?.sort ? "Top" : "All"} ${options?.filter ? "Results" : "Songs"} (${playlist.items.length})`,
-            "description": `${ctx.guild.name.length > 20 ? ctx.guild.nameAcronym : ctx.guild.name} Server Playlist`,
+            "title": `${options.sort ? "Top" : "All"} ${options.filter ? "Results" : "Songs"} (${items.length})`,
+            "description": options.global ? "Global Music Index" : `${ctx.guild.name.length > 20 ? ctx.guild.nameAcronym : ctx.guild.name} Server Playlist`,
             "color": 0xff0000,
-            "fields": playlist.items.slice(page * 25, page * 25 + 25).map(s => {
+            "fields": items.slice(options.page * 25, options.page * 25 + 25).map(s => {
                 return {
-                    "name": options?.sort ? `[${s.score} Score] ${truncateString(s.title, 25)}` : s.title,
+                    "name": options.sort ? `[${s.score} Score] ${truncateString(s.title, 25)}` : s.title,
                     "value": s.id,
                     "inline": true,
                 } as EmbedField
             }) || { "name": "No Results", "value": "Out Of Bounds", "inline": false } as EmbedField,
             "footer": {
-                "text": `PlaylistDJ - Song List - Page ${page + 1}/${Math.ceil(playlist.items.length / 25)}`,
+                "text": `PlaylistDJ - Song ${global ? "Index" : "List"} - Page ${options.page + 1}/${Math.ceil(items.length / 25)}`,
                 "iconURL": client.user?.avatarURL() ?? ""
             }
         } as MessageEmbed]

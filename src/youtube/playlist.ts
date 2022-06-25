@@ -121,8 +121,8 @@ export class WebPlaylist {
             */
         })).then(async (completion: Array<PromiseSettledResult<void>>) => {
             if (completion.every(r=>r.status==="rejected")) return;
-            pdata.items.forEach(rs=>MUSICINDEX[rs.id]=(rs as SongReference))
-            await setMusicIndex();
+            pdata.items.forEach(rs=>Playlist.INDEX[rs.id]=(rs as SongReference))
+            await Playlist.setMusicIndex();
             let playlist: Playlist = new Playlist(pdata);
             await playlist.save();
             return playlist;
@@ -134,6 +134,8 @@ export class WebPlaylist {
 export class Playlist { // Represents a playlist stored on the filesystem
     private playlist: MusicJSON;
     public get playlistdata(): MusicJSON {return this.playlist}
+    public static INDEX: {[key: string]: SongReference} = JSON.parse(fs.readFileSync('./resources/music.json','utf8'));
+    public static async setMusicIndex() {return fs.promises.writeFile('./resources/music.json',JSON.stringify(Playlist.INDEX))}
 
     public vote(songid: string, voteup: boolean) {
         let index: number = this.playlist.items.findIndex(i => i.id === songid)
@@ -159,7 +161,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
 
     public static create(guildid: string, ids: string[], url?: string): Playlist {
         if (getPlaylist(guildid)) throw new Error("This guild already has a playlist!")
-        let items: RatedSong[] = ids.filter(id=>Object.keys(MUSICINDEX).includes(id)).map(id=>{return {score:0,...MUSICINDEX[id]}})
+        let items: RatedSong[] = ids.filter(id=>Object.keys(Playlist.INDEX).includes(id)).map(id=>{return {score:0,...Playlist.INDEX[id]}})
         if (items.length <= 0) throw new Error("Couldn't find any songs!")
         return new Playlist({guildid,url,items} as MusicJSON)
     }
@@ -170,7 +172,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
 
     public addSongs(ids: string[]): RatedSong[] {
-        let added: RatedSong[] = ids.filter(id=>Object.keys(MUSICINDEX).includes(id)).map(id=>{return {score:0,...MUSICINDEX[id]}})
+        let added: RatedSong[] = ids.filter(id=>Object.keys(Playlist.INDEX).includes(id)).map(id=>{return {score:0,...Playlist.INDEX[id]}})
         this.playlist.items = this.playlist.items.concat(added)
         return added;
     }
@@ -223,8 +225,8 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
 
     public static async delete(ids: string[]) {
-        ids.forEach(id=>delete MUSICINDEX[id]);
-        await setMusicIndex();
+        ids.forEach(id=>delete Playlist.INDEX[id]);
+        await Playlist.setMusicIndex();
         await fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
             ents.filter(ent=>ent.isFile()&&ent.name.endsWith(".json"))
         ).then(jsonfiles=>
@@ -247,6 +249,3 @@ export function getPlaylist(guildid: string): Playlist | undefined {
     }
     return playlists[guildid];
 }
-
-export const MUSICINDEX: {[key: string]: SongReference} = JSON.parse(fs.readFileSync('./resources/music.json','utf8'));
-export async function setMusicIndex() {return fs.promises.writeFile('./resources/music.json',JSON.stringify(MUSICINDEX))}
