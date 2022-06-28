@@ -1,5 +1,5 @@
-import { ApplicationCommandSubCommandData, BaseCommandInteraction, ChatInputApplicationCommandData, Message, MessageComponentInteraction } from "discord.js";
-import { Auth } from "./auth";
+import { ApplicationCommandSubCommandData, ApplicationCommandSubGroupData, BaseCommandInteraction, ChatInputApplicationCommandData, Message, MessageComponentInteraction } from "discord.js";
+import { Admin } from "./admin";
 import { Join } from "./join";
 import { Leave } from "./leave";
 import { Play } from "./play";
@@ -10,17 +10,20 @@ import { Vote } from "./vote";
 export interface Command extends ChatInputApplicationCommandData {
     public: boolean;
     run(ctx: BaseCommandInteraction | Message): void;
-    interact?(ctx: MessageComponentInteraction): void;
 }
 export interface SubCommand extends ApplicationCommandSubCommandData {
     type: "SUB_COMMAND";
     public: boolean;
     run(ctx: BaseCommandInteraction | Message): void;
-    interact?(ctx: MessageComponentInteraction): void;
+}
+export interface SubCommandGroup extends ApplicationCommandSubGroupData {
+    type: "SUB_COMMAND_GROUP";
+    public: boolean;
+    run(ctx: BaseCommandInteraction | Message): void;
 }
 
 export const Commands: Command[] = [
-    Auth,Rickroll,        // Admin Commands
-    Playlist,             // Management Commands [Playlist **MUST** Precede Play in order for interaction seeking to work]
+    Admin, Playlist,      // Management Commands
     Join,Leave,Play,Vote, // Public Commands
+    Rickroll,
 ]

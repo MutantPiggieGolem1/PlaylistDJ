@@ -117,7 +117,7 @@ export class WebPlaylist {
                     ee.emit('warn', done, total, new Error(`Skipped \`${playlistitem.id}\` (timeout).`)) // !important! May have to decrement here but i err on the safe si
                     reject()
                 },14*60*1000)
-            })]) TODO: Fix this not cancelling on others' completion
+            })])
             */
         })).then(async (completion: Array<PromiseSettledResult<void>>) => {
             if (completion.every(r=>r.status==="rejected")) return;
@@ -146,7 +146,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
     public constructor(arg: MusicJSON) {
         let eids: Set<string> = new Set<string>();
         arg.items = arg.items.filter(rs=>{
-            if (eids.has(rs.id)) return false;
+            if (eids.has(rs.id) || !fs.existsSync(rs.file)) return false;
             eids.add(rs.id)
             return true;
         }).map(rs=>{
@@ -159,11 +159,12 @@ export class Playlist { // Represents a playlist stored on the filesystem
         this.playlist = arg;
     }
 
-    public static create(guildid: string, ids: string[], url?: string): Playlist {
+    public static create(guildid: string, ids: string[], url?: string): Promise<Playlist> {
         if (getPlaylist(guildid)) throw new Error("This guild already has a playlist!")
-        let items: RatedSong[] = ids.filter(id=>Object.keys(Playlist.INDEX).includes(id)).map(id=>{return {score:0,...Playlist.INDEX[id]}})
+        let items: RatedSong[] = ids.filter(id=>Object.keys(Playlist.INDEX).includes(id) && fs.existsSync(Playlist.INDEX[id].file)).map(id=>{return {score:0,...Playlist.INDEX[id]}})
         if (items.length <= 0) throw new Error("Couldn't find any songs!")
-        return new Playlist({guildid,url,items} as MusicJSON)
+        playlists[guildid] = new Playlist({guildid,url,items} as MusicJSON);
+        return playlists[guildid].save().then(_=>playlists[guildid]);
     }
 
     public async delete() {
@@ -224,7 +225,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
         return ee;
     }
 
-    public static async delete(ids: string[]) {
+    public static async delete(ids: string[]): Promise<string[]> {
         ids.forEach(id=>delete Playlist.INDEX[id]);
         await Playlist.setMusicIndex();
         await fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
@@ -234,10 +235,10 @@ export class Playlist { // Represents a playlist stored on the filesystem
         ).then(playlists => 
             Promise.all(playlists.map(pl=>{if (pl) {pl.removeSongs(ids);return pl.save()}}))
         )
-        await Promise.all(ids.map(id=>{
+        return Promise.all(ids.map(id=>{
             let file = `./resources/music/${id}${AUDIOFORMAT}`;
-            if (fs.existsSync(file)) fs.promises.rm(file)
-        }))
+            if (fs.existsSync(file)) {return fs.promises.rm(file).then(_=>file)}
+        })).then(files=>files.filter(file=>file) as string[])
     }
 }
 

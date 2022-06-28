@@ -1,9 +1,10 @@
 import { AudioPlayer, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
-import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, InteractionReplyOptions, Message, MessageEditOptions, WebhookEditMessageOptions } from "discord.js";
+import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, InteractionReplyOptions, Message, ReplyMessageOptions, WebhookEditMessageOptions } from "discord.js";
 import { RatedSong } from "../youtube/util";
 import { WHITELIST } from "../index";
 
 export const TRUTHY: string[] = ["true","yes","1","on"]
+export const ITEMS_PER_PAGE = 25;
 
 const players: {[key:string]: {player?:AudioPlayer,playing?:RatedSong}} = {}
 export function getPlayer(guildid: string)               : {player:AudioPlayer,playing?:RatedSong}
@@ -25,11 +26,19 @@ export enum ERRORS {
     NO_USER = 'Couldn\'t find user!',
     NO_PLAYLIST = 'Couldn\'t find playlist!',
     NO_SONG = 'Couldn\'t find song!',
-    NO_PERMS = "Insufficent Permissions!"
+    NO_PERMS = "Insufficent Permissions!",
+    NO_GUILD = "Couldn't find guild!"
 }
 
-export async function editReply(ctx: BaseCommandInteraction | Message, content: WebhookEditMessageOptions | string) {
-    if (!ctx.channel) return;
+export function reply(ctx: BaseCommandInteraction | ButtonInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean>> {
+    if (typeof content === "string") content = { content }
+    content = { ...content, ephemeral: true }
+    if (ctx instanceof Message) return ctx.reply(content)
+    return ctx.reply(content).then(async _=>(await ctx.fetchReply() as Message))
+}
+
+export function editReply(ctx: BaseCommandInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {
+    if (typeof content === "string") content = { content }
     if (ctx instanceof Message) {
         let m: Message | null = [...ctx.channel.messages.cache.values()].find(msg => msg.editable &&
             msg.reference?.messageId === ctx.id &&
@@ -38,8 +47,8 @@ export async function editReply(ctx: BaseCommandInteraction | Message, content: 
         if (m) {return m.edit(content)}
         return ctx.reply(content);
     }
-    if (ctx.replied || ctx.deferred) return ctx.editReply(content)
-    return ctx.reply(typeof content === "string" ? {content, "ephemeral": true} : {...content,"ephemeral": true})
+    if (ctx.replied || ctx.deferred) return ctx.editReply(content).then(async _=>(await ctx.fetchReply() as Message))
+    return ctx.reply({...content, ephemeral: true}).then(async _=>(await ctx.fetchReply() as Message))
 }
 
 export function truncateString(str: string, len: number): string {

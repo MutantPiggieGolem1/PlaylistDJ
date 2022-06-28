@@ -9,6 +9,8 @@ import { Command } from "./Commands";
 import { leave } from "./leave"
 import { resetVotes } from "./vote";
 
+const timeouts: {[key:string]: number} = {}
+
 export const Play: Command = {
     name: "play",
     description: "Begins playing music.",
@@ -60,19 +62,23 @@ export const Play: Command = {
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
         if (!connection?.subscribe(player.player)) return error(ctx,ERRORS.NO_CONNECTION)
         // Action Execution
+        if (timeout > 0) timeouts[ctx.guild.id] = Date.now() + timeout
+        const guildid = ctx.guild.id;
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
         let msg: MessageOptions = play(player, start)
         if (ctx.channel && !silent) ctx.channel.send(msg);
         player.player.on(AudioPlayerStatus.Idle, () => {
+            if (Date.now() >= timeouts[guildid]) {
+                ctx.channel?.send("Finished Playing!")
+                delete timeouts[guildid];
+                return leave(ctx)
+            }
             let song: RatedSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
+            // let song: RatedSong = playlist.items.find(p=>p.id===)
             let msg: MessageOptions = play(player, song);
             if (ctx.channel && !silent) ctx.channel.send(msg);
             if (ctx.guild?.id) resetVotes(ctx.guild.id);
         })
-        if (timeout > 0) setTimeout(() => {try {
-            leave(ctx)
-            ctx.channel?.send("Finished Playing!")
-        } catch (e) {ctx.channel?.send(`Finished Playing! [Error: ${(e as Error).message}]`)}}, timeout);
     }
 }
 
@@ -80,7 +86,7 @@ function play(player: {player:AudioPlayer,playing?:RatedSong}, song: RatedSong):
     if (!existsSync(song.file)) {
         player.player.removeAllListeners()
         player.playing = undefined;
-        return {content:"Couldn't locate resources!"}
+        return {content:"Couldn't locate resources!",flags:64}
     }
     player.player.play(createAudioResource(createReadStream(song.file),{
         inputType: StreamType.WebmOpus,

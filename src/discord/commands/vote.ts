@@ -1,7 +1,7 @@
 import { BaseCommandInteraction, GuildMember, Message} from "discord.js";
 import { getPlaylist } from "../../youtube/playlist";
 import { RatedSong } from "../../youtube/util";
-import { error, ERRORS, getPlayer, truncateString } from "../util";
+import { error, ERRORS, getPlayer, reply, truncateString } from "../util";
 import { Command } from "./Commands";
 
 const voted: {[key:string]: Set<String>} = {};
@@ -17,6 +17,10 @@ export const Vote: Command = {
         description: "Upvote or downvote?",
         type: "STRING",
         required: true,
+        choices: [
+            {name:"Up",value:"up"},
+            {name:"Down",value:"down"}
+        ]
     }],
 
     run: (ctx: BaseCommandInteraction | Message) => {
@@ -37,6 +41,6 @@ export const Vote: Command = {
         if (!voted[ctx.guild.id]) voted[ctx.guild.id] = new Set<string>();
         voted[ctx.guild.id].add(ctx.member.user.id);
         playlist.vote(song.id,arg1==="up");
-        ctx.reply(`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.playlistdata.items.find(i=>i.id===song?.id)?.score} score)`)
+        reply(ctx,`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.playlistdata.items.find(i=>i.id===song?.id)?.score} score)`)
     }
 }
