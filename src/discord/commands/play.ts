@@ -15,7 +15,6 @@ export const Play: Command = {
     name: "play",
     description: "Begins playing music.",
     type: "CHAT_INPUT",
-    public: true,
     options: [{
         name: "song",
         description: "Song ID to start with",
@@ -32,6 +31,8 @@ export const Play: Command = {
         type: "NUMBER",
         required: false
     }],
+    
+    public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;

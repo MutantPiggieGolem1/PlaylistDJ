@@ -9,6 +9,7 @@ export const Rickroll: Command = {
     name: "rr",
     description: "dQw4w9WgXcQ",
     type: "CHAT_INPUT",
+    
     public: false,
 
     run: (ctx: BaseCommandInteraction | Message) => {

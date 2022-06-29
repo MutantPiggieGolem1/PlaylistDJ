@@ -7,18 +7,17 @@ import { error } from "../util";
 export const Join: Command = {
     name: "join",
     description: "Joins a voice channel.",
-    type: "CHAT_INPUT",
-    public: true,
     options: [{
-            name: "channel",
-            description: "Voice channel to join",
-            type: "CHANNEL",
-            channelTypes: [
-                ChannelTypes.GUILD_VOICE,
-                ChannelTypes.GUILD_STAGE_VOICE
-            ],
-            required: true
-    }],
+        name: "channel",
+        description: "Voice channel to join",
+        type: "CHANNEL",
+        channelTypes: [
+            ChannelTypes.GUILD_VOICE,
+            ChannelTypes.GUILD_STAGE_VOICE
+        ],
+        required: true
+    }], 
+    public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild?.available) return;

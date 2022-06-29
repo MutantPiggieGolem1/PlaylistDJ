@@ -113,7 +113,7 @@ const Add: SubCommand = {
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
         let added: RatedSong[] = playlist.addSongs(arg1.split(",").map(i => i.trim()))
-        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, 10)).join(", ")}`)
+        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, Math.floor(60/added.length))).join(", ")}`)
     }
 }
 const Remove: SubCommand = {
@@ -383,6 +383,7 @@ export const Playlist: Command = {
     name: commandname,
     description: "Manage your server playlist.",
     options: SubCommands,
+    
     public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {

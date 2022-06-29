@@ -160,11 +160,14 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
 
     public static create(guildid: string, ids: string[], url?: string): Promise<Playlist> {
-        if (getPlaylist(guildid)) throw new Error("This guild already has a playlist!")
-        let items: RatedSong[] = ids.filter(id=>Object.keys(Playlist.INDEX).includes(id) && fs.existsSync(Playlist.INDEX[id].file)).map(id=>{return {score:0,...Playlist.INDEX[id]}})
-        if (items.length <= 0) throw new Error("Couldn't find any songs!")
-        playlists[guildid] = new Playlist({guildid,url,items} as MusicJSON);
-        return playlists[guildid].save().then(_=>playlists[guildid]);
+        return new Promise<Playlist>(async (resolve,reject) => {
+            if (getPlaylist(guildid)) return reject("This guild already has a playlist!")
+            let items: RatedSong[] = ids.filter(id=>Object.keys(Playlist.INDEX).includes(id) && fs.existsSync(Playlist.INDEX[id].file)).map(id=>{return {score:0,...Playlist.INDEX[id]}})
+            if (items.length <= 0) return reject("Couldn't find any songs!")
+            playlists[guildid] = new Playlist({guildid,url,items} as MusicJSON);
+            await playlists[guildid].save()
+            resolve(playlists[guildid])
+        })
     }
 
     public async delete() {
@@ -227,7 +230,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
 
     public static async delete(ids: string[]): Promise<string[]> {
         ids.forEach(id=>delete Playlist.INDEX[id]);
-        await Playlist.setMusicIndex();
+        await Playlist.setMusicIndex()
         await fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
             ents.filter(ent=>ent.isFile()&&ent.name.endsWith(".json"))
         ).then(jsonfiles=>
@@ -237,7 +240,8 @@ export class Playlist { // Represents a playlist stored on the filesystem
         )
         return Promise.all(ids.map(id=>{
             let file = `./resources/music/${id}${AUDIOFORMAT}`;
-            if (fs.existsSync(file)) {return fs.promises.rm(file).then(_=>file)}
+            if (!fs.existsSync(file)) return false;
+            return fs.promises.rm(file).then(_=>file).catch(_=>false)
         })).then(files=>files.filter(file=>file) as string[])
     }
 }

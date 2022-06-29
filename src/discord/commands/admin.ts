@@ -130,8 +130,6 @@ const Amend: SubCommand = {
             Playlist.setMusicIndex().then(_=>{
                 interaction.update({content: "Saved!", components:[]})
             })
-        }).on('end', () => {
-            editReply(ctx,{components:[]})
         }))
     },
 }
@@ -531,6 +529,7 @@ export const Admin: Command = {
     name: commandname,
     description: "Manage global bot data.",
     options: SubCommands,
+    
     public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {

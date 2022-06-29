@@ -11,7 +11,6 @@ export const Vote: Command = {
     name: "vote",
     description: "Casts a vote on the current song.",
     type: "CHAT_INPUT",
-    public: true,
     options: [{
         name: "vote",
         description: "Upvote or downvote?",
@@ -22,7 +21,9 @@ export const Vote: Command = {
             {name:"Down",value:"down"}
         ]
     }],
-
+    
+    public: true,
+    
     run: (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild || !(ctx.member instanceof GuildMember)) return;
         if (voted[ctx.guild.id]?.has(ctx.member.user.id)) return error(ctx,new Error("You've already voted!"));

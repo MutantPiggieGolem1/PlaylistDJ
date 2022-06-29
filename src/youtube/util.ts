@@ -40,7 +40,8 @@ export enum Genre {
     Minecraft = 'Minecraft'         ,// Dragonhearted - TryHardNinja
     Electronic = 'Electronic'       ,// Base After Base - DJVI
     Instrumental = 'Instrumental'   ,// 
-    Japanese = 'Japanese'           ,// YOASABI - Into the Night
+    Korean = 'Korean'               ,// Way Back Home - SHAUN
+    Japanese = 'Japanese'           ,// Into the Night - YOASABI
     Chinese = 'Chinese'             ,// 
     Eurobeat = 'Eurobeat'           ,// Running in the 90s
 } // Philter, TheFatRat
