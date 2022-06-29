@@ -1,4 +1,4 @@
-import { BaseCommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, MessageActionRow, MessageEmbed, MessageOptions, User, Interaction } from "discord.js";
+import { BaseCommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, MessageActionRow, MessageEmbed, MessageOptions, User, Interaction, Modal, ModalSubmitInteraction, TextInputComponent, ModalOptions } from "discord.js";
 import { client, WHITELIST } from "../../index";
 import { Playlist, WebPlaylist } from "../../youtube/playlist";
 import { SongReference, Genre, Song } from "../../youtube/util";
@@ -16,121 +16,124 @@ const Amend: SubCommand = {
         description: "Song ID to edit",
         type: "STRING",
         required: true,
-    }, {
-        name: "field",
-        description: "Field to edit",
-        type: "STRING",
-        required: false,
-        choices: [
-            {name:"Title",value:"title"},
-            {name:"Artist",value:"artist"},
-            {name:"Genre",value:"genre"}
-        ]
-    }, {
-        name: "value",
-        description: "Value to assign",
-        type: "STRING",
-        required: false
     }],
     public: false,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let id: string | undefined, field: string | undefined, value: string | undefined;
-        if (ctx instanceof BaseCommandInteraction) {
-            id = ctx.options.get("id", true).value?.toString()
-            field = ctx.options.get("field", false)?.value?.toString()?.toLowerCase()
-            value = ctx.options.get("value", false)?.value?.toString()
-        } else {
-            let args: string[] = ctx.content.split(/\s+/g).slice(3);
-            id = args[0]
-            field = args[1]?.toLowerCase()
-            value = args.slice(2)?.join(" ")
-        }
-        if (!id || (field && !value)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        const id: string | undefined = ctx instanceof BaseCommandInteraction ?
+            ctx.options.get("id", true).value?.toString() :
+            ctx.content.split(/\s+/g)[3]
+        if (!id) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating (ish)
-        let song: SongReference | undefined = Playlist.INDEX[id]
+        const song: SongReference | undefined = Playlist.INDEX[id]
         if (!song) return error(ctx, ERRORS.NO_SONG);
-        // Action Execution
-        if (field && value) {
-            switch (field) {
-                case "title":
-                    song.title = value;
-                    break;
-                case "artist":
-                    song.artist = value;
-                    break;
-                case "genre":
-                    if (!Object.keys(Genre).includes(value)) return error(ctx, new Error(`Couldn't identify genre ${value}!`))
-                    song.genre = <Genre>(<any>Genre)[value];
-                    break;
-                default:
-                    return error(ctx, ERRORS.INVALID_ARGUMENTS);
-            }
-        }
-        // Response Message
-        reply(ctx, {
-            "content": "_",
-            "embeds": [{
-                "type": "rich",
-                "title": "Song ID: " + song.id,
-                "description": "Song Metadata",
-                "color": 0xff0000,
-                "fields": [
-                    {
-                        "name": `Title:`,
-                        "value": song.title,
-                        "inline": true
-                    } as EmbedField,
-                    {
-                        "name": `Artist:`,
-                        "value": song.artist,
-                        "inline": true
-                    } as EmbedField,
-                    {
-                        "name": `Genre:`,
-                        "value": song.genre.toString() ?? "Unknown",
-                        "inline": true
-                    } as EmbedField
-                ],
-                "footer": {
-                    "text": `PlaylistDJ - Global Metadata Editor`,
-                    "icon_url": client.user?.avatarURL() ?? ""
-                },
-                "url": song.url
-            }],
+        // Action Execution & Response Message
+        let rctx: ButtonInteraction | BaseCommandInteraction;
+        rctx = ctx instanceof Message ? await reply(ctx, {
+            "content": "Click this button to continue:",
             "components": [{
-                "type": "ACTION_ROW",
-                "components": [
-                    {
-                        "style": "SUCCESS",
-                        "label": `Save`,
-                        "customId": `c${commandname}amendsave`,
-                        "disabled": false,
-                        "type": "BUTTON",
-                    } as MessageActionRowComponent,
-                    {
-                        "style": "DANGER",
-                        "label": `Cancel`,
-                        "customId": `cancel`,
-                        "disabled": ctx instanceof BaseCommandInteraction,
-                        "type": "BUTTON",
-                    } as MessageActionRowComponent
-                ]
-            } as MessageActionRow],
-            fetchReply: true
-        } as ReplyMessageOptions & { fetchReply: true }).then(msg => msg.createMessageComponentCollector({
+                type: "ACTION_ROW",
+                components: [{
+                    "style": "SUCCESS",
+                    "label": `Continue`,
+                    "customId": `continue`,
+                    "disabled": false,
+                    "type": "BUTTON",
+                } as MessageActionRowComponent]
+            }]
+        }).then(msg=>msg.awaitMessageComponent({
             componentType: "BUTTON",
-            filter: (i: ButtonInteraction) => i.user.id===(ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
-            max: 1,
+            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
-        }).on('collect', (interaction: ButtonInteraction) => {
-            if (interaction.customId === 'cancel') return interaction.update({components:[]});
-            Playlist.setMusicIndex().then(_=>{
-                interaction.update({content: "Saved!", components:[]})
+        })) : ctx
+        rctx.showModal({
+            customId: `c${commandname}amendedit`,
+            title: `Song Metadata Editor [${song.id}]`,
+            components: [{
+                type: "ACTION_ROW",
+                components: [{
+                    customId: `mamendedittitle`,
+                    label: "Song Title:",
+                    maxLength: 64,
+                    minLength: 1,
+                    placeholder: song.title,
+                    required: false,
+                    style: "SHORT",
+                    type: "TEXT_INPUT"
+                } as TextInputComponent]
+            },{
+                type: "ACTION_ROW",
+                components: [{
+                    customId: `mamendeditartist`,
+                    label: "Song Artist:",
+                    maxLength: 32,
+                    minLength: 1,
+                    placeholder: song.artist,
+                    required: false,
+                    style: "SHORT",
+                    type: "TEXT_INPUT"
+                } as TextInputComponent]
+            },{
+                type: "ACTION_ROW",
+                components: [{
+                    customId: `mamendeditgenre`,
+                    label: "Song Genre:",
+                    maxLength: 16,
+                    minLength: 1,
+                    placeholder: song.genre.toString(),
+                    required: false,
+                    style: "SHORT",
+                    type: "TEXT_INPUT"
+                } as TextInputComponent]
+            } as MessageActionRow<TextInputComponent>]
+        } as ModalOptions).then(async _=> {
+            if (ctx instanceof Message && await rctx.fetchReply()) await rctx.deleteReply()
+            return rctx.awaitModalSubmit({time:5*60*1000})
+        }).then(async (interaction: ModalSubmitInteraction) => {
+            song.title = interaction.fields.getField(`mamendedittitle`).value || song.title
+            song.artist= interaction.fields.getField(`mamendeditartist`).value|| song.artist
+            let genre = interaction.fields.getField(`mamendeditgenre`).value
+            if (genre) {
+                if (!Object.keys(Genre).includes(genre)) return error(ctx, new Error(`Couldn't identify genre ${genre}!`))
+                song.genre = <Genre>(<any>Genre)[genre];
+            }
+            await Playlist.setMusicIndex()
+            return interaction.reply({
+                ephemeral: true,
+                "content": "_",
+                "embeds": [{
+                    "title": "Song ID: " + song.id,
+                    "description": "Song Metadata",
+                    "color": 0xff0000,
+                    "fields": [
+                        {
+                            "name": `Title:`,
+                            "value": song.title,
+                            "inline": true
+                        } as EmbedField,
+                        {
+                            "name": `Artist:`,
+                            "value": song.artist,
+                            "inline": true
+                        } as EmbedField,
+                        {
+                            "name": `Genre:`,
+                            "value": song.genre.toString(),
+                            "inline": true
+                        } as EmbedField
+                    ],
+                    "footer": {
+                        "text": `PlaylistDJ - Global Metadata Viewer`,
+                        "icon_url": client.user?.avatarURL() ?? ""
+                    },
+                    "url": song.url
+                }]
             })
-        }))
+        }).catch(_ => {
+            return rctx.deleteReply().catch(_=>{})
+        })
     },
 }
 const Auth: SubCommandGroup = {

@@ -210,6 +210,7 @@ const List: SubCommand = {
         reply(ctx, listMessage<ReplyMessageOptions>(ctx, items, page)).then(msg => msg.createMessageComponentCollector({
             componentType: "BUTTON",
             filter: (i: ButtonInteraction) => i.user.id===(ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
+            max: Number.MAX_SAFE_INTEGER,
             time: 10*1000
         }).on('collect', (interaction: ButtonInteraction) => { 
             switch (interaction.customId) {

@@ -74,7 +74,6 @@ export const Play: Command = {
                 return leave(ctx)
             }
             let song: RatedSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
-            // let song: RatedSong = playlist.items.find(p=>p.id===)
             let msg: MessageOptions = play(player, song);
             if (ctx.channel && !silent) ctx.channel.send(msg);
             if (ctx.guild?.id) resetVotes(ctx.guild.id);
