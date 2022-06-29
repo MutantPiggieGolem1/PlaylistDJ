@@ -8,7 +8,6 @@ export const Leave: Command = {
     name: "leave",
     description: "Leaves the voice channel and stops playing",
     public: true,
-    
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;

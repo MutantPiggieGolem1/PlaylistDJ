@@ -10,7 +10,6 @@ export function resetVotes(gid: string) {voted[gid]?.clear()}
 export const Vote: Command = {
     name: "vote",
     description: "Casts a vote on the current song.",
-    type: "CHAT_INPUT",
     options: [{
         name: "vote",
         description: "Upvote or downvote?",
@@ -21,7 +20,6 @@ export const Vote: Command = {
             {name:"Down",value:"down"}
         ]
     }],
-    
     public: true,
     
     run: (ctx: BaseCommandInteraction | Message) => {

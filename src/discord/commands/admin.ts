@@ -529,7 +529,6 @@ export const Admin: Command = {
     name: commandname,
     description: "Manage global bot data.",
     options: SubCommands,
-    
     public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {

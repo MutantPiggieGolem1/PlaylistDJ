@@ -31,7 +31,6 @@ export const Play: Command = {
         type: "NUMBER",
         required: false
     }],
-    
     public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {

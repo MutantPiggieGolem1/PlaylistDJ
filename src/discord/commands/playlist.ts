@@ -383,7 +383,6 @@ export const Playlist: Command = {
     name: commandname,
     description: "Manage your server playlist.",
     options: SubCommands,
-    
     public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {
