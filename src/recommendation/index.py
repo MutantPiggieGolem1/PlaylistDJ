@@ -52,4 +52,5 @@
 # print(f"Recommendations for user 42: {titles[0, :3]}")
 
 import sys
-print(sys.argv)
+from random import randint
+print(randint(*[int(i) for i in sys.argv[1:3]]))
