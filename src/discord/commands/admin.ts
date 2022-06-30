@@ -321,7 +321,7 @@ const Download: SubCommand = {
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx) return;
+        if (!rctx?.guild) return;
         if (rmsg?.deletable) await rmsg.delete()
         // Playlist Locating
         await rctx.reply({content: "Searching for Playlist...", ephemeral: true})
@@ -329,6 +329,7 @@ const Download: SubCommand = {
             var webpl: WebPlaylist = await WebPlaylist.fromUrl(arg1);
         } catch (e) { return error(rctx, e as Error) }
         // Action Execution
+        const guildid: string = rctx.guild?.id;
         const idata: {index: number, exclusions: number[]} = { index: 0, exclusions: [] };
         if (rctx instanceof ButtonInteraction && (rctx.message as Message).deletable) await (rctx.message as Message).delete();
         const msg: Message = (await rctx.editReply({
@@ -461,21 +462,18 @@ const Download: SubCommand = {
                     }
                 case `c${commandname}downloadcustomall`:
                     if (idata?.exclusions) { webpl.remove(idata.exclusions) }
-                case `c${commandname}downloadall`:
-                    msg.edit({components:[]})
-                    
-                    if (!interaction.deferred && interaction.isRepliable()) await interaction.deferReply({ "ephemeral": true });
-                    if (!interaction.guild) {error(interaction, ERRORS.NO_GUILD); return;}
-                    webpl.download(interaction.guild.id)
-                        .on('progress', (cur: number, total: number) => {
-                            interaction.editReply(`Downloaded: ${cur}/${total} songs.`);
-                        }).on('finish', (pl: Playlist | undefined) => {
-                            interaction.editReply(`Success! ${pl ? pl.playlistdata.items.length : 0} files downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
-                        }).on('warn', (cur: number, total: number, error: Error) => {
-                            interaction.editReply(`Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
-                        }).on('error', (e: Error) => {
-                            interaction.editReply(`Error: ` + e.message);
-                        })
+                case `c${commandname}downloadall`:                    
+                    if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate();
+                    webpl.download(guildid)
+                    .on('progress', (cur: number, total: number) => {
+                        editReply(interaction,{content:`Downloaded: ${cur}/${total} songs.`, components: [], embeds: []});
+                    }).on('finish', (pl: Playlist | undefined) => {
+                        editReply(interaction, `Success! ${pl ? pl.playlistdata.items.length : 0} files downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
+                    }).on('warn', (cur: number, total: number, error: Error) => {
+                        editReply(interaction, `Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
+                    }).on('error', (e: Error) => {
+                        editReply(interaction, "Error: " + e.message);
+                    })
                     break;
                 default:
                     return interaction.update({components:[]});

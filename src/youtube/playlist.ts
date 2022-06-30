@@ -134,7 +134,7 @@ export class WebPlaylist {
 export class Playlist { // Represents a playlist stored on the filesystem
     private playlist: MusicJSON;
     public get playlistdata(): MusicJSON {return this.playlist}
-    public static INDEX: {[key: string]: SongReference} = JSON.parse(fs.readFileSync('./resources/music.json','utf8'));
+    public static INDEX: {[key: string]: SongReference} = fs.existsSync('./resources/music.json') ? JSON.parse(fs.readFileSync('./resources/music.json','utf8')) : {};
     public static async setMusicIndex() {return fs.promises.writeFile('./resources/music.json',JSON.stringify(Playlist.INDEX))}
 
     public vote(songid: string, voteup: boolean) {

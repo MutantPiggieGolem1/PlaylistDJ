@@ -18,7 +18,8 @@ export function getPlayer(guildid: string, create: boolean = true) {
 export async function error(ctx: BaseCommandInteraction | ButtonInteraction | Message, error: ERRORS | Error): Promise<Message | void> {
     let content: string = error instanceof Error ? "Error: "+error.message : error;
     if (ctx instanceof Interaction) {
-        return ctx.fetchReply().then(async _=>await ctx.editReply({content, components: []}) as Message).catch(_=>ctx.reply({content, ephemeral: true}))
+        if (ctx.replied) return await ctx.editReply({content, components: []}) as Message
+        return ctx.reply({content, ephemeral: true})
     } else {
         return ctx.reply(content)
     }
