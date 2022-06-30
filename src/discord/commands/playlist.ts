@@ -1,8 +1,8 @@
-import { BaseCommandInteraction, ButtonInteraction, EmbedField, Interaction, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageEmbed, ReplyMessageOptions } from "discord.js"
+import { BaseCommandInteraction, ButtonInteraction, EmbedField, Interaction, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageButton, MessageEmbed, ModalOptions, ModalSubmitInteraction, ReplyMessageOptions, TextInputComponent } from "discord.js"
 import { client } from "../../index"
 import * as yt from "../../youtube/playlist"
 import { Genre, RatedSong } from "../../youtube/util"
-import { editReply, error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply, truncateString } from "../util"
+import { error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply, truncateString } from "../util"
 import { Command, SubCommand } from "./Commands"
 
 const commandname = "playlist"
@@ -29,7 +29,7 @@ const Create: SubCommand = {
 
         yt.Playlist.create(ctx.guild.id, ids).then((playlist: yt.Playlist) => {
             reply(ctx, `Created a new playlist with ${playlist.playlistdata.items.length} song(s)!`)
-        }).catch((e: Error) => {error(ctx, e as Error)})
+        }).catch((e: Error) => { error(ctx, e as Error) })
     }
 }
 const Delete: SubCommand = {
@@ -38,9 +38,10 @@ const Delete: SubCommand = {
     description: "Deletes your playlist.",
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
-        reply(ctx, {
+        // Message
+        const msg = await reply(ctx, {
             content: "_",
             components: [{
                 "type": "ACTION_ROW",
@@ -71,20 +72,24 @@ const Delete: SubCommand = {
                 }
             }],
             fetchReply: true
-        }).then(msg => msg.createMessageComponentCollector({
+        })
+        // Interaction Collection
+        msg.createMessageComponentCollector({
             componentType: "BUTTON",
-            filter: (i: ButtonInteraction) => i.user.id===(ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
+            filter: (i: ButtonInteraction) => i.user.id === (ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
             max: 1,
-            time: 10*1000
+            time: 5 * 1000
         }).on('collect', (interaction: ButtonInteraction) => {
-            if (interaction.customId === 'cancel') return interaction.update({components:[]});
-            if (!interaction.guild) {error(ctx, ERRORS.NO_GUILD); return;}
+            if (interaction.customId === 'cancel') return interaction.update({ components: [] });
+            if (!interaction.guild) { error(ctx, ERRORS.NO_GUILD); return; }
             let playlist = yt.getPlaylist(interaction.guild.id)
-            if (!playlist) {error(ctx, ERRORS.NO_PLAYLIST); return;}
+            if (!playlist) { error(ctx, ERRORS.NO_PLAYLIST); return; }
             playlist.delete().then(_ => {
-                interaction.update({content:`Deleted your playlist.`,components:[]})
+                interaction.update({ content: `Deleted your playlist.`, components: [] })
             }).catch((e: Error) => error(ctx, e))
-        }))
+        }).on('end', (_,reason: string) => {
+            if (reason==="idle" && msg.editable) msg.edit({components:[]})
+        })
     },
 }
 const Add: SubCommand = {
@@ -113,7 +118,7 @@ const Add: SubCommand = {
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
         let added: RatedSong[] = playlist.addSongs(arg1.split(",").map(i => i.trim()))
-        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, Math.floor(60/added.length))).join(", ")}`)
+        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, Math.floor(60 / added.length))).join(", ")}`)
     }
 }
 const Remove: SubCommand = {
@@ -155,13 +160,13 @@ const List: SubCommand = {
         "description": "Search filter",
         "required": false,
         choices: [
-            {name:"Title",value:"title"},
-            {name:"Artist",value:"artist"},
-            {name:"Genre",value:"genre"},
-            {name:"Tags",value:"tags"},
-            {name:"Sort",value:"sort"}
+            { name: "Title", value: "title" },
+            { name: "Artist", value: "artist" },
+            { name: "Genre", value: "genre" },
+            { name: "Tags", value: "tags" },
+            { name: "Sort", value: "sort" }
         ]
-    },{
+    }, {
         "type": "STRING",
         "name": "term",
         "description": "Search term",
@@ -169,7 +174,7 @@ const List: SubCommand = {
     }],
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
         let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
@@ -191,7 +196,7 @@ const List: SubCommand = {
                     items = items.filter((i: RatedSong) => i.title.toLowerCase().includes(term));
                     break;
                 case 'artist':
-                    items = items.filter((i: RatedSong) => i.artist.toLowerCase() === term);
+                    items = items.filter((i: RatedSong) => i.artist.toLowerCase().includes(term));
                     break;
                 case 'genre':
                     items = items.filter((i: RatedSong) => i.genre.toString().toLowerCase() === term);
@@ -206,13 +211,38 @@ const List: SubCommand = {
                     break;
             }
         }
-        // Message
-        reply(ctx, listMessage<ReplyMessageOptions>(ctx, items, page)).then(msg => msg.createMessageComponentCollector({
+        // Interaction Standardization
+        let rmsg: Message | undefined;
+        if (ctx instanceof Message) {
+            rmsg = await reply(ctx, {
+                "content": "Click this button to continue:",
+                "components": [{
+                    type: "ACTION_ROW",
+                    components: [{
+                        "style": "SUCCESS",
+                        "label": `Continue`,
+                        "customId": `continue`,
+                        "disabled": false,
+                        "type": "BUTTON",
+                    } as MessageActionRowComponent]
+                }]
+            })
+        }
+        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
             componentType: "BUTTON",
-            filter: (i: ButtonInteraction) => i.user.id===(ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
-            max: Number.MAX_SAFE_INTEGER,
+            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
-        }).on('collect', (interaction: ButtonInteraction) => { 
+        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
+        if (!rctx) return;
+        if (rmsg?.deletable) await rmsg.delete()
+        // Message
+        const msg = await reply(rctx, listMessage<ReplyMessageOptions>(rctx, items, page))
+        // Interaction Collection
+        msg.createMessageComponentCollector({
+            componentType: "BUTTON",
+            filter: (i: ButtonInteraction) => i.user.id === rctx.user.id,
+            idle: 20 * 1000
+        }).on('collect', (interaction: ButtonInteraction) => {
             switch (interaction.customId) {
                 case `c${commandname}listpageup`:
                     page++;
@@ -221,10 +251,12 @@ const List: SubCommand = {
                     page--;
                     break;
                 default:
-                    return interaction.update({components:[]});
+                    return interaction.update({ components: [] });
             }
-            interaction.update(listMessage<InteractionUpdateOptions>(ctx, items, page))
-        }))
+            interaction.update(listMessage<InteractionUpdateOptions>(rctx, items, page))
+        }).on('end', (_,reason: string) => {
+            if (reason==="idle") rctx.editReply({components:[]})
+        })
     },
 }
 const Edit: SubCommand = {
@@ -236,25 +268,10 @@ const Edit: SubCommand = {
         description: "Song ID to edit",
         type: "STRING",
         required: true,
-    }, {
-        name: "field",
-        description: "Field to edit",
-        type: "STRING",
-        required: false,
-        choices: [
-            {name:"Title",value:"title"},
-            {name:"Artist",value:"artist"},
-            {name:"Genre",value:"genre"}
-        ]
-    }, {
-        name: "value",
-        description: "Value to assign",
-        type: "STRING",
-        required: false
     }],
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
         let id: string | undefined, field: string | undefined, value: string | undefined;
@@ -270,59 +287,124 @@ const Edit: SubCommand = {
         }
         if (!id || (field && !value)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating (ish)
-        let playlist = yt.getPlaylist(ctx.guild.id)
+        const playlist = yt.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         let songindex: number = playlist.playlistdata.items.findIndex(i => i.id === id)
         if (songindex < 0) return error(ctx, ERRORS.NO_SONG);
-        let song: RatedSong = playlist.playlistdata.items[songindex]
-        // Action Execution
-        if (field && value) {
-            switch (field) {
-                case "title":
-                    song.title = value;
-                    break;
-                case "artist":
-                    song.artist = value;
-                    break;
-                case "genre":
-                    if (!Object.keys(Genre).includes(value)) return error(ctx, new Error(`Couldn't identify genre ${value}!`))
-                    song.genre = <Genre>(<any>Genre)[value];
-                    break;
-                case "tags":
-                    song.tags = value.split(",").map(v => v.trim())
-                    break;
-                default:
-                    return error(ctx, ERRORS.INVALID_ARGUMENTS);
-            }
+        const song: RatedSong = playlist.playlistdata.items[songindex]
+        // Interaction Standardization
+        let rmsg: Message | undefined;
+        if (ctx instanceof Message) {
+            rmsg = await reply(ctx, {
+                "content": "Click this button to continue:",
+                "components": [{
+                    type: "ACTION_ROW",
+                    components: [{
+                        "style": "SUCCESS",
+                        "label": `Continue`,
+                        "customId": `continue`,
+                        "disabled": false,
+                        "type": "BUTTON",
+                    } as MessageActionRowComponent]
+                }]
+            })
         }
-        playlist.editSong(song);
+        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+            componentType: "BUTTON",
+            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
+            time: 10*1000
+        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
+        if (!rctx) return;
+        if (rmsg?.deletable) await rmsg.delete()
+        // Action Execution
+        await rctx.showModal({
+            customId: `c${commandname}editedit`,
+            title: `Song Metadata Editor [${song.id}]`,
+            components: [{
+                type: "ACTION_ROW",
+                components: [{
+                    customId: `meditedittitle`,
+                    label: "Song Title:",
+                    maxLength: 64,
+                    placeholder: song.title,
+                    required: false,
+                    style: "SHORT",
+                    type: "TEXT_INPUT"
+                } as TextInputComponent]
+            } as MessageActionRow<TextInputComponent>, {
+                type: "ACTION_ROW",
+                components: [{
+                    customId: `mediteditartist`,
+                    label: "Song Artist:",
+                    maxLength: 32,
+                    placeholder: song.artist,
+                    required: false,
+                    style: "SHORT",
+                    type: "TEXT_INPUT"
+                } as TextInputComponent]
+            } as MessageActionRow<TextInputComponent>, {
+                type: "ACTION_ROW",
+                components: [{
+                    customId: `mediteditgenre`,
+                    label: "Song Genre:",
+                    maxLength: 16,
+                    placeholder: song.genre.toString(),
+                    required: false,
+                    style: "SHORT",
+                    type: "TEXT_INPUT"
+                } as TextInputComponent]
+            } as MessageActionRow<TextInputComponent>, {
+                type: "ACTION_ROW",
+                components: [{
+                    customId: `meditedittags`,
+                    label: "Tags:",
+                    maxLength: 128,
+                    placeholder: song.tags?.join(", ") || "None",
+                    required: false,
+                    style: "PARAGRAPH",
+                    type: "TEXT_INPUT"
+                } as TextInputComponent]
+            } as MessageActionRow<TextInputComponent>]
+        } as ModalOptions)
+        // Interaction Collection
+        const interaction: ModalSubmitInteraction | void = await rctx.awaitModalSubmit({ time: 5 * 60 * 1000 }).catch((e: Error) => {error(rctx,e)})
+        if (!interaction) return;
+        song.title = interaction.fields.getTextInputValue(`meditedittitle`) || song.title
+        song.artist = interaction.fields.getTextInputValue(`mediteditartist`) || song.artist
+        let genre = interaction.fields.getTextInputValue(`mediteditgenre`)
+        if (genre) {
+            if (!Object.keys(Genre).includes(genre)) return error(ctx, new Error(`Couldn't identify genre ${genre}!`))
+            song.genre = <Genre>(<any>Genre)[genre];
+        }
+        song.tags = interaction.fields.getTextInputValue(`meditedittags`)?.split(",")?.map(i => i.trim()) || song.tags
 
-        reply(ctx, {
+        playlist.editSong(song);
+        (await reply(interaction, {
+            ephemeral: true,
             "content": "_",
             "embeds": [{
-                "type": "rich",
                 "title": "Song ID: " + song.id,
                 "description": "Song Metadata",
                 "color": 0xff0000,
                 "fields": [
                     {
                         "name": `Title:`,
-                        "value": song.title,
+                        "value": song.title ?? "-",
                         "inline": true
                     } as EmbedField,
                     {
                         "name": `Artist:`,
-                        "value": song.artist,
+                        "value": song.artist ?? "-",
                         "inline": true
                     } as EmbedField,
                     {
                         "name": `Genre:`,
-                        "value": song.genre.toString() ?? "Unknown",
+                        "value": song.genre.toString() ?? "-",
                         "inline": true
                     } as EmbedField,
                     {
                         "name": `Score:`,
-                        "value": song.score.toString(),
+                        "value": song.score.toString() ?? "-",
                         "inline": true
                     } as EmbedField,
                     {
@@ -332,49 +414,30 @@ const Edit: SubCommand = {
                     } as EmbedField
                 ],
                 "footer": {
-                    "text": `PlaylistDJ - Metadata Editor`,
+                    "text": `PlaylistDJ - Metadata Viewer`,
                     "icon_url": client.user?.avatarURL() ?? ""
                 },
                 "url": song.url
             }],
             "components": [{
                 "type": "ACTION_ROW",
-                "components": [
-                    {
-                        "style": "SUCCESS",
-                        "label": `Save`,
-                        "customId": `cplaylisteditsave`,
-                        "disabled": false,
-                        "type": "BUTTON",
-                    } as MessageActionRowComponent,
-                    {
-                        "style": "DANGER",
-                        "label": `Cancel`,
-                        "customId": `cancel`,
-                        "disabled": ctx instanceof BaseCommandInteraction,
-                        "type": "BUTTON",
-                    } as MessageActionRowComponent
-                ]
+                "components": [{
+                    "style": "SUCCESS",
+                    "label": `Save`,
+                    "customId": `c${commandname}editsave`,
+                    "disabled": false,
+                    "type": "BUTTON",
+                } as MessageButton]
             } as MessageActionRow],
-            fetchReply: true
-        } as ReplyMessageOptions).then(msg => msg.createMessageComponentCollector({
+        })).createMessageComponentCollector({
             componentType: "BUTTON",
-            filter: (i: ButtonInteraction) => i.user.id===(ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
+            filter: (i: ButtonInteraction) => i.user.id === rctx.user.id,
             max: 1,
-            time: 10*1000
-        }).on('collect', (interaction: ButtonInteraction) => {
-            if (interaction.customId === 'cancel') return interaction.update({components:[]});
-            if (!interaction.guild) {error(ctx, ERRORS.NO_GUILD); return;}
-            let playlist = yt.getPlaylist(interaction.guild.id)
-            if (!playlist) {error(ctx, ERRORS.NO_PLAYLIST); return;}
-            playlist.save().then(_=>{
-                interaction.update({content: "Saved!", components:[]})
-            })
-        }).on('end', () => {
-            editReply(ctx,{components:[]})
-        }))
-    },
-    
+            time: 10 * 1000
+        }).on('collect',_=>playlist.save().then(_ => interaction.update({ content: "Saved!", components: [] }))).on('end', (_,reason: string) => {
+            if (reason==="idle") interaction.editReply({components:[]});
+        })
+    }
 }
 
 const SubCommands: SubCommand[] = [
@@ -397,7 +460,7 @@ export const Playlist: Command = {
     }
 }
 
-function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, items: RatedSong[], page: number): T {
+function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: Interaction, items: RatedSong[], page: number): T {
     if (!ctx.guild) return { content: "Couldn't find guild!" } as T;
     return {
         "content": "_",
@@ -416,14 +479,7 @@ function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(c
                     "customId": `c${commandname}listpageup`,
                     "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
                     "type": "BUTTON"
-                } as MessageActionRowComponent,
-                {
-                    "style": "DANGER",
-                    "label": "Cancel",
-                    "customId": "cancel",
-                    "disabled": ctx instanceof BaseCommandInteraction,
-                    "type": "BUTTON"
-                } as MessageActionRowComponent,
+                } as MessageActionRowComponent
             ]
         } as MessageActionRow],
         "embeds": [{

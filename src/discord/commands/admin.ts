@@ -29,25 +29,31 @@ const Amend: SubCommand = {
         // Playlist Locating (ish)
         const song: SongReference | undefined = Playlist.INDEX[id]
         if (!song) return error(ctx, ERRORS.NO_SONG);
-        // Action Execution & Response Message
-        let rctx: ButtonInteraction | BaseCommandInteraction;
-        rctx = ctx instanceof Message ? await reply(ctx, {
-            "content": "Click this button to continue:",
-            "components": [{
-                type: "ACTION_ROW",
-                components: [{
-                    "style": "SUCCESS",
-                    "label": `Continue`,
-                    "customId": `continue`,
-                    "disabled": false,
-                    "type": "BUTTON",
-                } as MessageActionRowComponent]
-            }]
-        }).then(msg=>msg.awaitMessageComponent({
+        // Interaction Standardization
+        let rmsg: Message | undefined;
+        if (ctx instanceof Message) {
+            rmsg = await reply(ctx, {
+                "content": "Click this button to continue:",
+                "components": [{
+                    type: "ACTION_ROW",
+                    components: [{
+                        "style": "SUCCESS",
+                        "label": `Continue`,
+                        "customId": `continue`,
+                        "disabled": false,
+                        "type": "BUTTON",
+                    } as MessageActionRowComponent]
+                }]
+            })
+        }
+        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
             componentType: "BUTTON",
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
-        })) : ctx
+        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
+        if (!rctx) return;
+        if (rmsg?.deletable) await rmsg.delete()
+        // Action Execution
         rctx.showModal({
             customId: `c${commandname}amendedit`,
             title: `Song Metadata Editor [${song.id}]`,
@@ -63,7 +69,7 @@ const Amend: SubCommand = {
                     style: "SHORT",
                     type: "TEXT_INPUT"
                 } as TextInputComponent]
-            },{
+            } as MessageActionRow<TextInputComponent>,{
                 type: "ACTION_ROW",
                 components: [{
                     customId: `mamendeditartist`,
@@ -75,7 +81,7 @@ const Amend: SubCommand = {
                     style: "SHORT",
                     type: "TEXT_INPUT"
                 } as TextInputComponent]
-            },{
+            } as MessageActionRow<TextInputComponent>,{
                 type: "ACTION_ROW",
                 components: [{
                     customId: `mamendeditgenre`,
@@ -92,9 +98,9 @@ const Amend: SubCommand = {
             if (ctx instanceof Message && await rctx.fetchReply()) await rctx.deleteReply()
             return rctx.awaitModalSubmit({time:5*60*1000})
         }).then(async (interaction: ModalSubmitInteraction) => {
-            song.title = interaction.fields.getField(`mamendedittitle`).value || song.title
-            song.artist= interaction.fields.getField(`mamendeditartist`).value|| song.artist
-            let genre = interaction.fields.getField(`mamendeditgenre`).value
+            song.title = interaction.fields.getTextInputValue(`mamendedittitle`) || song.title
+            song.artist= interaction.fields.getTextInputValue(`mamendeditartist`)|| song.artist
+            let genre = interaction.fields.getTextInputValue(`mamendeditgenre`)
             if (genre) {
                 if (!Object.keys(Genre).includes(genre)) return error(ctx, new Error(`Couldn't identify genre ${genre}!`))
                 song.genre = <Genre>(<any>Genre)[genre];
@@ -288,19 +294,45 @@ const Download: SubCommand = {
 
     run: async (ctx: BaseCommandInteraction | Message) => {
         if (!ctx.guild) return;
-        let url: string | null | undefined = ctx instanceof BaseCommandInteraction ?
+        // Argument Processing
+        let arg1: string | null | undefined = ctx instanceof BaseCommandInteraction ?
             ctx.options.get("url", true).value?.toString() :
             ctx.content.split(/\s+/g)[3]
-        if (!url) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-
-        await reply(ctx, "Detecting Playlist...");
-
+        if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        // Interaction Standardization
+        let rmsg: Message | undefined;
+        if (ctx instanceof Message) {
+            rmsg = await reply(ctx, {
+                "content": "Click this button to continue:",
+                "components": [{
+                    type: "ACTION_ROW",
+                    components: [{
+                        "style": "SUCCESS",
+                        "label": `Continue`,
+                        "customId": `continue`,
+                        "disabled": false,
+                        "type": "BUTTON",
+                    } as MessageActionRowComponent]
+                }]
+            })
+        }
+        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+            componentType: "BUTTON",
+            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
+            time: 10*1000
+        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
+        if (!rctx) return;
+        if (rmsg?.deletable) await rmsg.delete()
+        // Playlist Locating
+        await rctx.reply({content: "Searching for Playlist...", ephemeral: true})
         try {
-            var webpl: WebPlaylist = await WebPlaylist.fromUrl(url);
-        } catch (e) { return await error(ctx, e as Error) }
-
-        const idata: {playlist: WebPlaylist, index: number, exclusions: number[]} = { playlist: webpl, index: 0, exclusions: [] }
-        await editReply(ctx, {
+            var webpl: WebPlaylist = await WebPlaylist.fromUrl(arg1);
+        } catch (e) { return error(rctx, e as Error) }
+        // Action Execution
+        const idata: {index: number, exclusions: number[]} = { index: 0, exclusions: [] };
+        if (rctx instanceof ButtonInteraction && (rctx.message as Message).deletable) await (rctx.message as Message).delete();
+        const msg: Message = (await rctx.editReply({
+            ephemeral: true,
             "content": "Found!",
             "components": [
                 {
@@ -320,13 +352,6 @@ const Download: SubCommand = {
                             "disabled": false,
                             "type": "BUTTON",
                         } as MessageActionRowComponent,
-                        {
-                            "style": "DANGER",
-                            "label": `Cancel`,
-                            "customId": `cancel`,
-                            "disabled": ctx instanceof BaseCommandInteraction,
-                            "type": "BUTTON",
-                        } as MessageActionRowComponent
                     ]
                 } as MessageActionRow
             ],
@@ -353,11 +378,12 @@ const Download: SubCommand = {
                     "url": webpl.ytplaylist.url,
                 } as MessageEmbed
             ]
-        } as MessageOptions).then(msg => msg.createMessageComponentCollector({
+        } as MessageOptions) as Message)
+        // Interaction Collection
+        msg.createMessageComponentCollector({
             componentType: "BUTTON",
-            filter: (i: ButtonInteraction) => i.user.id===(ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
-            max: 1,
-            time: 10*1000
+            filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
+            idle: 20*1000
         }).on('collect', async (interaction: ButtonInteraction) => {
             switch (interaction.customId) {
                 case `c${commandname}downloadcustomskip`:
@@ -436,7 +462,7 @@ const Download: SubCommand = {
                 case `c${commandname}downloadcustomall`:
                     if (idata?.exclusions) { webpl.remove(idata.exclusions) }
                 case `c${commandname}downloadall`:
-                    // Disable buttons here (ctx.update({components:[]}))
+                    msg.edit({components:[]})
                     
                     if (!interaction.deferred && interaction.isRepliable()) await interaction.deferReply({ "ephemeral": true });
                     if (!interaction.guild) {error(interaction, ERRORS.NO_GUILD); return;}
@@ -454,7 +480,9 @@ const Download: SubCommand = {
                 default:
                     return interaction.update({components:[]});
             }
-        }))
+        }).on('end', (_,reason: string) => {
+            if (reason==="idle") rctx.editReply({components:[]})
+        })
     }
 }
 const Index: SubCommand = {
@@ -479,7 +507,7 @@ const Index: SubCommand = {
     }],
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: BaseCommandInteraction | Message) => {
         // Argument Processing
         let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
             ctx.options.get("key", false)?.value?.toString() :
@@ -487,6 +515,30 @@ const Index: SubCommand = {
         let arg2: string | undefined = ctx instanceof BaseCommandInteraction ?
             ctx.options.get("term", false)?.value?.toString() :
             ctx.content.split(/\s+/g).slice(4).join(" ");
+        // Interaction Standardization
+        let rmsg: Message | undefined;
+        if (ctx instanceof Message) {
+            rmsg = await reply(ctx, {
+                "content": "Click this button to continue:",
+                "components": [{
+                    type: "ACTION_ROW",
+                    components: [{
+                        "style": "SUCCESS",
+                        "label": `Continue`,
+                        "customId": `continue`,
+                        "disabled": false,
+                        "type": "BUTTON",
+                    } as MessageActionRowComponent]
+                }]
+            })
+        }
+        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+            componentType: "BUTTON",
+            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
+            time: 10*1000
+        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
+        if (!rctx) return;
+        if (rmsg?.deletable) await rmsg.delete()
         // Action Execution
         let items: Song[] = Object.values(Playlist.INDEX)
         let page = 0;
@@ -497,18 +549,19 @@ const Index: SubCommand = {
                     items = items.filter((i: Song) => i.title.toLowerCase().includes(term));
                     break;
                 case 'artist':
-                    items = items.filter((i: Song) => i.artist.toLowerCase() === term);
+                    items = items.filter((i: Song) => i.artist.toLowerCase().includes(term));
                     break;
                 case 'genre':
                     items = items.filter((i: Song) => i.genre.toString().toLowerCase() === term);
                     break;
             }
         }
-        // Message
-        reply(ctx, listMessage<ReplyMessageOptions>(ctx, items, page)).then(msg => msg.createMessageComponentCollector({
+        const msg: Message = await reply(rctx, listMessage<ReplyMessageOptions>(rctx, items, page))
+        // Interaction Collection
+        msg.createMessageComponentCollector({
             componentType: "BUTTON",
-            filter: (i: ButtonInteraction) => i.user.id===(ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
-            time: 10*1000
+            filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
+            idle: 20*1000
         }).on('collect', (interaction: ButtonInteraction) => { 
             switch (interaction.customId) {
                 case `c${commandname}indexpageup`:
@@ -520,8 +573,10 @@ const Index: SubCommand = {
                 default:
                     return interaction.update({components:[]});
             }
-            interaction.update(listMessage<InteractionUpdateOptions>(ctx, items, page))
-        }))
+            interaction.update(listMessage<InteractionUpdateOptions>(rctx, items, page))
+        }).on('end', (_,reason: string) => {
+            if (reason==="idle") rctx.editReply({components:[]})
+        })
     }
 }
 
@@ -562,13 +617,6 @@ function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(c
                     "label": `Next Page`,
                     "customId": `c${commandname}indexpageup`,
                     "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
-                    "type": "BUTTON"
-                } as MessageActionRowComponent,
-                {
-                    "style": "DANGER",
-                    "label": "Cancel",
-                    "customId": "cancel",
-                    "disabled": ctx instanceof BaseCommandInteraction,
                     "type": "BUTTON"
                 } as MessageActionRowComponent,
             ]

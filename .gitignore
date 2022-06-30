@@ -110,6 +110,7 @@ resources/*
 .VSCodeCounter/*
 .VSCodeCounter
 *.code-workspace
+.vscode
 
 # Crossplatform Compat.
 node_modules/*
