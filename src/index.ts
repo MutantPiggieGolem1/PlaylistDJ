@@ -1,6 +1,7 @@
 import { Client, Intents, Interaction, Message } from "discord.js";
 import { Command, Commands } from "./discord/commands/Commands";
 import { isWhitelisted } from "./discord/util";
+import Day from "dayjs"
 export const client: Client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES,Intents.FLAGS.GUILD_MESSAGES,Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
 const PREFIX: string = "kt";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
@@ -18,7 +19,8 @@ client.on("messageCreate", (msg: Message) => {
     let command: Command | null | undefined = Commands.find(c=>c.name===msg.content.split(" ")[1]);
     if (!command) {msg.reply("Command not recognized."); return;}
 
-    if (!command.public && !isWhitelisted(msg)) {msg.reply("This command requires authorization."); return}
+    if (!command.public && !isWhitelisted(msg)) {msg.reply("This command requires authorization."); return}    
+    console.info(`[${Day().format("DD HH:mm:ss")}] ${msg.author.tag} >> ${command.name}`)
     command.run(msg);
 })
 
@@ -28,8 +30,9 @@ client.on("interactionCreate", (interaction: Interaction) => {
     if (!command) return interaction.reply({"content":"Command not recognized.","ephemeral":true});
 
     if (!command.public && !isWhitelisted(interaction)) {return interaction.reply({content:"This command requires authorization.",ephemeral:true})}
+    console.info(`[${Day().format("DD HH:mm:ss")}] ${interaction.user.tag} >> /${command.name}`)
     command.run(interaction);
-});
+})
 
 import { readFileSync } from "fs";
 client.login(readFileSync("./resources/token.txt").toString());

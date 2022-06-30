@@ -250,8 +250,6 @@ const List: SubCommand = {
                 case `c${commandname}listpagedown`:
                     page--;
                     break;
-                default:
-                    return interaction.update({ components: [] });
             }
             interaction.update(listMessage<InteractionUpdateOptions>(rctx, items, page))
         }).on('end', (_,reason: string) => {
@@ -434,7 +432,9 @@ const Edit: SubCommand = {
             filter: (i: ButtonInteraction) => i.user.id === rctx.user.id,
             max: 1,
             time: 10 * 1000
-        }).on('collect',_=>playlist.save().then(_ => interaction.update({ content: "Saved!", components: [] }))).on('end', (_,reason: string) => {
+        }).on('collect', () => 
+            playlist.save().then(_ => interaction.update({ content: "Saved!", components: [] }))
+        ).on('end', (_,reason: string) => {
             if (reason==="idle") interaction.editReply({components:[]});
         })
     }
