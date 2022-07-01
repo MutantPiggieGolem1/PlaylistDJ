@@ -388,27 +388,27 @@ const Edit: SubCommand = {
                 "fields": [
                     {
                         "name": `Title:`,
-                        "value": song.title ?? "-",
+                        "value": song.title || "-",
                         "inline": true
                     } as EmbedField,
                     {
                         "name": `Artist:`,
-                        "value": song.artist ?? "-",
+                        "value": song.artist || "-",
                         "inline": true
                     } as EmbedField,
                     {
                         "name": `Genre:`,
-                        "value": song.genre.toString() ?? "-",
+                        "value": song.genre?.toString() || "-",
                         "inline": true
                     } as EmbedField,
                     {
                         "name": `Score:`,
-                        "value": song.score.toString() ?? "-",
+                        "value": song.score?.toString() || "-",
                         "inline": true
                     } as EmbedField,
                     {
                         "name": `Tags:`,
-                        "value": song.tags?.join(", ") ?? "None",
+                        "value": song.tags?.join(", ") || "None",
                         inline: false
                     } as EmbedField
                 ],

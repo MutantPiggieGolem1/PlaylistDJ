@@ -3,14 +3,15 @@ import { Command, Commands } from "./discord/commands/Commands";
 import { isWhitelisted } from "./discord/util";
 import Day from "dayjs"
 export const client: Client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES,Intents.FLAGS.GUILD_MESSAGES,Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
-const PREFIX: string = "dj";
+const PREFIX: string = "kt";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
 client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
-    client.user.setActivity({type: "LISTENING", name: `To music in ${client.guilds.cache.size} servers!`})
+    client.user.setActivity({name: "Rest in peace Technoblade.", type: "PLAYING"})
+    // client.user.setActivity({type: "LISTENING", name: `To music in ${client.guilds.cache.size} servers!`})
     console.info(`Bot Ready! [${client.user.tag}]`);
 })
 
@@ -30,7 +31,7 @@ client.on("interactionCreate", (interaction: Interaction) => {
     if (!command) return interaction.reply({"content":"Command not recognized.","ephemeral":true});
 
     if (!command.public && !isWhitelisted(interaction)) {return interaction.reply({content:"This command requires authorization.",ephemeral:true})}
-    console.info(`[${Day().format("DD HH:mm:ss")}] ${interaction.user.tag} >> /${command.name}`)
+    console.info(`[${Day().format("DD HH:mm:ss")}] ${interaction.user.tag} >> /${command.name} ${command.options?.join(" ") || ""}`)
     command.run(interaction);
 })
 
