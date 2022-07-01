@@ -377,9 +377,10 @@ const Edit: SubCommand = {
         song.tags = interaction.fields.getTextInputValue(`meditedittags`)?.split(",")?.map(i => i.trim()) || song.tags
 
         playlist.editSong(song);
-        (await reply(interaction, {
+        await playlist.save()
+        await reply(interaction, {
             ephemeral: true,
-            "content": "_",
+            "content": "Saved!",
             "embeds": [{
                 "title": "Song ID: " + song.id,
                 "description": "Song Metadata",
@@ -416,26 +417,7 @@ const Edit: SubCommand = {
                     "icon_url": client.user?.avatarURL() ?? ""
                 },
                 "url": song.url
-            }],
-            "components": [{
-                "type": "ACTION_ROW",
-                "components": [{
-                    "style": "SUCCESS",
-                    "label": `Save`,
-                    "customId": `c${commandname}editsave`,
-                    "disabled": false,
-                    "type": "BUTTON",
-                } as MessageButton]
-            } as MessageActionRow],
-        })).createMessageComponentCollector({
-            componentType: "BUTTON",
-            filter: (i: ButtonInteraction) => i.user.id === rctx.user.id,
-            max: 1,
-            time: 10 * 1000
-        }).on('collect', () => 
-            playlist.save().then(_ => interaction.update({ content: "Saved!", components: [] }))
-        ).on('end', (_,reason: string) => {
-            if (reason==="idle") interaction.editReply({components:[]});
+            }]
         })
     }
 }
