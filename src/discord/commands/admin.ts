@@ -463,10 +463,10 @@ const Download: SubCommand = {
                 case `c${commandname}downloadcustomall`:
                     if (idata?.exclusions) { webpl.remove(idata.exclusions) }
                 case `c${commandname}downloadall`:                    
-                    if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate();
+                    if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: []});
                     webpl.download(guildid)
                     .on('progress', (cur: number, total: number) => {
-                        editReply(interaction,{content:`Downloaded: ${cur}/${total} songs.`, components: [], embeds: []});
+                        editReply(interaction,`Downloaded: ${cur}/${total} songs.`);
                     }).on('finish', (pl: Playlist | undefined) => {
                         editReply(interaction, `Success! ${pl ? pl.playlistdata.items.length : 0} files downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
                     }).on('warn', (cur: number, total: number, error: Error) => {
