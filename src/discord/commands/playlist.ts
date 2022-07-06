@@ -1,4 +1,4 @@
-import { BaseCommandInteraction, ButtonInteraction, EmbedField, Interaction, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageButton, MessageEmbed, ModalOptions, ModalSubmitInteraction, ReplyMessageOptions, TextInputComponent } from "discord.js"
+import { ApplicationCommandOptionChoiceData, AutocompleteInteraction, BaseCommandInteraction, ButtonInteraction, EmbedField, Interaction, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageButton, MessageEmbed, ModalOptions, ModalSubmitInteraction, ReplyMessageOptions, TextInputComponent } from "discord.js"
 import { client } from "../../index"
 import * as yt from "../../youtube/playlist"
 import { Genre, RatedSong } from "../../youtube/util"
@@ -16,7 +16,6 @@ const Create: SubCommand = {
         name: "ids",
         description: "Song IDs to create your playlist with",
         required: true,
-        autocomplete: true,
     }],
     public: true,
 
@@ -97,15 +96,12 @@ const Add: SubCommand = {
     type: "SUB_COMMAND",
     name: "add",
     description: "Adds music to your playlist.",
-    options: [
-        {
-            "type": 3,
-            "name": "ids",
-            "description": "Song IDs to add",
-            "required": true,
-            autocomplete: true,
-        }
-    ],
+    options: [{
+        type: "STRING",
+        name: "ids",
+        description: "Song IDs to add",
+        required: true,
+    }],
     public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {
@@ -132,7 +128,6 @@ const Remove: SubCommand = {
         "name": "ids",
         "description": "Song IDs to remove",
         "required": true,
-        autocomplete: true,
     }],
     public: true,
 
@@ -421,6 +416,19 @@ const Edit: SubCommand = {
                 "url": song.url
             }]
         })
+    },
+
+    ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] | Error {
+        if (!ctx.guild) return new Error(ERRORS.NO_GUILD);
+        const playlist = yt.getPlaylist(ctx.guild.id);
+        if (!playlist?.playlistdata.items || playlist.playlistdata.items.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
+        const focused = ctx.options.getFocused()
+        if (focused.length <= 0) return []; // too many matches, don't bother
+        return Object.values(playlist.playlistdata.items)
+            .filter(k=>k.id.startsWith(focused))
+            .map(o=>{
+                return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
+            })
     }
 }
 
@@ -441,6 +449,13 @@ export const Playlist: Command = {
         if (!subcommand) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         if (!subcommand.public && !isWhitelisted(ctx)) return error(ctx, ERRORS.NO_PERMS);
         return subcommand.run(ctx);
+    },
+
+    ac: (ctx: AutocompleteInteraction) => {
+        let command: SubCommand | undefined | null = SubCommands.find(c=>c.name===ctx.options.data[0].name);
+        if (!command?.ac) return new Error("Autocomplete not recognized.");
+    
+        return command.ac(ctx);
     }
 }
 

@@ -151,7 +151,7 @@ const Amend: SubCommand = {
             .map(o=>{
                 return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
             })
-    } // TODO: Implement the rest of these
+    }
 }
 const Auth: SubCommandGroup = {
     name: "auth",
@@ -275,7 +275,6 @@ const Destroy: SubCommand = {
         description: "Song ID(s) to delete",
         type: "STRING",
         required: true,
-        autocomplete: true,
     }],
 
     run: async (ctx: BaseCommandInteraction | Message) => {

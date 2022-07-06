@@ -31,7 +31,7 @@ client.on("interactionCreate", (interaction: Interaction) => {
     if (!command) return interaction.reply({"content":"Command not recognized.","ephemeral":true});
 
     if (!command.public && !isWhitelisted(interaction)) {return interaction.reply({content:"This command requires authorization.",ephemeral:true})}
-    console.info(`[${Day().format("DD HH:mm:ss")}] ${interaction.user.tag} >> /${command.name} ${command.options?.join(" ") || ""}`)
+    console.info(`[${Day().format("DD HH:mm:ss")}] ${interaction.user.tag} >> /${command.name} ${interaction.options.data.map(o=>o.name+":"+o.value).join(" ")}`)
     command.run(interaction);
 })
 

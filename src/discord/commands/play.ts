@@ -1,5 +1,5 @@
 import { AudioPlayer, AudioPlayerStatus, createAudioResource, getVoiceConnection, StreamType, VoiceConnection } from "@discordjs/voice";
-import { BaseCommandInteraction, Message, MessageEmbed, MessageOptions } from "discord.js";
+import { ApplicationCommandOptionChoiceData, AutocompleteInteraction, BaseCommandInteraction, Message, MessageEmbed, MessageOptions } from "discord.js";
 import { createReadStream, existsSync } from "fs";
 import { client } from "../../index";
 import { getPlaylist } from "../../youtube/playlist";
@@ -17,10 +17,11 @@ export const Play: Command = {
     description: "Begins playing music.",
     type: "CHAT_INPUT",
     options: [{
-        name: "song",
+        name: "id",
         description: "Song ID to start with",
         type: "STRING",
         required: false,
+        autocomplete: true,
     },{
         name: "silent",
         description: "Broadcast current song?",
@@ -44,7 +45,7 @@ export const Play: Command = {
         // Argument Processing
         let arg1: string | undefined, arg2: boolean, arg3: string | undefined;
         if (ctx instanceof BaseCommandInteraction) {
-            arg1 = ctx.options.get("song",false)?.value?.toString()
+            arg1 = ctx.options.get("id",false)?.value?.toString()
             arg2 = !!ctx.options.get("silent",false)?.value
             arg3 = ctx.options.get("timeout",false)?.value?.toString()
         } else {
@@ -52,10 +53,9 @@ export const Play: Command = {
             [arg1,a2,arg3] = ctx.content.split(/\s+/g).slice(2)
             arg2 = TRUTHY.includes(a2?.toLowerCase())
         }
-        let start: RatedSong, silent: boolean, timeout: number;
-        start = playlist.items.find(s=>s.id===arg1) ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
-        silent = arg2;
-        timeout = (arg3 && !Number.isNaN(arg3)) ? Number.parseInt(arg3)*60*1000 : -1;
+        const start: RatedSong = playlist.items.find(s=>s.id===arg1) ?? playlist.items[Math.floor(Math.random()*playlist.items.length)]
+        const silent: boolean = arg2;
+        const timeout: number = (arg3 && !Number.isNaN(arg3)) ? Number.parseInt(arg3)*60*1000 : -1;
         // Condition Validation
         let player: {player:AudioPlayer,playing?:SongReference} = getPlayer(ctx.guild.id)
         player.player.removeAllListeners()
@@ -84,6 +84,19 @@ export const Play: Command = {
                 return leave(ctx)
             }
         })
+    },
+    
+    ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] | Error {
+        if (!ctx.guild) return new Error(ERRORS.NO_GUILD);
+        const playlist = getPlaylist(ctx.guild.id);
+        if (!playlist?.playlistdata.items || playlist.playlistdata.items.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
+        const focused = ctx.options.getFocused()
+        if (focused.length <= 0) return []; // too many matches, don't bother
+        return Object.values(playlist.playlistdata.items)
+            .filter(k=>k.id.startsWith(focused))
+            .map(o=>{
+                return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
+            })
     }
 }
 
