@@ -1,6 +1,6 @@
 import { AudioPlayer, getVoiceConnection, VoiceConnection } from "@discordjs/voice";
 import { BaseCommandInteraction, Message, VoiceBasedChannel } from "discord.js";
-import { RatedSong } from "../../youtube/util";
+import { SongReference } from "../../youtube/util";
 import { error, ERRORS, getPlayer } from "../util";
 import { Command } from "./Commands";
 
@@ -22,7 +22,7 @@ export const Leave: Command = {
 
 export function leave(ctx: BaseCommandInteraction | Message) {
     if (!ctx.guild) return;
-    let player: {player?: AudioPlayer,playing?: RatedSong} = getPlayer(ctx.guild.id, false);
+    let player: {player?: AudioPlayer,playing?: SongReference} = getPlayer(ctx.guild.id, false);
     if (player.player) {player.player.removeAllListeners();player.player.stop();}
     player.playing = undefined;
     let voiceconnection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)

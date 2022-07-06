@@ -3,11 +3,12 @@ import { BaseCommandInteraction, Message, MessageEmbed, MessageOptions } from "d
 import { createReadStream, existsSync } from "fs";
 import { client } from "../../index";
 import { getPlaylist } from "../../youtube/playlist";
-import { MusicJSON, RatedSong, Song } from "../../youtube/util";
+import { MusicJSON, RatedSong, Song, SongReference } from "../../youtube/util";
 import { error, ERRORS, getPlayer, TRUTHY } from "../util";
 import { Command } from "./Commands";
 import { leave } from "./leave"
 import { resetVotes } from "./vote";
+import nextSong from "../../recommendation/interface";
 
 const timeouts: {[key:string]: number} = {}
 
@@ -56,7 +57,7 @@ export const Play: Command = {
         silent = arg2;
         timeout = (arg3 && !Number.isNaN(arg3)) ? Number.parseInt(arg3)*60*1000 : -1;
         // Condition Validation
-        let player: {player:AudioPlayer,playing?:RatedSong} = getPlayer(ctx.guild.id)
+        let player: {player:AudioPlayer,playing?:SongReference} = getPlayer(ctx.guild.id)
         player.player.removeAllListeners()
         player.player.stop()
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
@@ -67,31 +68,32 @@ export const Play: Command = {
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
         let msg: MessageOptions = play(player, start)
         if (ctx.channel && !silent) ctx.channel.send(msg);
-        player.player.on(AudioPlayerStatus.Idle, () => {
+        player.player.on(AudioPlayerStatus.Idle, async () => {
             if (Date.now() >= timeouts[guildid]) {
                 ctx.channel?.send("Finished Playing!")
                 delete timeouts[guildid];
                 return leave(ctx)
             }
-            let song: RatedSong = playlist.items[Math.floor(Math.random()*playlist.items.length)]
-            let msg: MessageOptions = play(player, song);
-            if (ctx.channel && !silent) ctx.channel.send(msg);
-            if (ctx.guild?.id) resetVotes(ctx.guild.id);
+            try {
+                let msg: MessageOptions = play(player, await nextSong(guildid));
+                if (ctx.channel && !silent) ctx.channel.send(msg)
+                resetVotes(guildid);
+            } catch (e) {
+                if (ctx.channel) {error(ctx.channel, ERRORS.NO_SONG)} else {console.error(e)}
+                delete timeouts[guildid];
+                return leave(ctx)
+            }
         })
     }
 }
 
-function play(player: {player:AudioPlayer,playing?:RatedSong}, song: RatedSong): MessageOptions {
-    if (!existsSync(song.file)) {
-        player.player.removeAllListeners()
+function play(player: ReturnType<typeof getPlayer>, song: SongReference): MessageOptions {
+    if (!existsSync(song.file) || !player.player) {
+        player.player?.removeAllListeners()
         player.playing = undefined;
         return {content:"Couldn't locate resources!",flags:64}
     }
-    player.player.play(createAudioResource(createReadStream(song.file),{
-        inputType: StreamType.WebmOpus,
-        metadata: song as Song,
-        inlineVolume: false,
-    }))
+    player.player.play(createAudioResource(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))
     player.playing = song;
     return {embeds:[{
         type: "rich",

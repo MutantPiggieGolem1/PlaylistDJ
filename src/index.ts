@@ -1,4 +1,4 @@
-import { Client, Intents, Interaction, Message } from "discord.js";
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionData, Client, Intents, Interaction, Message } from "discord.js";
 import { Command, Commands } from "./discord/commands/Commands";
 import { isWhitelisted } from "./discord/util";
 import Day from "dayjs"
@@ -33,6 +33,16 @@ client.on("interactionCreate", (interaction: Interaction) => {
     if (!command.public && !isWhitelisted(interaction)) {return interaction.reply({content:"This command requires authorization.",ephemeral:true})}
     console.info(`[${Day().format("DD HH:mm:ss")}] ${interaction.user.tag} >> /${command.name} ${command.options?.join(" ") || ""}`)
     command.run(interaction);
+})
+
+client.on("interactionCreate", async (interaction: Interaction) => {
+    if (!interaction.isAutocomplete()) return;
+    let command: Command | undefined | null = Commands.find(c=>c.name===interaction.commandName);
+    if (!command?.ac) return console.error("Autocomplete not recognized.");
+    
+    let choices: ApplicationCommandOptionChoiceData[] | Error = await command.ac(interaction);
+    if (choices instanceof Error) return console.error("Autocomplete failed.\n"+choices)
+    interaction.respond(choices.slice(undefined,25));
 })
 
 import { readFileSync } from "fs";

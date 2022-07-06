@@ -1,8 +1,8 @@
-import { BaseCommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, MessageActionRow, MessageEmbed, MessageOptions, User, Interaction, Modal, ModalSubmitInteraction, TextInputComponent, ModalOptions } from "discord.js";
+import { BaseCommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, MessageActionRow, MessageEmbed, MessageOptions, User, Interaction, Modal, ModalSubmitInteraction, TextInputComponent, ModalOptions, AutocompleteInteraction, ApplicationCommandOptionChoiceData } from "discord.js";
 import { client, WHITELIST } from "../../index";
 import { Playlist, WebPlaylist } from "../../youtube/playlist";
 import { SongReference, Genre, Song } from "../../youtube/util";
-import { error, ERRORS, editReply, isWhitelisted, reply, ITEMS_PER_PAGE } from "../util";
+import { error, ERRORS, editReply, isWhitelisted, reply, ITEMS_PER_PAGE, truncateString } from "../util";
 import { Command, SubCommand, SubCommandGroup } from "./Commands";
 
 const commandname = "admin"
@@ -16,6 +16,7 @@ const Amend: SubCommand = {
         description: "Song ID to edit",
         type: "STRING",
         required: true,
+        autocomplete: true,
     }],
     public: false,
 
@@ -141,6 +142,16 @@ const Amend: SubCommand = {
             return rctx.deleteReply().catch(_=>{})
         })
     },
+
+    ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
+        const focused = ctx.options.getFocused()
+        if (focused.length <= 0) return []; // too many matches, don't bother
+        return Object.values(Playlist.INDEX)
+            .filter(k=>k.id.startsWith(focused))
+            .map(o=>{
+                return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
+            })
+    } // TODO: Implement the rest of these
 }
 const Auth: SubCommandGroup = {
     name: "auth",
@@ -170,7 +181,7 @@ const Auth: SubCommandGroup = {
                 "name": "user",
                 "description": "User to deauthorize",
                 "required": true,
-            }]
+            }],
         },
         {
             "type": "SUB_COMMAND",
@@ -264,6 +275,7 @@ const Destroy: SubCommand = {
         description: "Song ID(s) to delete",
         type: "STRING",
         required: true,
+        autocomplete: true,
     }],
 
     run: async (ctx: BaseCommandInteraction | Message) => {
@@ -596,6 +608,13 @@ export const Admin: Command = {
         if (!subcommand.public && !isWhitelisted(ctx)) return error(ctx, ERRORS.NO_PERMS);
         return subcommand.run(ctx);
     },
+
+    ac: (ctx: AutocompleteInteraction) => {
+        let command: SubCommand | SubCommandGroup | undefined | null = SubCommands.find(c=>c.name===ctx.options.data[0].name);
+        if (!command?.ac) return new Error("Autocomplete not recognized.");
+    
+        return command.ac(ctx);
+    }
 }
 
 function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, items: Song[], page: number): T {

@@ -1,38 +1,40 @@
 import { AudioPlayer, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
-import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, InteractionReplyOptions, Message, ModalSubmitInteraction, ReplyMessageOptions, WebhookEditMessageOptions } from "discord.js";
-import { RatedSong } from "../youtube/util";
+import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, InteractionReplyOptions, Message, ModalSubmitInteraction, ReplyMessageOptions, TextBasedChannel, WebhookEditMessageOptions } from "discord.js";
+import { SongReference } from "../youtube/util";
 import { WHITELIST } from "../index";
 
 export const TRUTHY: string[] = ["true","yes","1","on"]
 export const ITEMS_PER_PAGE = 25;
 
-const players: {[key:string]: {player?:AudioPlayer,playing?:RatedSong}} = {}
-export function getPlayer(guildid: string)               : {player:AudioPlayer,playing?:RatedSong}
-export function getPlayer(guildid: string, create: true) : {player:AudioPlayer,playing?:RatedSong}
-export function getPlayer(guildid: string, create: false): {player?:AudioPlayer,playing?:RatedSong}
+const players: {[key:string]: {player?:AudioPlayer,playing?:SongReference}} = {}
+export function getPlayer(guildid: string)               : {player:AudioPlayer,playing?:SongReference}
+export function getPlayer(guildid: string, create: true) : {player:AudioPlayer,playing?:SongReference}
+export function getPlayer(guildid: string, create: false): {player?:AudioPlayer,playing?:SongReference}
 export function getPlayer(guildid: string, create: boolean = true) {
     if (!players[guildid]) {players[guildid] = {player: create ? createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}}).setMaxListeners(1) : undefined}}
     return players[guildid];
 }
 
-export async function error(ctx: BaseCommandInteraction | ButtonInteraction | Message, error: ERRORS | Error): Promise<Message | void> {
+export async function error(ctx: BaseCommandInteraction | ButtonInteraction | Message | TextBasedChannel, error: ERRORS | Error): Promise<Message | void> {
     let content: string = error instanceof Error ? "Error: "+error.message : error;
     if (ctx instanceof Interaction) {
         if (ctx.replied) return await ctx.editReply({content, components: []}) as Message
         return ctx.reply({content, ephemeral: true})
-    } else {
+    } else if (ctx instanceof Message) {
         return ctx.reply(content)
+    } else {
+        return ctx.send(content)
     }
 }
 export enum ERRORS {
     INVALID_ARGUMENTS = 'Invalid Arguments!',
     TIMEOUT = "Interaction Timed Out!",
+    NO_PERMS = "Insufficent Permissions!",
     NO_CONNECTION = 'Couldn\'t find voice connection!',
     NO_USER = 'Couldn\'t find user!',
     NO_PLAYLIST = 'Couldn\'t find playlist!',
     NO_SONG = 'Couldn\'t find song!',
-    NO_PERMS = "Insufficent Permissions!",
-    NO_GUILD = "Couldn't find guild!",
+    NO_GUILD = 'Couldn\'t find guild!',
 }
 
 export function reply(ctx: BaseCommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean>> {

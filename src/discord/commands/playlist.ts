@@ -15,7 +15,8 @@ const Create: SubCommand = {
         type: "STRING",
         name: "ids",
         description: "Song IDs to create your playlist with",
-        required: true
+        required: true,
+        autocomplete: true,
     }],
     public: true,
 
@@ -101,7 +102,8 @@ const Add: SubCommand = {
             "type": 3,
             "name": "ids",
             "description": "Song IDs to add",
-            "required": true
+            "required": true,
+            autocomplete: true,
         }
     ],
     public: true,
@@ -125,14 +127,13 @@ const Remove: SubCommand = {
     type: "SUB_COMMAND",
     name: "remove",
     description: "Removes music from your playlist.",
-    options: [
-        {
-            "type": 3,
-            "name": "ids",
-            "description": "Song IDs to remove",
-            "required": true
-        }
-    ],
+    options: [{
+        "type": "STRING",
+        "name": "ids",
+        "description": "Song IDs to remove",
+        "required": true,
+        autocomplete: true,
+    }],
     public: true,
 
     run: (ctx: BaseCommandInteraction | Message) => {
@@ -266,6 +267,7 @@ const Edit: SubCommand = {
         description: "Song ID to edit",
         type: "STRING",
         required: true,
+        autocomplete: true,
     }],
     public: true,
 

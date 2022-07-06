@@ -1,6 +1,6 @@
 import { BaseCommandInteraction, GuildMember, Message} from "discord.js";
 import { getPlaylist } from "../../youtube/playlist";
-import { RatedSong } from "../../youtube/util";
+import { SongReference } from "../../youtube/util";
 import { error, ERRORS, getPlayer, reply, truncateString } from "../util";
 import { Command } from "./Commands";
 
@@ -34,7 +34,7 @@ export const Vote: Command = {
         // Playlist Locating
         let playlist = getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx,ERRORS.NO_PLAYLIST);
-        let song: RatedSong | undefined = getPlayer(ctx.guild.id,false)?.playing
+        let song: SongReference | undefined = getPlayer(ctx.guild.id,false)?.playing
         if (!song) return error(ctx,ERRORS.NO_SONG);
         // Action Execution
         if (!voted[ctx.guild.id]) voted[ctx.guild.id] = new Set<string>();
