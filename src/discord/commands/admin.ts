@@ -2,7 +2,7 @@ import { BaseCommandInteraction, Message, ReplyMessageOptions, ButtonInteraction
 import { client, WHITELIST } from "../../index";
 import { Playlist, WebPlaylist } from "../../youtube/playlist";
 import { SongReference, Genre, Song } from "../../youtube/util";
-import { error, ERRORS, editReply, isWhitelisted, reply, ITEMS_PER_PAGE, truncateString } from "../util";
+import { error, ERRORS, editReply, isWhitelisted, reply, ITEMS_PER_PAGE } from "../util";
 import { Command, SubCommand, SubCommandGroup } from "./Commands";
 
 const commandname = "admin"

@@ -6,6 +6,7 @@ import ytpl from "ytpl";
 import { AUDIOFORMAT, Genre, MusicJSON, parseVideo, RatedSong, SongReference } from "./util";
 
 export class WebPlaylist {
+    private static downloading: boolean = false;
     public ytplaylist: ytpl.Result;
 
     private constructor(r: ytpl.Result) {
@@ -70,6 +71,8 @@ export class WebPlaylist {
     public download(guildid: string): EventEmitter {
         const ee: EventEmitter = new EventEmitter();
 
+        if (WebPlaylist.downloading) {setTimeout(() => ee.emit('warn', 0, 0, new Error("Wait for the previous playlist to download first!")), 1000); return ee;}
+
         const datafile = `./resources/playlists/${guildid}.json`
         let pdata: MusicJSON = {guildid, url: [this.ytplaylist.url], items: []};
 
@@ -86,9 +89,10 @@ export class WebPlaylist {
 
         let done: number = 0, total: number = this.ytplaylist.items.length;
         ee.emit("start",this.ytplaylist.items)
+        WebPlaylist.downloading = true;
         Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
             const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
-            if (fs.existsSync(file)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);done++;return Promise.resolve();}
+            if (fs.existsSync(file) && pdata.items.findIndex(i=>i.id===playlistitem.id) < 0) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);done++;return Promise.resolve();}
             return new Promise<void>(async (resolve,reject) => {
                 try {
                     let videoinfo: ytdl.videoInfo = await ytdl.getInfo(playlistitem.url)
@@ -107,19 +111,8 @@ export class WebPlaylist {
                     return reject(e)
                 }
             })
-            /*
-            return Promise.race([
-            <Download Promise>,
-            new Promise<void>((_,reject) => {
-                setTimeout(()=>{
-                    let index: number = pdata.items.findIndex(i=>i.file===file); // cleanup partial progress
-                    if (index) pdata.items.splice(index,1)                       // /
-                    ee.emit('warn', done, total, new Error(`Skipped \`${playlistitem.id}\` (timeout).`)) // !important! May have to decrement here but i err on the safe si
-                    reject()
-                },14*60*1000)
-            })])
-            */
         })).then(async (completion: Array<PromiseSettledResult<void>>) => {
+            WebPlaylist.downloading = false;
             if (completion.every(r=>r.status==="rejected")) return;
             pdata.items.forEach(rs=>Playlist.INDEX[rs.id]=(rs as SongReference))
             await Playlist.setMusicIndex();

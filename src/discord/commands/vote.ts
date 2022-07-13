@@ -1,7 +1,7 @@
 import { BaseCommandInteraction, GuildMember, Message} from "discord.js";
+import { Song } from "src/youtube/util"
 import { getPlaylist } from "../../youtube/playlist";
-import { SongReference } from "../../youtube/util";
-import { error, ERRORS, getPlayer, reply, truncateString } from "../util";
+import { error, ERRORS, getPlayer, getPlaying, reply, truncateString } from "../util";
 import { Command } from "./Commands";
 
 const voted: {[key:string]: Set<String>} = {};
@@ -34,7 +34,7 @@ export const Vote: Command = {
         // Playlist Locating
         let playlist = getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx,ERRORS.NO_PLAYLIST);
-        let song: SongReference | undefined = getPlayer(ctx.guild.id,false)?.playing
+        let song: Song | undefined = getPlaying(getPlayer(ctx.guild.id,false))
         if (!song) return error(ctx,ERRORS.NO_SONG);
         // Action Execution
         if (!voted[ctx.guild.id]) voted[ctx.guild.id] = new Set<string>();

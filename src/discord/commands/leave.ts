@@ -1,6 +1,5 @@
 import { AudioPlayer, getVoiceConnection, VoiceConnection } from "@discordjs/voice";
 import { BaseCommandInteraction, Message, VoiceBasedChannel } from "discord.js";
-import { SongReference } from "../../youtube/util";
 import { error, ERRORS, getPlayer } from "../util";
 import { Command } from "./Commands";
 
@@ -22,9 +21,9 @@ export const Leave: Command = {
 
 export function leave(ctx: BaseCommandInteraction | Message) {
     if (!ctx.guild) return;
-    let player: {player?: AudioPlayer,playing?: SongReference} = getPlayer(ctx.guild.id, false);
-    if (player.player) {player.player.removeAllListeners();player.player.stop();}
-    player.playing = undefined;
+    
+    let player: AudioPlayer | undefined = getPlayer(ctx.guild.id, false);
+    if (player) {player.removeAllListeners();player.stop();}
     let voiceconnection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
     if (!voiceconnection?.disconnect()) throw new Error("Failed to leave voice channel.");
 }

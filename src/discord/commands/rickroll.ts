@@ -3,7 +3,7 @@ import { BaseCommandInteraction, Message } from "discord.js";
 import { error, ERRORS } from "../util";
 import { Command } from "./Commands";
 
-const player: AudioPlayer = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}})
+const player: AudioPlayer = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Stop}})
 
 export const Rickroll: Command = {
     name: "rr",

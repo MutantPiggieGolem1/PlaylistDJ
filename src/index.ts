@@ -10,8 +10,7 @@ client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
-    client.user.setActivity({name: "Rest in peace Technoblade.", type: "PLAYING"})
-    // client.user.setActivity({type: "LISTENING", name: `To music in ${client.guilds.cache.size} servers!`})
+    client.user.setActivity({type: "LISTENING", name: `To music in ${client.guilds.cache.size} servers!\nRest in peace Technoblade.`})
     console.info(`Bot Ready! [${client.user.tag}]`);
 })
 
@@ -21,7 +20,7 @@ client.on("messageCreate", (msg: Message) => {
     if (!command) {msg.reply("Command not recognized."); return;}
 
     if (!command.public && !isWhitelisted(msg)) {msg.reply("This command requires authorization."); return}    
-    console.info(`[${Day().format("DD HH:mm:ss")}] ${msg.author.tag} >> ${command.name} ${msg.content.slice(3+command.name.length)}`)
+    console.info(`[${Day().format("DD HH:mm:ss")}] ${msg.author.tag} >> ${PREFIX} ${command.name} ${msg.content.slice(3+command.name.length)}`)
     command.run(msg);
 })
 

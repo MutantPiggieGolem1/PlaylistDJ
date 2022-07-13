@@ -1,18 +1,27 @@
-import { AudioPlayer, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
-import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, InteractionReplyOptions, Message, ModalSubmitInteraction, ReplyMessageOptions, TextBasedChannel, WebhookEditMessageOptions } from "discord.js";
-import { SongReference } from "../youtube/util";
-import { WHITELIST } from "../index";
+import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice"
+import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, InteractionReplyOptions, Message, ModalSubmitInteraction, ReplyMessageOptions, TextBasedChannel, WebhookEditMessageOptions } from "discord.js"
+import { Song } from "../youtube/util"
+import { WHITELIST } from "../index"
 
 export const TRUTHY: string[] = ["true","yes","1","on"]
 export const ITEMS_PER_PAGE = 25;
 
-const players: {[key:string]: {player?:AudioPlayer,playing?:SongReference}} = {}
-export function getPlayer(guildid: string)               : {player:AudioPlayer,playing?:SongReference}
-export function getPlayer(guildid: string, create: true) : {player:AudioPlayer,playing?:SongReference}
-export function getPlayer(guildid: string, create: false): {player?:AudioPlayer,playing?:SongReference}
+export function getPlayer(guildid: string)               : AudioPlayer
+export function getPlayer(guildid: string, create: true) : AudioPlayer
+export function getPlayer(guildid: string, create: false): AudioPlayer | undefined
 export function getPlayer(guildid: string, create: boolean = true) {
-    if (!players[guildid]) {players[guildid] = {player: create ? createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}}).setMaxListeners(1) : undefined}}
-    return players[guildid];
+    const a: VoiceConnection | undefined = getVoiceConnection(guildid);
+    if (!a || !("subscription" in a.state) || !a.state.subscription) {
+        if (!create) return;
+        return createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}}).setMaxListeners(1);
+    }
+    return a.state.subscription.player;
+}
+export function getPlaying(player?: AudioPlayer): Song | undefined {
+    if (!player || !('resource' in player.state)) return;
+    const resource: AudioResource = player.state.resource;
+    if (!resource?.metadata) return;
+    return resource.metadata as Song;
 }
 
 export async function error(ctx: BaseCommandInteraction | ButtonInteraction | Message | TextBasedChannel, error: ERRORS | Error): Promise<Message | void> {

@@ -3,6 +3,7 @@ import { Admin } from "./admin";
 import { Join } from "./join";
 import { Leave } from "./leave";
 import { Play } from "./play";
+import { Playing } from "./playing"
 import { Playlist } from "./playlist";
 import { Rickroll } from "./rickroll";
 import { Vote } from "./vote";
@@ -27,6 +28,6 @@ export interface SubCommandGroup extends ApplicationCommandSubGroupData {
 
 export const Commands: Command[] = [
     Admin, Playlist,      // Management Commands
-    Join,Leave,Play,Vote, // Public Commands
+    Join,Leave,Play,Playing,Vote, // Public Commands
     Rickroll,
 ]
