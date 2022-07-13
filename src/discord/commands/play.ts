@@ -64,6 +64,7 @@ export const Play: Command = {
                 player.removeAllListeners().on(AudioPlayerStatus.Idle, () => {
                     leave(ctx);
                 })
+                return;
             }
             try {
                 play(player, await nextSong(guildid));
