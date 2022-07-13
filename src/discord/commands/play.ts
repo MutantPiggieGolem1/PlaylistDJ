@@ -53,12 +53,12 @@ export const Play: Command = {
         if (!connection?.subscribe(player)) return error(ctx,ERRORS.NO_CONNECTION)
         // Action Execution
         const guildid = ctx.guild.id;
-        if (timeout > 0) timeouts[guildid] = timeout;
+        timeouts[guildid] = timeout;
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
         play(player, start)
 
         player.on(AudioPlayerStatus.Idle, async () => {
-            if (timeouts[guildid] && Date.now() >= timeouts[guildid]) {
+            if (timeouts[guildid] > 0 && Date.now() >= timeouts[guildid]) {
                 ctx.channel?.send("Finished Playing!")
                 player.play(createAudioResource(createReadStream("./resources/end.webm"),{inlineVolume: false, inputType: StreamType.WebmOpus}))
                 player.removeAllListeners().on(AudioPlayerStatus.Idle, () => {
