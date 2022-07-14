@@ -25,7 +25,7 @@ export function leave(ctx: BaseCommandInteraction | Message) {
     
     delete timeouts[ctx.guild.id];
     let player: AudioPlayer | undefined = getPlayer(ctx.guild.id, false);
-    if (player) {player.removeAllListeners();player.stop();}
+    player?.removeAllListeners().stop();
     let voiceconnection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
     if (!voiceconnection?.disconnect()) throw new Error("Failed to leave voice channel.");
 }
