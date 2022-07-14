@@ -59,7 +59,6 @@ export const Play: Command = {
 
         player.on(AudioPlayerStatus.Idle, async () => {
             if (timeouts[guildid] && Date.now() >= timeouts[guildid]) {
-                ctx.channel?.send("Finished Playing!")
                 player.play(createAudioResource(createReadStream("./resources/end.webm"),{inlineVolume: false, inputType: StreamType.WebmOpus}))
                 player.removeAllListeners().on(AudioPlayerStatus.Idle, () => {
                     leave(ctx);
