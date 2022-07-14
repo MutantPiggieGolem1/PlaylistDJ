@@ -22,7 +22,7 @@ export const Playing: Command = {
             description: `${song.title} - ${song.artist}\n\`${song.id}\``,
             color: 0xff0000,
             footer: {
-                text: `PlaylistDJ - Playing Music - ${to ? (to >= Date.now() ? format(to-Date.now())+" left" : "Last Song") : "No Timeout"}`,
+                text: `PlaylistDJ - Playing Music - ${to > 0 ? (to >= Date.now() ? format(to-Date.now())+" left" : "Last Song") : "No Timeout"}`,
                 icon_url: client.user?.avatarURL() ?? ""
             }
         } as Partial<MessageEmbed>]} as MessageOptions)

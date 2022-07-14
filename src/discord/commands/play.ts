@@ -53,7 +53,7 @@ export const Play: Command = {
         if (!connection?.subscribe(player)) return error(ctx,ERRORS.NO_CONNECTION)
         // Action Execution
         const guildid = ctx.guild.id;
-        if (timeout > 0) timeouts[guildid] = timeout;
+        timeouts[guildid] = timeout;
         if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
         play(player, start)
 
