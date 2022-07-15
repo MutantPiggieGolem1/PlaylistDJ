@@ -144,7 +144,7 @@ const Amend: SubCommand = {
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
-        const focused = ctx.options.getFocused()
+        const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0) return []; // too many matches, don't bother
         return Object.values(Playlist.INDEX)
             .filter(k=>k.id.startsWith(focused))

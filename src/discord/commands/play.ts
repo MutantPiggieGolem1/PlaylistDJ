@@ -45,7 +45,7 @@ export const Play: Command = {
             [arg1,arg2] = ctx.content.split(/\s+/g).slice(2)
         }
         const start: SongReference = playlist.items.find(s=>s.id===arg1) ?? await nextSong(ctx.guild.id);
-        const timeout: number = (arg2 && !Number.isNaN(arg2)) ? Date.now() + Number.parseInt(arg2)*60*1000 : (timeouts[ctx.guild.id] || -1);
+        const timeout: number = (arg2 && !Number.isNaN(arg2)) ? Date.now() + Number.parseInt(arg2)*60*1000 : timeouts[ctx.guild.id];
         // Condition Validation
         let player: AudioPlayer = getPlayer(ctx.guild.id)
         player.removeAllListeners().stop()
@@ -79,7 +79,7 @@ export const Play: Command = {
         if (!ctx.guild) return new Error(ERRORS.NO_GUILD);
         const playlist = getPlaylist(ctx.guild.id);
         if (!playlist?.playlistdata.items || playlist.playlistdata.items.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
-        const focused = ctx.options.getFocused()
+        const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0) return []; // too many matches, don't bother
         return Object.values(playlist.playlistdata.items)
             .filter(k=>k.id.startsWith(focused) || k.title.toLowerCase().startsWith(focused.toLowerCase()))
