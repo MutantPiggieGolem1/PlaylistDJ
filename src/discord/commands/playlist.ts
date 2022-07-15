@@ -422,7 +422,7 @@ const Edit: SubCommand = {
         if (!ctx.guild) return new Error(ERRORS.NO_GUILD);
         const playlist = yt.getPlaylist(ctx.guild.id);
         if (!playlist?.playlistdata.items || playlist.playlistdata.items.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
-        const focused = ctx.options.getFocused()
+        const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0) return []; // too many matches, don't bother
         return Object.values(playlist.playlistdata.items)
             .filter(k=>k.id.startsWith(focused))
