@@ -103,8 +103,9 @@ dist
 resources/token.txt
 
 # Resources
-resources/
-resources/*
+resources/music
+resources/playlists
+resources/music.json
 
 # VSC
 .VSCodeCounter/*
