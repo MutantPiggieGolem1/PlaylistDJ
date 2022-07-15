@@ -103,8 +103,17 @@ dist
 resources/token.txt
 
 # Resources
-resources/music/
+resources/
+resources/*
 
 # VSC
 .VSCodeCounter/*
 .VSCodeCounter
+*.code-workspace
+.vscode
+
+# Crossplatform Compat.
+node_modules/*
+node_modules/
+package-lock.json
+package.json

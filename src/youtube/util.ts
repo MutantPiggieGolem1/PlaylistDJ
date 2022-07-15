@@ -9,50 +9,39 @@ export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {
         id: video.id,
 
         title: titlesegments[artistindex >= 0 ? (artistindex+1)%2 : 1]?.replace(/[([].*?Official.*?[\])]/i,"")?.trim() ?? video.title ?? "Unknown",
-        artist: titlesegments.length === 2 ? titlesegments[artistindex >= 0 ? artistindex : 0] : "Unknown Artist",
+        artist: titlesegments.length === 2 && artistindex >= 0 ? titlesegments[artistindex] : "Unknown Artist",
         genre: Genre.Unknown,
         length: video.durationSec ?? -1,
-
-        score: 0,
-    } // TODO: Parse video information
+    }
 }
-
-export function isMusicJSON(arg: any): arg is MusicJSON { // good enough
-    return  typeof arg?.directory === "string" &&
-            arg.url?.every && arg.url.every((u: any)=>typeof u === "string") &&
-            typeof arg.items === "object"
-}
-
 
 export type MusicJSON = {
-    directory: string,
-    url: string[],
+    guildid: string,
+    url?: string[],
 
-    items: Array<RealSong>,
+    items: Array<RatedSong>,
 }
 
-export type RealSong = Song & {file: string, url: string}
-
-export type Song = {
+export type RatedSong = SongReference & {tags?: Array<string>, score: number}
+export type SongReference = Song & {file: string, url: string}
+export type Song = { // objective properties
     id: string,
 
     title: string,
     artist: string,
     genre: Genre,
     length: number, // Song Duration (Seconds)
-
-    tags?: Array<string>,
-    score: number,
 }
 
 export enum Genre {
-    Unknown   ,
-    Pop       ,// Shake it Off - Taylor Swift
-    Meme      ,// Plastic Bag - Paty Kerry
-    Minecraft ,// Dragonhearted- TryHardNinja
-    EDM       ,// Base After Base - DJVI
-    House     ,// 
-    Instrumental,// 
-    Japanese  ,// Nausicaa on the Valley of the Wind - Joe Hisaishi
-    Eurobeat  ,// Running in the 90s
+    Unknown = 'Unknown'             ,
+    Pop = 'Pop'                     ,// Shake it Off - Taylor Swift
+    Meme = 'Meme'                   ,// Plastic Bag - Paty Kerry
+    Minecraft = 'Minecraft'         ,// Dragonhearted - TryHardNinja
+    Electronic = 'Electronic'       ,// Base After Base - DJVI
+    Instrumental = 'Instrumental'   ,// 
+    Korean = 'Korean'               ,// Way Back Home - SHAUN
+    Japanese = 'Japanese'           ,// Into the Night - YOASABI
+    Chinese = 'Chinese'             ,// 
+    Eurobeat = 'Eurobeat'           ,// Running in the 90s
 } // Philter, TheFatRat

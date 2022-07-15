@@ -1,55 +1,76 @@
-import { AudioPlayer, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
-import { BaseCommandInteraction, ButtonInteraction, Interaction, Message, MessageOptions, MessagePayload, InteractionUpdateOptions, MessageActionRow, MessageActionRowComponent, MessageButton, MessageSelectMenu, MessageActionRowOptions, MessageFlags } from "discord.js";
-import { client } from "../index";
+import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice"
+import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, InteractionReplyOptions, Message, ModalSubmitInteraction, ReplyMessageOptions, TextBasedChannel, WebhookEditMessageOptions } from "discord.js"
+import { Song } from "../youtube/util"
+import { WHITELIST } from "../index"
 
 export const TRUTHY: string[] = ["true","yes","1","on"]
+export const ITEMS_PER_PAGE = 25;
 
-const players: {[key:string]: AudioPlayer} = {};
-export function getPlayer(guildid: string) {
-    if (!players[guildid]) players[guildid] = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}});
-    return players[guildid];
+export function getPlayer(guildid: string)               : AudioPlayer
+export function getPlayer(guildid: string, create: true) : AudioPlayer
+export function getPlayer(guildid: string, create: false): AudioPlayer | undefined
+export function getPlayer(guildid: string, create: boolean = true) {
+    const a: VoiceConnection | undefined = getVoiceConnection(guildid);
+    if (!a || !("subscription" in a.state) || !a.state.subscription) {
+        if (!create) return;
+        return createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Pause}}).setMaxListeners(1);
+    }
+    return a.state.subscription.player;
+}
+export function getPlaying(player?: AudioPlayer): Song | undefined {
+    if (!player || !('resource' in player.state)) return;
+    const resource: AudioResource = player.state.resource;
+    if (!resource?.metadata) return;
+    return resource.metadata as Song;
 }
 
-export async function reply(ctx: BaseCommandInteraction | ButtonInteraction | Message, content: MessageOptions | string, eph?: boolean): Promise<void | Message<boolean>> {
-    if (!ctx.channel) return;
-    if (typeof content === "string") content = {content} as MessageOptions;
-    content.flags = 64;
-    if (ctx instanceof Message) {if (eph) {ctx.author.send(content)} else {ctx.reply(content)}; return;}
-    if (ctx.replied) {return editReply(ctx,content)}
-    return ctx.reply( MessagePayload.create(ctx,content));
-}
-
-export async function editReply(ctx: BaseCommandInteraction | ButtonInteraction | Message, content: MessageOptions | string): Promise<void | Message<boolean>> {
-    if (!ctx.channel) return;
-    if (typeof content === "string") content = {content} as MessageOptions;
-    content.flags = 64;
+export async function error(ctx: BaseCommandInteraction | ButtonInteraction | Message | TextBasedChannel, error: ERRORS | Error): Promise<Message | void> {
+    let content: string = error instanceof Error ? "Error: "+error.message : error;
     if (ctx instanceof Interaction) {
-        if (!ctx.replied && !ctx.deferred) {return reply(ctx,content)}
-        await ctx.editReply(content)
+        if (ctx.replied) return await ctx.editReply({content, components: []}) as Message
+        return ctx.reply({content, ephemeral: true})
     } else if (ctx instanceof Message) {
-        let m: Message | null | undefined = [...ctx.channel.messages.cache.values()].find(msg => client?.user?.id === msg.author.id && msg.reference?.messageId === ctx.id && Date.now()-msg.createdAt.getTime() < 10*1000)
-        if (m?.editable) {return m.edit(MessagePayload.create(m,content))}
-        await ctx.reply(content);
+        return ctx.reply(content)
+    } else {
+        return ctx.send(content)
     }
 }
+export enum ERRORS {
+    INVALID_ARGUMENTS = 'Invalid Arguments!',
+    TIMEOUT = "Interaction Timed Out!",
+    NO_PERMS = "Insufficent Permissions!",
+    NO_CONNECTION = 'Couldn\'t find voice connection!',
+    NO_USER = 'Couldn\'t find user!',
+    NO_PLAYLIST = 'Couldn\'t find playlist!',
+    NO_SONG = 'Couldn\'t find song!',
+    NO_GUILD = 'Couldn\'t find guild!',
+}
 
-// function disableButtons(ctx: ButtonInteraction, options?: InteractionUpdateOptions): void {
-//     if (ctx.deferred || ctx.message.flags === MessageFlags.FLAGS.EPHEMERAL) return console.warn("Attempted to disable buttons on deferred context.")
-//     try {
-//         if (!(ctx.message instanceof Message && ctx.message.components && ctx.message.components instanceof Array<MessageActionRow<MessageButton | MessageSelectMenu>>)) return;
-//         let jmsg: InteractionUpdateOptions | any = ctx.message;
-//         if (ctx.message.nonce === null) jmsg.nonce = undefined;
-//         let audited: InteractionUpdateOptions = {};
-//         audited = Object.assign(audited,jmsg)
-//         if (!options?.components) audited.components = ctx.message.components?.map(a=>{
-//             return new MessageActionRow({components: a.components.map(c=>{
-//                 c.disabled=true;return c as MessageActionRowComponent
-//             })} as MessageActionRowOptions<MessageActionRowComponent>)
-//         })
-//         if (!options?.attachments) audited.attachments = [...ctx.message.attachments.values()]
-//         if (options) audited = Object.assign(audited,options);
-//         ctx.update(audited)
-//     } catch (e) {
-//         console.error(e)
-//     }
-// }
+export function reply(ctx: BaseCommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean>> {
+    if (typeof content === "string") content = { content }
+    content = { ...content, ephemeral: true }
+    if (ctx instanceof Message) return ctx.reply(content)
+    return ctx.reply(content).then(async _=>(await ctx.fetchReply() as Message))
+}
+
+export function editReply(ctx: BaseCommandInteraction | ButtonInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {
+    if (typeof content === "string") content = { content }
+    if (ctx instanceof Message) {
+        let m: Message | null = [...ctx.channel.messages.cache.values()].find(msg => msg.editable &&
+            msg.reference?.messageId === ctx.id &&
+            Date.now()-msg.createdAt.getTime() < 10*1000
+        ) ?? null
+        if (m) {return m.edit(content)}
+        return ctx.reply(content);
+    }
+    if (ctx.replied || ctx.deferred) return ctx.editReply(content).then(async _=>(await ctx.fetchReply() as Message))
+    return ctx.reply({...content, ephemeral: true}).then(async _=>(await ctx.fetchReply() as Message))
+}
+
+export function truncateString(str: string, len: number): string {
+    return (str.length > len) ? str.slice(0, len-1)+".." : str;
+}
+
+export function isWhitelisted(ctx: BaseCommandInteraction<CacheType> | ButtonInteraction<CacheType> | Message<boolean>) {
+    return (ctx instanceof Message ? ctx.author : ctx.user).id === '547624574070816799' || WHITELIST.has((ctx instanceof Message ? ctx.author : ctx.user).id)
+}
