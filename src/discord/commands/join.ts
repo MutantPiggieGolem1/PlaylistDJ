@@ -1,7 +1,7 @@
 import { CommandInteraction, Message, VoiceChannel, StageChannel, GuildBasedChannel, ApplicationCommandOptionType, ChannelType } from "discord.js";
 import { Command } from "./Commands";
 import { DiscordGatewayAdapterCreator, joinVoiceChannel } from '@discordjs/voice';
-import { error } from "../util";
+import { error, reply } from "../util";
 
 export const Join: Command = {
     name: "join",
@@ -38,6 +38,7 @@ export const Join: Command = {
             selfMute: false,
             selfDeaf: true,
         });
-        if (ctx instanceof CommandInteraction) ctx.reply({content:"Joined "+voicechannel.toString(),ephemeral: true});
+        if (voicechannel.bitrate < 16000) reply(ctx, {content: `Warning! This channel's bitrate is low; audio quality may be decreased.`, ephemeral: false})
+        else if (ctx instanceof CommandInteraction) ctx.reply({content:"Joined "+voicechannel.toString(), ephemeral: true});
     }
 };

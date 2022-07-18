@@ -12,7 +12,7 @@ export const Leave: Command = {
 
     run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
-        let voicechannel: VoiceBasedChannel | null | undefined = (await ctx.guild.members.fetchMe())?.voice.channel
+        let voicechannel: VoiceBasedChannel | null | undefined = ( ctx.guild.members.me ?? await ctx.guild.members.fetchMe() ).voice.channel
         if (!voicechannel) return error(ctx,ERRORS.NO_CONNECTION);
         try {
             leave(ctx)

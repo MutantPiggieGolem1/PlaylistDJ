@@ -47,7 +47,7 @@ export enum ERRORS {
 
 export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean>> {
     if (typeof content === "string") content = { content }
-    content = { ...content, ephemeral: true }
+    if (!('ephemeral' in content)) content = { ...content, ephemeral: true }
     if (ctx instanceof Message) return ctx.reply(content)
     return ctx.reply(content).then(async _=>(await ctx.fetchReply() as Message))
 }

@@ -1,5 +1,5 @@
 import { AudioPlayer, AudioPlayerStatus, createAudioResource, getVoiceConnection, StreamType, VoiceConnection } from "@discordjs/voice"
-import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, ApplicationCommandType, AutocompleteInteraction, CommandInteraction, Message } from "discord.js"
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction, Message } from "discord.js"
 import { createReadStream } from "fs"
 import nextSong from "../../recommendation/interface"
 import { getPlaylist } from "../../youtube/playlist"
@@ -90,5 +90,5 @@ export const Play: Command = {
 }
 
 function play(player: AudioPlayer, song: SongReference) {
-    player.play(createAudioResource(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))
+    player.play(createAudioResource<Song>(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))
 }
