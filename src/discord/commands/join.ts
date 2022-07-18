@@ -1,5 +1,4 @@
-import { BaseCommandInteraction, Message, VoiceChannel, StageChannel, GuildBasedChannel } from "discord.js";
-import { ChannelTypes } from "discord.js/typings/enums";
+import { CommandInteraction, Message, VoiceChannel, StageChannel, GuildBasedChannel, ApplicationCommandOptionType, ChannelType } from "discord.js";
 import { Command } from "./Commands";
 import { joinVoiceChannel } from '@discordjs/voice';
 import { error } from "../util";
@@ -10,23 +9,24 @@ export const Join: Command = {
     options: [{
         name: "channel",
         description: "Voice channel to join",
-        type: "CHANNEL",
+        type: ApplicationCommandOptionType.Channel,
         channelTypes: [
-            ChannelTypes.GUILD_VOICE,
-            ChannelTypes.GUILD_STAGE_VOICE
+            ChannelType.GuildVoice,
+            ChannelType.GuildStageVoice
         ],
         required: true
-    }], 
+    }],
+    defaultMemberPermissions: "ManageChannels",
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: CommandInteraction | Message) => {
         if (!ctx.guild?.available) return;
         // Argument Processing
-        let voicechannel: GuildBasedChannel | null | undefined = ctx instanceof BaseCommandInteraction ? 
+        let voicechannel: GuildBasedChannel | null | undefined = ctx instanceof CommandInteraction ? 
             ctx.options.get("channel",true).channel as GuildBasedChannel : (() => {
                 let arg1: string = ctx.content.split(/\s+/g).slice(2).join(" ");
                 return ctx.guild.channels.resolve(arg1.replaceAll(/\D/g,"")) ?? 
-                    ctx.guild.channels.cache.find(c=>c.isVoice()&&c.name.toLowerCase()===arg1.toLowerCase()) ??
+                    ctx.guild.channels.cache.find(c=>c.isVoiceBased()&&c.name.toLowerCase()===arg1.toLowerCase()) ??
                     ctx.member?.voice?.channel;
             })();
         if (!(voicechannel instanceof VoiceChannel || voicechannel instanceof StageChannel) || !voicechannel?.joinable) return error(ctx, new Error("Couldn't join voice channel!"));
@@ -38,6 +38,6 @@ export const Join: Command = {
             selfMute: false,
             selfDeaf: true,
         });
-        if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Joined "+voicechannel.toString(),ephemeral: true});
+        if (ctx instanceof CommandInteraction) ctx.reply({content:"Joined "+voicechannel.toString(),ephemeral: true});
     }
 };

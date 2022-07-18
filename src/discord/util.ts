@@ -1,9 +1,8 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice"
-import { BaseCommandInteraction, ButtonInteraction, CacheType, Interaction, InteractionReplyOptions, Message, ModalSubmitInteraction, ReplyMessageOptions, TextBasedChannel, WebhookEditMessageOptions } from "discord.js"
+import { CommandInteraction, ButtonInteraction, CacheType, InteractionReplyOptions, Message, ModalSubmitInteraction, ReplyMessageOptions, TextBasedChannel, WebhookEditMessageOptions, BaseInteraction, InteractionResponse } from "discord.js"
 import { Song } from "../youtube/util"
 import { WHITELIST } from "../index"
 
-export const TRUTHY: string[] = ["true","yes","1","on"]
 export const ITEMS_PER_PAGE = 25;
 
 export function getPlayer(guildid: string)               : AudioPlayer
@@ -24,10 +23,10 @@ export function getPlaying(player?: AudioPlayer): Song | undefined {
     return resource.metadata as Song;
 }
 
-export async function error(ctx: BaseCommandInteraction | ButtonInteraction | Message | TextBasedChannel, error: ERRORS | Error): Promise<Message | void> {
+export async function error(ctx: CommandInteraction | ButtonInteraction | Message | TextBasedChannel, error: ERRORS | Error): Promise<InteractionResponse | Message | void> {
     let content: string = error instanceof Error ? "Error: "+error.message : error;
-    if (ctx instanceof Interaction) {
-        if (ctx.replied) return await ctx.editReply({content, components: []}) as Message
+    if (ctx instanceof BaseInteraction) {
+        if (ctx.replied) return await ctx.editReply({content, components: []})
         return ctx.reply({content, ephemeral: true})
     } else if (ctx instanceof Message) {
         return ctx.reply(content)
@@ -46,14 +45,14 @@ export enum ERRORS {
     NO_GUILD = 'Couldn\'t find guild!',
 }
 
-export function reply(ctx: BaseCommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean>> {
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean>> {
     if (typeof content === "string") content = { content }
     content = { ...content, ephemeral: true }
     if (ctx instanceof Message) return ctx.reply(content)
     return ctx.reply(content).then(async _=>(await ctx.fetchReply() as Message))
 }
 
-export function editReply(ctx: BaseCommandInteraction | ButtonInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {
+export function editReply(ctx: CommandInteraction | ButtonInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {
     if (typeof content === "string") content = { content }
     if (ctx instanceof Message) {
         let m: Message | null = [...ctx.channel.messages.cache.values()].find(msg => msg.editable &&
@@ -71,6 +70,6 @@ export function truncateString(str: string, len: number): string {
     return (str.length > len) ? str.slice(0, len-1)+".." : str;
 }
 
-export function isWhitelisted(ctx: BaseCommandInteraction<CacheType> | ButtonInteraction<CacheType> | Message<boolean>) {
+export function isWhitelisted(ctx: CommandInteraction<CacheType> | ButtonInteraction<CacheType> | Message<boolean>) {
     return (ctx instanceof Message ? ctx.author : ctx.user).id === '547624574070816799' || WHITELIST.has((ctx instanceof Message ? ctx.author : ctx.user).id)
 }

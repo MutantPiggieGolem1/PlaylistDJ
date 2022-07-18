@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionChoiceData, ApplicationCommandSubCommandData, ApplicationCommandSubGroupData, AutocompleteInteraction, BaseCommandInteraction, ChatInputApplicationCommandData, Message, MessageComponentInteraction } from "discord.js";
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, ApplicationCommandSubCommandData, ApplicationCommandSubGroupData, AutocompleteInteraction, CommandInteraction, ChatInputApplicationCommandData, Message, MessageComponentInteraction } from "discord.js";
 import { Admin } from "./admin";
 import { Join } from "./join";
 import { Leave } from "./leave";
@@ -10,19 +10,19 @@ import { Vote } from "./vote";
 
 export interface Command extends ChatInputApplicationCommandData {
     public: boolean;
-    run(ctx: BaseCommandInteraction | Message): void;
+    run(ctx: CommandInteraction | Message): void;
     ac?: (ctx: AutocompleteInteraction) => ApplicationCommandOptionChoiceData[] | Promise<ApplicationCommandOptionChoiceData[]> | Error;
 }
 export interface SubCommand extends ApplicationCommandSubCommandData {
-    type: "SUB_COMMAND";
+    type: ApplicationCommandOptionType.Subcommand;
     public: boolean;
-    run(ctx: BaseCommandInteraction | Message): void;
+    run(ctx: CommandInteraction | Message): void;
     ac?: (ctx: AutocompleteInteraction) => ApplicationCommandOptionChoiceData[] | Promise<ApplicationCommandOptionChoiceData[]> | Error;
 }
 export interface SubCommandGroup extends ApplicationCommandSubGroupData {
-    type: "SUB_COMMAND_GROUP";
+    type: ApplicationCommandOptionType.SubcommandGroup;
     public: boolean;
-    run(ctx: BaseCommandInteraction | Message): void;
+    run(ctx: CommandInteraction | Message): void;
     ac?: (ctx: AutocompleteInteraction) => ApplicationCommandOptionChoiceData[] | Promise<ApplicationCommandOptionChoiceData[]> | Error;
 }
 

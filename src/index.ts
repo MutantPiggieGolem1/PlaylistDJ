@@ -1,16 +1,16 @@
-import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionData, Client, Intents, Interaction, Message } from "discord.js";
+import { ActivityType, ApplicationCommandOptionChoiceData, ApplicationCommandOptionData, Client, Interaction, InteractionType, Message, GatewayIntentBits } from "discord.js";
 import { Command, Commands } from "./discord/commands/Commands";
 import { isWhitelisted } from "./discord/util";
 import Day from "dayjs"
-export const client: Client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES,Intents.FLAGS.GUILD_MESSAGES,Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
-const PREFIX: string = "kt";
+export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
+const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
 client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
-    client.user.setActivity({type: "LISTENING", name: `To music in ${client.guilds.cache.size} servers!\nRest in peace Technoblade.`})
+    client.user.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!\nRest in peace Technoblade.`})
     console.info(`Bot Ready! [${client.user.tag}]`);
 })
 
@@ -24,18 +24,18 @@ client.on("messageCreate", (msg: Message) => {
     command.run(msg);
 })
 
-client.on("interactionCreate", (interaction: Interaction) => {
-    if (!interaction.isCommand() && !interaction.isContextMenu()) return;
+client.on("interactionCreate", (interaction: Interaction): void => {
+    if (interaction.type !== InteractionType.ApplicationCommand) return;
     let command: Command | undefined | null = Commands.find(c=>c.name===interaction.commandName);
-    if (!command) return interaction.reply({"content":"Command not recognized.","ephemeral":true});
+    if (!command) {interaction.reply({"content":"Command not recognized.","ephemeral":true}); return;}
 
-    if (!command.public && !isWhitelisted(interaction)) {return interaction.reply({content:"This command requires authorization.",ephemeral:true})}
+    if (!command.public && !isWhitelisted(interaction)) {interaction.reply({content:"This command requires authorization.",ephemeral:true}); return}
     console.info(`[${Day().format("DD HH:mm:ss")}] ${interaction.user.tag} >> /${command.name} ${interaction.options.data.map(o=>o.name+":"+o.value).join(" ")}`)
     command.run(interaction);
 })
 
-client.on("interactionCreate", async (interaction: Interaction) => {
-    if (!interaction.isAutocomplete()) return;
+client.on("interactionCreate", async (interaction: Interaction): Promise<void> => {
+    if (interaction.type !== InteractionType.ApplicationCommandAutocomplete) return;
     let command: Command | undefined | null = Commands.find(c=>c.name===interaction.commandName);
     if (!command?.ac) return console.error("Autocomplete not recognized.");
     

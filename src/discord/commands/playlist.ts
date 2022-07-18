@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionChoiceData, AutocompleteInteraction, BaseCommandInteraction, ButtonInteraction, EmbedField, Interaction, InteractionUpdateOptions, Message, MessageActionRow, MessageActionRowComponent, MessageButton, MessageEmbed, ModalOptions, ModalSubmitInteraction, ReplyMessageOptions, TextInputComponent } from "discord.js"
+import { ApplicationCommandOptionChoiceData, AutocompleteInteraction, CommandInteraction, ButtonInteraction, ComponentType, EmbedField, InteractionUpdateOptions, Message, ActionRow, ActionRowComponent, Embed, ModalSubmitInteraction, ReplyMessageOptions, TextInputComponent, ApplicationCommandOptionType, ButtonStyle, MessageActionRowComponentData, TextInputComponentData, TextInputStyle, BaseInteraction, ModalActionRowComponentData, ModalData, ModalComponentData, ModalActionRowComponent } from "discord.js"
 import { client } from "../../index"
 import * as yt from "../../youtube/playlist"
 import { Genre, RatedSong } from "../../youtube/util"
@@ -8,20 +8,20 @@ import { Command, SubCommand } from "./Commands"
 const commandname = "playlist"
 
 const Create: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "create",
     description: "Creates a playlist from existing songs.",
     options: [{
-        type: "STRING",
+        type: ApplicationCommandOptionType.String,
         name: "ids",
         description: "Song IDs to create your playlist with",
         required: true,
     }],
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => { // dj playlist create 123,456,789
+    run: (ctx: CommandInteraction | Message) => { // dj playlist create 123,456,789
         if (!ctx.guild) return;
-        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
+        let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("ids", true).value?.toString() :
             ctx.content.split(/\s+/g).slice(3).join("")
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS)
@@ -33,32 +33,32 @@ const Create: SubCommand = {
     }
 }
 const Delete: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "delete",
     description: "Deletes your playlist.",
     public: true,
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Message
         const msg = await reply(ctx, {
             content: "_",
             components: [{
-                "type": "ACTION_ROW",
+                type: ComponentType.ActionRow,
                 "components": [
                     {
-                        "style": "SUCCESS",
+                        "style": ButtonStyle.Success,
                         "label": `Confirm`,
-                        "custom_id": `cplaylistdeleteconfirm`,
+                        "customId": `cplaylistdeleteconfirm`,
                         "disabled": false,
-                        "type": "BUTTON"
+                        "type": ComponentType.Button
                     },
                     {
-                        "style": "DANGER",
+                        "style": ButtonStyle.Danger,
                         "label": `Cancel`,
-                        "custom_id": `cancel`,
-                        "disabled": ctx instanceof BaseCommandInteraction,
-                        "type": "BUTTON"
+                        "customId": `cancel`,
+                        "disabled": ctx instanceof CommandInteraction,
+                        "type": ComponentType.Button
                     }
                 ]
             }],
@@ -74,13 +74,12 @@ const Delete: SubCommand = {
             fetchReply: true
         })
         // Interaction Collection
-        msg.createMessageComponentCollector({
-            componentType: "BUTTON",
-            filter: (i: ButtonInteraction) => i.user.id === (ctx instanceof BaseCommandInteraction ? ctx.user : ctx.author).id,
+        msg.createMessageComponentCollector<ComponentType.Button>({
+            filter: (i: ButtonInteraction) => i.user.id === (ctx instanceof CommandInteraction ? ctx.user : ctx.author).id,
             max: 1,
             time: 5 * 1000
-        }).on('collect', (interaction: ButtonInteraction) => {
-            if (interaction.customId === 'cancel') return interaction.update({ components: [] });
+        }).on('collect', (interaction: ButtonInteraction): void => {
+            if (interaction.customId === 'cancel') {interaction.update({ components: [] }); return}
             if (!interaction.guild) { error(ctx, ERRORS.NO_GUILD); return; }
             let playlist = yt.getPlaylist(interaction.guild.id)
             if (!playlist) { error(ctx, ERRORS.NO_PLAYLIST); return; }
@@ -93,21 +92,21 @@ const Delete: SubCommand = {
     },
 }
 const Add: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "add",
     description: "Adds music to your playlist.",
     options: [{
-        type: "STRING",
+        type: ApplicationCommandOptionType.String,
         name: "ids",
         description: "Song IDs to add",
         required: true,
     }],
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
+        let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("ids")?.value?.toString() :
             ctx.content.split(/\s+/g)[3]
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
@@ -120,21 +119,21 @@ const Add: SubCommand = {
     }
 }
 const Remove: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "remove",
     description: "Removes music from your playlist.",
     options: [{
-        "type": "STRING",
+        "type": ApplicationCommandOptionType.String,
         "name": "ids",
         "description": "Song IDs to remove",
         "required": true,
     }],
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
+        let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("ids")?.value?.toString() :
             ctx.content.split(/\s+/g)[3]
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
@@ -147,11 +146,11 @@ const Remove: SubCommand = {
     }
 }
 const List: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "list",
     description: "Lists music on your playlist",
     options: [{
-        "type": "STRING",
+        "type": ApplicationCommandOptionType.String,
         "name": "key",
         "description": "Search filter",
         "required": false,
@@ -163,20 +162,20 @@ const List: SubCommand = {
             { name: "Sort", value: "sort" }
         ]
     }, {
-        "type": "STRING",
+        "type": ApplicationCommandOptionType.String,
         "name": "term",
         "description": "Search term",
         "required": false
     }],
     public: true,
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
+        let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("key", false)?.value?.toString() :
             ctx.content.split(/\s+/g)[3];
-        let arg2: string | undefined = ctx instanceof BaseCommandInteraction ?
+        let arg2: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("term", false)?.value?.toString() :
             ctx.content.split(/\s+/g).slice(4).join(" ");
         // Playlist Locating
@@ -213,19 +212,19 @@ const List: SubCommand = {
             rmsg = await reply(ctx, {
                 "content": "Click this button to continue:",
                 "components": [{
-                    type: "ACTION_ROW",
+                    type: ComponentType.ActionRow,
                     components: [{
-                        "style": "SUCCESS",
+                        "style": ButtonStyle.Success,
                         "label": `Continue`,
                         "customId": `continue`,
                         "disabled": false,
-                        "type": "BUTTON",
-                    } as MessageActionRowComponent]
+                        "type": ComponentType.Button,
+                    } as MessageActionRowComponentData]
                 }]
             })
         }
-        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: "BUTTON",
+        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+            componentType: ComponentType.Button,
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
@@ -235,7 +234,7 @@ const List: SubCommand = {
         const msg = await reply(rctx, listMessage<ReplyMessageOptions>(rctx, items, page))
         // Interaction Collection
         msg.createMessageComponentCollector({
-            componentType: "BUTTON",
+            componentType: ComponentType.Button,
             filter: (i: ButtonInteraction) => i.user.id === rctx.user.id,
             idle: 20 * 1000
         }).on('collect', (interaction: ButtonInteraction) => {
@@ -254,23 +253,23 @@ const List: SubCommand = {
     },
 }
 const Edit: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "edit",
     description: "Modifies music metadata in your playlist.",
     options: [{
         name: "id",
         description: "Song ID to edit",
-        type: "STRING",
+        type: ApplicationCommandOptionType.String,
         required: true,
         autocomplete: true,
     }],
     public: true,
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
         let id: string | undefined, field: string | undefined, value: string | undefined;
-        if (ctx instanceof BaseCommandInteraction) {
+        if (ctx instanceof CommandInteraction) {
             id = ctx.options.get("id", true).value?.toString()
             field = ctx.options.get("field", false)?.value?.toString()?.toLowerCase()
             value = ctx.options.get("value", false)?.value?.toString()
@@ -293,19 +292,19 @@ const Edit: SubCommand = {
             rmsg = await reply(ctx, {
                 "content": "Click this button to continue:",
                 "components": [{
-                    type: "ACTION_ROW",
+                    type: ComponentType.ActionRow,
                     components: [{
-                        "style": "SUCCESS",
+                        "style": ButtonStyle.Success,
                         "label": `Continue`,
                         "customId": `continue`,
                         "disabled": false,
-                        "type": "BUTTON",
-                    } as MessageActionRowComponent]
+                        "type": ComponentType.Button,
+                    } as MessageActionRowComponentData]
                 }]
             })
         }
-        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: "BUTTON",
+        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+            componentType: ComponentType.Button,
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
@@ -316,51 +315,51 @@ const Edit: SubCommand = {
             customId: `c${commandname}editedit`,
             title: `Song Metadata Editor [${song.id}]`,
             components: [{
-                type: "ACTION_ROW",
+                type: ComponentType.ActionRow,
                 components: [{
                     customId: `meditedittitle`,
                     label: "Song Title:",
                     maxLength: 64,
                     placeholder: song.title,
                     required: false,
-                    style: "SHORT",
-                    type: "TEXT_INPUT"
-                } as TextInputComponent]
-            } as MessageActionRow<TextInputComponent>, {
-                type: "ACTION_ROW",
+                    style: TextInputStyle.Short,
+                    type: ComponentType.TextInput
+                } as ModalActionRowComponentData]
+            } as ActionRow<TextInputComponent>, {
+                type: ComponentType.ActionRow,
                 components: [{
                     customId: `mediteditartist`,
                     label: "Song Artist:",
                     maxLength: 32,
                     placeholder: song.artist,
                     required: false,
-                    style: "SHORT",
-                    type: "TEXT_INPUT"
-                } as TextInputComponent]
-            } as MessageActionRow<TextInputComponent>, {
-                type: "ACTION_ROW",
+                    style: TextInputStyle.Short,
+                    type: ComponentType.TextInput
+                } as ModalActionRowComponentData]
+            } as ActionRow<ModalActionRowComponent>, {
+                type: ComponentType.ActionRow,
                 components: [{
                     customId: `mediteditgenre`,
                     label: "Song Genre:",
                     maxLength: 16,
                     placeholder: song.genre.toString(),
                     required: false,
-                    style: "SHORT",
-                    type: "TEXT_INPUT"
-                } as TextInputComponent]
-            } as MessageActionRow<TextInputComponent>, {
-                type: "ACTION_ROW",
+                    style: TextInputStyle.Short,
+                    type: ComponentType.TextInput
+                } as ModalActionRowComponentData]
+            } as ActionRow<ModalActionRowComponent>, {
+                type: ComponentType.ActionRow,
                 components: [{
                     customId: `meditedittags`,
                     label: "Tags:",
                     maxLength: 128,
                     placeholder: song.tags?.join(", ") || "None",
                     required: false,
-                    style: "PARAGRAPH",
-                    type: "TEXT_INPUT"
-                } as TextInputComponent]
-            } as MessageActionRow<TextInputComponent>]
-        } as ModalOptions)
+                    style: TextInputStyle.Paragraph,
+                    type: ComponentType.TextInput
+                } as ModalActionRowComponentData]
+            } as ActionRow<ModalActionRowComponent>]
+        } as ModalComponentData)
         // Interaction Collection
         const interaction: ModalSubmitInteraction | void = await rctx.awaitModalSubmit({ time: 5 * 60 * 1000 }).catch((e: Error) => {error(rctx,e)})
         if (!interaction) return;
@@ -439,11 +438,12 @@ export const Playlist: Command = {
     name: commandname,
     description: "Manage your server playlist.",
     options: SubCommands,
+    defaultMemberPermissions: "ManageGuild",
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
-        let option: string = ctx instanceof BaseCommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
+        let option: string = ctx instanceof CommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
         let subcommand: SubCommand | undefined = SubCommands.find(sc => sc.name === option)
 
         if (!subcommand) return error(ctx, ERRORS.INVALID_ARGUMENTS);
@@ -459,28 +459,28 @@ export const Playlist: Command = {
     }
 }
 
-function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: Interaction, items: RatedSong[], page: number): T {
+function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: BaseInteraction, items: RatedSong[], page: number): T {
     if (!ctx.guild) return { content: "Couldn't find guild!" } as T;
     return {
         "content": "_",
         "components": [{
-            "type": "ACTION_ROW", "components": [
+            "type": ComponentType.ActionRow, "components": [
                 {
-                    "style": "PRIMARY",
+                    "style": ButtonStyle.Primary,
                     "label": `Prev Page`,
                     "customId": `c${commandname}listpagedown`,
                     "disabled": page <= 0,
-                    "type": "BUTTON"
-                } as MessageActionRowComponent,
+                    "type": ComponentType.Button
+                } as ActionRowComponent,
                 {
-                    "style": "PRIMARY",
+                    "style": ButtonStyle.Primary,
                     "label": `Next Page`,
                     "customId": `c${commandname}listpageup`,
                     "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
-                    "type": "BUTTON"
-                } as MessageActionRowComponent
+                    "type": ComponentType.Button
+                } as ActionRowComponent
             ]
-        } as MessageActionRow],
+        } as ActionRow<ActionRowComponent>],
         "embeds": [{
             "type": "rich",
             "title": `All Results (${items.length})`,
@@ -495,8 +495,8 @@ function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(c
             }) || { "name": "No Results", "value": "Out Of Bounds", "inline": false } as EmbedField,
             "footer": {
                 "text": `PlaylistDJ - Song List - Page ${page + 1}/${Math.ceil(items.length / ITEMS_PER_PAGE)}`,
-                "iconURL": client.user?.avatarURL() ?? ""
+                "icon_url": client.user?.avatarURL() ?? ""
             }
-        } as MessageEmbed]
+        } as Partial<Embed>]
     } as T
 }

@@ -1,5 +1,5 @@
-import { BaseCommandInteraction, GuildMember, Message} from "discord.js";
-import { Song } from "src/youtube/util"
+import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message} from "discord.js";
+import { Song } from "../../youtube/util"
 import { getPlaylist } from "../../youtube/playlist";
 import { error, ERRORS, getPlayer, getPlaying, reply, truncateString } from "../util";
 import { Command } from "./Commands";
@@ -13,24 +13,26 @@ export const Vote: Command = {
     options: [{
         name: "vote",
         description: "Upvote or downvote?",
-        type: "STRING",
+        type: ApplicationCommandOptionType.String,
         required: true,
         choices: [
             {name:"Up",value:"up"},
             {name:"Down",value:"down"}
         ]
     }],
+    defaultMemberPermissions: "PrioritySpeaker",
     public: true,
     
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild || !(ctx.member instanceof GuildMember)) return;
         if (voted[ctx.guild.id]?.has(ctx.member.user.id)) return error(ctx,new Error("You've already voted!"));
         // Argument Processing
-        let arg1: string | undefined = (ctx instanceof BaseCommandInteraction ?
+        let arg1: string | undefined = (ctx instanceof CommandInteraction ?
             ctx.options.get("vote",true).value?.toString() :
             ctx.content.split(/\s+/g)[2])?.toLowerCase()
         if (!arg1 || !["up","down"].includes(arg1)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-        if (!ctx.member.voice || ctx.member.voice.channelId !== ctx.guild.me?.voice.channelId || ctx.member.voice.deaf || ctx.guild.me.voice.serverMute) return error(ctx,new Error("You aren't even listening to the music!"))
+        const me: GuildMember = await ctx.guild.members.fetchMe();
+        if (!ctx.member.voice || ctx.member.voice.channelId !== me.voice.channelId || ctx.member.voice.deaf || me.voice.serverMute) return error(ctx,new Error("You aren't even listening to the music!"))
         // Playlist Locating
         let playlist = getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx,ERRORS.NO_PLAYLIST);

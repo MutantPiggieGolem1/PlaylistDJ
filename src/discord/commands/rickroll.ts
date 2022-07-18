@@ -1,5 +1,5 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, createAudioResource, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
-import { BaseCommandInteraction, Message } from "discord.js";
+import { CommandInteraction, Message } from "discord.js";
 import { error, ERRORS } from "../util";
 import { Command } from "./Commands";
 
@@ -8,9 +8,10 @@ const player: AudioPlayer = createAudioPlayer({behaviors: {noSubscriber: NoSubsc
 export const Rickroll: Command = {
     name: "rr",
     description: "dQw4w9WgXcQ",
+    defaultMemberPermissions: "Administrator",
     public: false,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         let conn: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
         if (!conn) return error(ctx, ERRORS.NO_CONNECTION);
@@ -21,7 +22,7 @@ export const Rickroll: Command = {
         player.play(rr)
         conn.removeAllListeners();
         if (!conn.subscribe(player)) return;
-        if (ctx instanceof BaseCommandInteraction) {
+        if (ctx instanceof CommandInteraction) {
             ctx.reply({content:"We participated in a miniscule amount of tomfoolery.",ephemeral:true});
         } else {
             ctx.author.send("We participated in a miniscule amount of tomfoolery.")

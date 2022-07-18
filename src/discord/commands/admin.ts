@@ -1,4 +1,4 @@
-import { BaseCommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, MessageActionRow, MessageEmbed, MessageOptions, User, Interaction, Modal, ModalSubmitInteraction, TextInputComponent, ModalOptions, AutocompleteInteraction, ApplicationCommandOptionChoiceData } from "discord.js";
+import { CommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, ActionRow, Embed, MessageOptions, User, ModalSubmitInteraction, TextInputComponent, ModalData, AutocompleteInteraction, ApplicationCommandOptionChoiceData, ButtonStyle, ComponentType, ApplicationCommandOptionType, ActionRowComponent, ModalComponentData, ModalActionRowComponentData, TextInputStyle, ModalActionRowComponent, ActionRowModalData, TextInputModalData } from "discord.js";
 import { client, WHITELIST } from "../../index";
 import { Playlist, WebPlaylist } from "../../youtube/playlist";
 import { SongReference, Genre, Song } from "../../youtube/util";
@@ -8,22 +8,22 @@ import { Command, SubCommand, SubCommandGroup } from "./Commands";
 const commandname = "admin"
 
 const Amend: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "amend",
     description: "Modifies music metadata in the music database.",
     options: [{
         name: "id",
         description: "Song ID to edit",
-        type: "STRING",
+        type: ApplicationCommandOptionType.String,
         required: true,
         autocomplete: true,
     }],
     public: false,
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        const id: string | undefined = ctx instanceof BaseCommandInteraction ?
+        const id: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("id", true).value?.toString() :
             ctx.content.split(/\s+/g)[3]
         if (!id) return error(ctx, ERRORS.INVALID_ARGUMENTS);
@@ -36,19 +36,19 @@ const Amend: SubCommand = {
             rmsg = await reply(ctx, {
                 "content": "Click this button to continue:",
                 "components": [{
-                    type: "ACTION_ROW",
+                    type: ComponentType.ActionRow,
                     components: [{
-                        "style": "SUCCESS",
+                        "style": ButtonStyle.Success,
                         "label": `Continue`,
                         "customId": `continue`,
                         "disabled": false,
-                        "type": "BUTTON",
+                        "type": ComponentType.Button,
                     } as MessageActionRowComponent]
                 }]
             })
         }
-        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: "BUTTON",
+        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+            componentType: ComponentType.Button,
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
@@ -59,7 +59,7 @@ const Amend: SubCommand = {
             customId: `c${commandname}amendedit`,
             title: `Song Metadata Editor [${song.id}]`,
             components: [{
-                type: "ACTION_ROW",
+                type: ComponentType.ActionRow,
                 components: [{
                     customId: `mamendedittitle`,
                     label: "Song Title:",
@@ -67,11 +67,11 @@ const Amend: SubCommand = {
                     minLength: 1,
                     placeholder: song.title,
                     required: false,
-                    style: "SHORT",
-                    type: "TEXT_INPUT"
-                } as TextInputComponent]
-            } as MessageActionRow<TextInputComponent>,{
-                type: "ACTION_ROW",
+                    style: TextInputStyle.Short,
+                    type: ComponentType.TextInput
+                } as ModalActionRowComponentData]
+            } as ActionRow<ModalActionRowComponent>,{
+                type: ComponentType.ActionRow,
                 components: [{
                     customId: `mamendeditartist`,
                     label: "Song Artist:",
@@ -79,11 +79,11 @@ const Amend: SubCommand = {
                     minLength: 1,
                     placeholder: song.artist,
                     required: false,
-                    style: "SHORT",
-                    type: "TEXT_INPUT"
-                } as TextInputComponent]
-            } as MessageActionRow<TextInputComponent>,{
-                type: "ACTION_ROW",
+                    style: TextInputStyle.Short,
+                    type: ComponentType.TextInput
+                } as ModalActionRowComponentData]
+            } as ActionRow<ModalActionRowComponent>,{
+                type: ComponentType.ActionRow,
                 components: [{
                     customId: `mamendeditgenre`,
                     label: "Song Genre:",
@@ -91,11 +91,11 @@ const Amend: SubCommand = {
                     minLength: 1,
                     placeholder: song.genre.toString(),
                     required: false,
-                    style: "SHORT",
-                    type: "TEXT_INPUT"
-                } as TextInputComponent]
-            } as MessageActionRow<TextInputComponent>]
-        } as ModalOptions).then(async _=> {
+                    style: TextInputStyle.Short,
+                    type: ComponentType.TextInput
+                } as ModalActionRowComponentData]
+            } as ActionRow<ModalActionRowComponent>]
+        } as ModalComponentData).then(async _=> {
             if (ctx instanceof Message && await rctx.fetchReply()) await rctx.deleteReply()
             return rctx.awaitModalSubmit({time:5*60*1000})
         }).then(async (interaction: ModalSubmitInteraction) => {
@@ -156,16 +156,16 @@ const Amend: SubCommand = {
 const Auth: SubCommandGroup = {
     name: "auth",
     description: "Modifies users with administrator privileges.",
-    type: "SUB_COMMAND_GROUP",
+    type: ApplicationCommandOptionType.SubcommandGroup,
     public: false,
     options: [
         {
-            "type": "SUB_COMMAND",
+            "type": ApplicationCommandOptionType.Subcommand,
             "name": "add",
             "description": "Authorizes a user",
             "options": [
                 {
-                    "type": "USER",
+                    "type": ApplicationCommandOptionType.User,
                     "name": "user",
                     "description": "User to authorize",
                     "required": true
@@ -173,28 +173,28 @@ const Auth: SubCommandGroup = {
             ]
         },
         {
-            "type": "SUB_COMMAND",
+            "type": ApplicationCommandOptionType.Subcommand,
             "name": "remove",
             "description": "Deauthorizes a user",
             "options": [{
-                "type": "USER",
+                "type": ApplicationCommandOptionType.User,
                 "name": "user",
                 "description": "User to deauthorize",
                 "required": true,
             }],
         },
         {
-            "type": "SUB_COMMAND",
+            "type": ApplicationCommandOptionType.Subcommand,
             "name": "list",
             "description": "List authorized users"
         }
     ],
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return
         if (ctx.member?.user.id !== "547624574070816799") return error(ctx,ERRORS.NO_PERMS)
         let user: User | undefined, option: string
-        if (ctx instanceof BaseCommandInteraction) {
+        if (ctx instanceof CommandInteraction) {
             option = ctx.options.data[0]?.options ? ctx.options.data[0]?.options[0].name : ""
             user = ctx.options.get("user", false)?.user
         } else {
@@ -237,7 +237,7 @@ const Auth: SubCommandGroup = {
                             }}),
                             "footer": {
                                 "text": "PlaylistDJ - Auth List",
-                                "iconURL": client.user?.avatarURL() ?? ""
+                                "icon_url": client.user?.avatarURL() ?? ""
                             }
                         }
                     ]
@@ -250,12 +250,12 @@ const Auth: SubCommandGroup = {
     }
 }
 const Clean: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "clean",
     description: "Deletes unreferenced files globally.",
     public: false,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: CommandInteraction | Message) => {
         Playlist.clean()
             // .on('progress', async (message: string) => {
             //     // await editReply(ctx, message) // 
@@ -266,21 +266,21 @@ const Clean: SubCommand = {
     }
 }
 const Destroy: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "destroy",
     description: "Deletes music from the filesystem.",
     public: false,
     options: [{
         name: "id",
         description: "Song ID(s) to delete",
-        type: "STRING",
+        type: ApplicationCommandOptionType.String,
         required: true,
     }],
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let inp: string | undefined = ctx instanceof BaseCommandInteraction
+        let inp: string | undefined = ctx instanceof CommandInteraction
             ? ctx.options.get("id",true).value?.toString()
             : ctx.content.split(/\s+/g)[3]
         if (!inp) return error(ctx, ERRORS.INVALID_ARGUMENTS);
@@ -292,21 +292,21 @@ const Destroy: SubCommand = {
     }
 }
 const Download: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "download",
     description: "Downloads music from youtube.",
     options: [{
-        "type": "STRING",
+        "type": ApplicationCommandOptionType.String,
         name: "url",
         description: "Youtube URL to Download From",
         required: true,
     }],
     public: false,
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let arg1: string | null | undefined = ctx instanceof BaseCommandInteraction ?
+        let arg1: string | null | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("url", true).value?.toString() :
             ctx.content.split(/\s+/g)[3]
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
@@ -316,19 +316,19 @@ const Download: SubCommand = {
             rmsg = await reply(ctx, {
                 "content": "Click this button to continue:",
                 "components": [{
-                    type: "ACTION_ROW",
+                    type: ComponentType.ActionRow,
                     components: [{
-                        "style": "SUCCESS",
+                        "style": ButtonStyle.Success,
                         "label": `Continue`,
                         "customId": `continue`,
                         "disabled": false,
-                        "type": "BUTTON",
+                        "type": ComponentType.Button,
                     } as MessageActionRowComponent]
                 }]
             })
         }
-        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: "BUTTON",
+        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+            componentType: ComponentType.Button,
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
@@ -348,24 +348,24 @@ const Download: SubCommand = {
             "content": "Found!",
             "components": [
                 {
-                    "type": "ACTION_ROW",
+                    "type": ComponentType.ActionRow,
                     "components": [
                         {
-                            "style": "PRIMARY",
+                            "style": ButtonStyle.Primary,
                             "label": `Custom Download`,
                             "customId": `c${commandname}downloadcustom`,
                             "disabled": webpl.ytplaylist.items.length <= 1,
-                            "type": "BUTTON",
-                        } as MessageActionRowComponent,
+                            "type": ComponentType.Button,
+                        } as ActionRowComponent,
                         {
-                            "style": "SUCCESS",
+                            "style": ButtonStyle.Success,
                             "label": `Download All`,
                             "customId": `c${commandname}downloadall`,
                             "disabled": false,
-                            "type": "BUTTON",
-                        } as MessageActionRowComponent,
+                            "type": ComponentType.Button,
+                        } as ActionRowComponent,
                     ]
-                } as MessageActionRow
+                } as ActionRow<ActionRowComponent>
             ],
             "embeds": [
                 {
@@ -380,23 +380,22 @@ const Download: SubCommand = {
                     },
                     "author": webpl.ytplaylist.author ? {
                         "name": webpl.ytplaylist.author.name,
-                        "iconURL": webpl.ytplaylist.author.bestAvatar.url,
+                        "icon_url": webpl.ytplaylist.author.bestAvatar.url,
                         "url": webpl.ytplaylist.author.url
                     } : { "name": "Unknown Author" },
                     "footer": {
                         "text": `PlaylistDJ - Playlist Download`,
-                        "iconURL": client.user?.avatarURL() ?? ""
+                        "icon_url": client.user?.avatarURL() ?? ""
                     },
                     "url": webpl.ytplaylist.url,
-                } as MessageEmbed
+                } as Partial<Embed>
             ]
         } as MessageOptions) as Message)
         // Interaction Collection
-        msg.createMessageComponentCollector({
-            componentType: "BUTTON",
+        msg.createMessageComponentCollector<ComponentType.Button>({
             filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
             idle: 20*1000
-        }).on('collect', async (interaction: ButtonInteraction) => {
+        }).on('collect', async (interaction: ButtonInteraction): Promise<void> => {
             switch (interaction.customId) {
                 case `c${commandname}downloadcustomskip`:
                     idata.exclusions.push(idata.index)
@@ -409,38 +408,38 @@ const Download: SubCommand = {
                             "content": "Keep this video?",
                             "components": [
                                 {
-                                    "type": "ACTION_ROW",
+                                    "type": ComponentType.ActionRow,
                                     "components": [
                                         {
-                                            "style": "SECONDARY",
+                                            "style": ButtonStyle.Secondary,
                                             "label": `Keep Remaining`,
                                             "customId": `c${commandname}downloadcustomall`,
                                             "disabled": false,
-                                            "type": "BUTTON",
-                                        } as MessageActionRowComponent,
+                                            "type": ComponentType.Button,
+                                        } as ActionRowComponent,
                                         {
-                                            "style": "SUCCESS",
+                                            "style": ButtonStyle.Success,
                                             "label": `Keep`,
                                             "customId": `c${commandname}downloadcustomkeep`,
                                             "disabled": false,
-                                            "type": "BUTTON"
-                                        } as MessageActionRowComponent,
+                                            "type": ComponentType.Button
+                                        } as ActionRowComponent,
                                         {
-                                            "style": "DANGER",
+                                            "style": ButtonStyle.Danger,
                                             "label": `Skip`,
                                             "customId": `c${commandname}downloadcustomskip`,
                                             "disabled": false,
-                                            "type": "BUTTON"
-                                        } as MessageActionRowComponent,
+                                            "type": ComponentType.Button
+                                        } as ActionRowComponent,
                                         {
-                                            "style": "SECONDARY",
+                                            "style": ButtonStyle.Secondary,
                                             "label": `Skip Remaining`,
                                             "customId": `c${commandname}downloadcustomnone`,
                                             "disabled": false,
-                                            "type": "BUTTON",
-                                        } as MessageActionRowComponent,
+                                            "type": ComponentType.Button,
+                                        } as ActionRowComponent,
                                     ]
-                                } as MessageActionRow
+                                } as ActionRow<ActionRowComponent>
                             ],
                             "embeds": [
                                 {
@@ -459,10 +458,10 @@ const Download: SubCommand = {
                                     },
                                     "footer": {
                                         "text": `PlaylistDJ - Video Selection - Video ${idata.index + 1}/${webpl.ytplaylist.items.length}`,
-                                        "iconURL": client.user?.avatarURL() ?? ""
+                                        "icon_url": client.user?.avatarURL() ?? ""
                                     },
                                     "url": video.url,
-                                } as MessageEmbed
+                                } as Partial<Embed>
                             ]
                         } as InteractionUpdateOptions)
                         break;
@@ -487,7 +486,7 @@ const Download: SubCommand = {
                     })
                     break;
                 default:
-                    return interaction.update({components:[]});
+                    interaction.update({components:[]}); return;
             }
         }).on('end', (_,reason: string) => {
             if (reason==="idle") rctx.editReply({components:[]})
@@ -495,11 +494,11 @@ const Download: SubCommand = {
     }
 }
 const Index: SubCommand = {
-    type: "SUB_COMMAND",
+    type: ApplicationCommandOptionType.Subcommand,
     name: "index",
     description: "Lists music in the music database",
     options: [{
-        "type": "STRING",
+        "type": ApplicationCommandOptionType.String,
         "name": "key",
         "description": "Search filter",
         "required": false,
@@ -509,19 +508,19 @@ const Index: SubCommand = {
             {name:"Genre",value:"genre"}
         ]
     },{
-        "type": "STRING",
+        "type": ApplicationCommandOptionType.String,
         "name": "term",
         "description": "Search term",
         "required": false
     }],
     public: true,
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         // Argument Processing
-        let arg1: string | undefined = ctx instanceof BaseCommandInteraction ?
+        let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("key", false)?.value?.toString() :
             ctx.content.split(/\s+/g)[3];
-        let arg2: string | undefined = ctx instanceof BaseCommandInteraction ?
+        let arg2: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("term", false)?.value?.toString() :
             ctx.content.split(/\s+/g).slice(4).join(" ");
         // Interaction Standardization
@@ -530,19 +529,19 @@ const Index: SubCommand = {
             rmsg = await reply(ctx, {
                 "content": "Click this button to continue:",
                 "components": [{
-                    type: "ACTION_ROW",
+                    type: ComponentType.ActionRow,
                     components: [{
-                        "style": "SUCCESS",
+                        "style": ButtonStyle.Success,
                         "label": `Continue`,
                         "customId": `continue`,
                         "disabled": false,
-                        "type": "BUTTON",
+                        "type": ComponentType.Button,
                     } as MessageActionRowComponent]
                 }]
             })
         }
-        const rctx: ButtonInteraction | BaseCommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: "BUTTON",
+        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+            componentType: ComponentType.Button,
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
@@ -565,13 +564,12 @@ const Index: SubCommand = {
                     break;
             }
         }
-        const msg: Message = await reply(rctx, listMessage<ReplyMessageOptions>(rctx, items, page))
+        const msg: Message = await reply(rctx, listMessage<ReplyMessageOptions>(items, page))
         // Interaction Collection
-        msg.createMessageComponentCollector({
-            componentType: "BUTTON",
+        msg.createMessageComponentCollector<ComponentType.Button>({
             filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
             idle: 20*1000
-        }).on('collect', (interaction: ButtonInteraction) => { 
+        }).on('collect', (interaction: ButtonInteraction): void => { 
             switch (interaction.customId) {
                 case `c${commandname}indexpageup`:
                     page++;
@@ -580,9 +578,9 @@ const Index: SubCommand = {
                     page--;
                     break;
                 default:
-                    return interaction.update({components:[]});
+                    interaction.update({components:[]}); return;
             }
-            interaction.update(listMessage<InteractionUpdateOptions>(rctx, items, page))
+            interaction.update(listMessage<InteractionUpdateOptions>(items, page))
         }).on('end', (_,reason: string) => {
             if (reason==="idle") rctx.editReply({components:[]})
         })
@@ -596,11 +594,12 @@ export const Admin: Command = {
     name: commandname,
     description: "Manage global bot data.",
     options: SubCommands,
+    defaultMemberPermissions: "Administrator",
     public: true,
 
-    run: (ctx: BaseCommandInteraction | Message) => {
+    run: (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
-        let option: string = ctx instanceof BaseCommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
+        let option: string = ctx instanceof CommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
         let subcommand: SubCommand | SubCommandGroup | undefined = SubCommands.find(sc => sc.name === option)
 
         if (!subcommand) return error(ctx, ERRORS.INVALID_ARGUMENTS);
@@ -616,27 +615,27 @@ export const Admin: Command = {
     }
 }
 
-function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: Interaction | Message, items: Song[], page: number): T {
+function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(items: Song[], page: number): T {
     return {
         "content": "_",
         "components": [{
-            "type": "ACTION_ROW", "components": [
+            "type": ComponentType.ActionRow, "components": [
                 {
-                    "style": "PRIMARY",
+                    "style": ButtonStyle.Primary,
                     "label": `Prev Page`,
                     "customId": `c${commandname}indexpagedown`,
                     "disabled": page <= 0,
-                    "type": "BUTTON"
-                } as MessageActionRowComponent,
+                    "type": ComponentType.Button
+                } as ActionRowComponent,
                 {
-                    "style": "PRIMARY",
+                    "style": ButtonStyle.Primary,
                     "label": `Next Page`,
                     "customId": `c${commandname}indexpageup`,
                     "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
-                    "type": "BUTTON"
-                } as MessageActionRowComponent,
+                    "type": ComponentType.Button
+                } as ActionRowComponent,
             ]
-        } as MessageActionRow],
+        } as ActionRow<ActionRowComponent>],
         "embeds": [{
             "type": "rich",
             "title": `All Results (${items.length})`,
@@ -651,8 +650,8 @@ function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(c
             }) || { "name": "No Results", "value": "Out Of Bounds", "inline": false } as EmbedField,
             "footer": {
                 "text": `PlaylistDJ - Song Index - Page ${page + 1}/${Math.ceil(items.length / ITEMS_PER_PAGE)}`,
-                "iconURL": client.user?.avatarURL() ?? ""
+                "icon_url": client.user?.avatarURL() ?? ""
             }
-        } as MessageEmbed]
+        } as Partial<Embed>]
     } as T
 }

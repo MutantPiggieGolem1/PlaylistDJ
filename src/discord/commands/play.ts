@@ -1,5 +1,5 @@
 import { AudioPlayer, AudioPlayerStatus, createAudioResource, getVoiceConnection, StreamType, VoiceConnection } from "@discordjs/voice"
-import { ApplicationCommandOptionChoiceData, AutocompleteInteraction, BaseCommandInteraction, Message } from "discord.js"
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, ApplicationCommandType, AutocompleteInteraction, CommandInteraction, Message } from "discord.js"
 import { createReadStream } from "fs"
 import nextSong from "../../recommendation/interface"
 import { getPlaylist } from "../../youtube/playlist"
@@ -14,22 +14,22 @@ export const timeouts: {[key:string]: number} = {}
 export const Play: Command = {
     name: "play",
     description: "Begins playing music.",
-    type: "CHAT_INPUT",
     options: [{
         name: "id",
         description: "Song ID to start with",
-        type: "STRING",
+        type: ApplicationCommandOptionType.String,
         required: false,
         autocomplete: true,
     },{
         name: "timeout",
         description: "Duration music should play for (minutes)",
-        type: "NUMBER",
+        type: ApplicationCommandOptionType.Number,
         required: false
     }],
+    defaultMemberPermissions: "Speak",
     public: true,
 
-    run: async (ctx: BaseCommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Playlist Locating
         let pl = getPlaylist(ctx.guild.id)
@@ -38,7 +38,7 @@ export const Play: Command = {
         if (!playlist.items) return error(ctx,ERRORS.NO_SONG);
         // Argument Processing
         let arg1: string | undefined, arg2: string | undefined;
-        if (ctx instanceof BaseCommandInteraction) {
+        if (ctx instanceof CommandInteraction) {
             arg1 = ctx.options.get("id",false)?.value?.toString()
             arg2 = ctx.options.get("timeout",false)?.value?.toString()
         } else {
@@ -54,7 +54,7 @@ export const Play: Command = {
         // Action Execution
         const guildid = ctx.guild.id;
         timeouts[guildid] = timeout;
-        if (ctx instanceof BaseCommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
+        if (ctx instanceof CommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
         play(player, start)
 
         player.on(AudioPlayerStatus.Idle, async () => {
