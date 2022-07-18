@@ -3,7 +3,7 @@
   "displayName": "PlaylistDJ",
   "description": "A discord bot to play playlists with custom selection",
   "author": "Pew",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "keywords": [
     "discord",
     "discordjs",
