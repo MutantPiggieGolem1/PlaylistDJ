@@ -1,6 +1,6 @@
 import { CommandInteraction, Message, VoiceChannel, StageChannel, GuildBasedChannel, ApplicationCommandOptionType, ChannelType } from "discord.js";
 import { Command } from "./Commands";
-import { joinVoiceChannel } from '@discordjs/voice';
+import { DiscordGatewayAdapterCreator, joinVoiceChannel } from '@discordjs/voice';
 import { error } from "../util";
 
 export const Join: Command = {
@@ -34,7 +34,7 @@ export const Join: Command = {
         joinVoiceChannel({
             channelId: voicechannel.id,
             guildId: voicechannel.guild.id,
-            adapterCreator: voicechannel.guild.voiceAdapterCreator,
+            adapterCreator: voicechannel.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
             selfMute: false,
             selfDeaf: true,
         });
