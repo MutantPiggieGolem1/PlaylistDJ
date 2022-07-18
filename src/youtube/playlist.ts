@@ -92,7 +92,7 @@ export class WebPlaylist {
         WebPlaylist.downloading = true;
         Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
             const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
-            if (fs.existsSync(file) && pdata.items.findIndex(i=>i.id===playlistitem.id) < 0) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);done++;return Promise.resolve();}
+            if (fs.existsSync(file) && !pdata.items.some(i=>i.id===playlistitem.id)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);done++;return Promise.resolve();}
             return new Promise<void>(async (resolve,reject) => {
                 try {
                     let videoinfo: ytdl.videoInfo = await ytdl.getInfo(playlistitem.url)
@@ -114,7 +114,7 @@ export class WebPlaylist {
         })).then(async (completion: Array<PromiseSettledResult<void>>) => {
             WebPlaylist.downloading = false;
             if (completion.every(r=>r.status==="rejected")) return;
-            pdata.items.forEach(rs=>Playlist.INDEX[rs.id]=(rs as SongReference))
+            pdata.items.forEach(rs=>Playlist.INDEX[rs.id]=Playlist.INDEX[rs.id] ?? (rs as SongReference))
             await Playlist.setMusicIndex();
             let playlist: Playlist = new Playlist(pdata);
             await playlist.save();
@@ -192,6 +192,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
 
     public static clean() {
         const ee = new EventEmitter();
+        playlists = {}; // clean cache
         ee.emit('start')
         Promise.all([
             fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
@@ -209,6 +210,10 @@ export class Playlist { // Represents a playlist stored on the filesystem
         ]).then(([refs, files]) => 
             Promise.all(files.filter(f=>!refs.has(f)).map(f=>fs.promises.rm(f).then(_=>f))) // remove all unrefrenced files
             .then((rmfiles: string[])=>{
+                Object.values(Playlist.INDEX).forEach(song => {
+                    if (!rmfiles.includes(song.file)) return;
+                    delete Playlist.INDEX[song.id]
+                })
                 ee.emit('progress',`Removed all unrefrenced files (${rmfiles.length})!`)
                 return [refs,files.filter(f=>!rmfiles.includes(f))]
             }) // pass the args along to continue chaining
@@ -239,11 +244,13 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
 }
 
-const playlists: {[key: string]: Playlist} = {};
+let playlists: {[key: string]: Playlist} = {};
 export function getPlaylist(guildid: string): Playlist | undefined {
     if (!playlists[guildid]) {
         const ppath = `./resources/playlists/${guildid}.json`;
-        if (fs.existsSync(ppath)) playlists[guildid] = new Playlist(JSON.parse(fs.readFileSync(ppath).toString()) as MusicJSON)
+        if (fs.existsSync(ppath)) {try {
+            playlists[guildid] = new Playlist(JSON.parse(fs.readFileSync(ppath).toString()) as MusicJSON)
+        } catch (e) {return;}}
     }
     return playlists[guildid];
 }
