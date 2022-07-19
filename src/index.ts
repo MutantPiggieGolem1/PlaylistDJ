@@ -6,13 +6,18 @@ export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, Ga
 const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
+function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!`})}
+
 client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
-    client.user.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!\nRest in peace Technoblade.`})
+    setActivity();
     console.info(`Bot Ready! [${client.user.tag}]`);
 })
+
+client.on("guildCreate", setActivity)
+client.on("guildDelete", setActivity)
 
 client.on("messageCreate", (msg: Message) => {
     if (msg.author.id === client.user?.id || !msg.content.startsWith(PREFIX)) return;

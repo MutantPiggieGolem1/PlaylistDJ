@@ -16,7 +16,7 @@
   "dependencies": {
     "@discordjs/voice": "^0.10.0",
     "dayjs": "^1.11.3",
-    "discord.js": "^14.0.1",
+    "discord.js": "^14.0.3",
     "format-duration": "^2.0.0",
     "libsodium-wrappers": "^0.7.10",
     "ts-node": "^10.9.1",

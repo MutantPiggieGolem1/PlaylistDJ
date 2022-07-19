@@ -92,7 +92,13 @@ export class WebPlaylist {
         WebPlaylist.downloading = true;
         Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
             const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
-            if (fs.existsSync(file) && !pdata.items.some(i=>i.id===playlistitem.id)) {pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);done++;return Promise.resolve();}
+            if (fs.existsSync(file)) {
+                if (!pdata.items.some(i=>i.id===playlistitem.id)) {
+                    pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);
+                }
+                done++;
+                return Promise.resolve();
+            }
             return new Promise<void>(async (resolve,reject) => {
                 try {
                     let videoinfo: ytdl.videoInfo = await ytdl.getInfo(playlistitem.url)
@@ -190,14 +196,18 @@ export class Playlist { // Represents a playlist stored on the filesystem
         return fs.promises.writeFile(`./resources/playlists/${this.playlist.guildid}.json`,JSON.stringify(this.playlist))
     }
 
+    public static getAllPlaylists(): Promise<MusicJSON[]> {
+        return fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
+            ents.filter(ent=>ent.isFile()).map(file=>JSON.parse(fs.readFileSync(`./resources/playlists/${file.name}`).toString()) as MusicJSON)
+        )
+    }
+
     public static clean() {
         const ee = new EventEmitter();
         playlists = {}; // clean cache
         ee.emit('start')
         Promise.all([
-            fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}).then(ents=>
-                ents.filter(ent=>ent.isFile()).map(file=>JSON.parse(fs.readFileSync(`./resources/playlists/${file.name}`).toString()) as MusicJSON)
-            ).then((playlists: MusicJSON[]) => 
+            Playlist.getAllPlaylists().then((playlists: MusicJSON[]) => 
                 playlists.flatMap(pl=>pl.items)
             ).then((items: RatedSong[]) => {
                 ee.emit('progress','Located all references!')
