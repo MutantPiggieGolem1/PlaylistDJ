@@ -475,12 +475,12 @@ const Download: SubCommand = {
                 case `c${commandname}downloadall`:                    
                     if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: []});
                     webpl.download(guildid)
-                    .on('progress', (cur: number, total: number) => {
-                        editReply(interaction,`Downloaded: ${cur}/${total} songs.`);
+                    .on('progress', (cur: number, total: number, id: string) => {
+                        editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
+                    }).on('warn', (cur: number, total: number, id: string, error: Error) => {
+                        editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
                     }).on('finish', (pl: Playlist | undefined) => {
                         editReply(interaction, `Success! ${pl ? pl.playlistdata.items.length : 0} files downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
-                    }).on('warn', (cur: number, total: number, error: Error) => {
-                        editReply(interaction, `Downloaded: ${cur}/${total} songs. (Non-Fatal: ${error.message})`)
                     }).on('error', (e: Error) => {
                         editReply(interaction, "Error: " + e.message);
                     })

@@ -70,62 +70,66 @@ export class WebPlaylist {
 
     public download(guildid: string): EventEmitter {
         const ee: EventEmitter = new EventEmitter();
+        setImmediate(() => {
+            if (WebPlaylist.downloading) return ee.emit('error', new Error("Wait for the previous playlist to download first!"));
 
-        if (WebPlaylist.downloading) {setTimeout(() => ee.emit('warn', 0, 0, new Error("Wait for the previous playlist to download first!")), 1000); return ee;}
-
-        const datafile = `./resources/playlists/${guildid}.json`
-        let pdata: MusicJSON = {guildid, url: [this.ytplaylist.url], items: []};
-
-        if (!fs.existsSync(`./resources/music/`)) fs.mkdirSync(`./resources/music/`,{recursive:true});
-        if (!fs.existsSync("./resources/playlists")) {fs.mkdirSync("./resources/playlists",{recursive:true})}
-        else if (fs.existsSync(datafile)) {
-            let opl: Playlist | undefined = getPlaylist(guildid);
-            if (opl) {
-                let odata = opl.playlistdata
-                if (odata.url) pdata.url = [...new Set<string>([...pdata.url??[], ...odata.url])]
-                pdata.items = odata.items
-            }
-        }
-
-        let done: number = 0, total: number = this.ytplaylist.items.length;
-        ee.emit("start",this.ytplaylist.items)
-        WebPlaylist.downloading = true;
-        Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item) => {
-            const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
-            if (fs.existsSync(file)) {
-                if (!pdata.items.some(i=>i.id===playlistitem.id)) {
-                    pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);
+            const datafile = `./resources/playlists/${guildid}.json`
+            let pdata: MusicJSON = {guildid, url: [this.ytplaylist.url], items: []};
+    
+            if (!fs.existsSync(`./resources/music/`)) fs.mkdirSync(`./resources/music/`,{recursive:true});
+            if (!fs.existsSync("./resources/playlists")) {fs.mkdirSync("./resources/playlists",{recursive:true})}
+            else if (fs.existsSync(datafile)) {
+                let opl: Playlist | undefined = getPlaylist(guildid);
+                if (opl) {
+                    let odata = opl.playlistdata
+                    if (odata.url) pdata.url = [...new Set<string>([...pdata.url??[], ...odata.url])]
+                    pdata.items = odata.items
                 }
-                done++;
-                return Promise.resolve();
             }
-            return new Promise<void>(async (resolve,reject) => {
-                try {
+    
+            ee.emit("start",this.ytplaylist.items)
+            WebPlaylist.downloading = true;
+            let done: number = 0;
+            Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item): Promise<void> => {
+                const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
+                if (fs.existsSync(file)) {
+                    if (!pdata.items.some(i=>i.id===playlistitem.id)) {
+                        pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);
+                    }
+                    done++;
+                    return Promise.resolve();
+                }
+                return new Promise<void>(async (resolve,reject) => {
                     let videoinfo: ytdl.videoInfo = await ytdl.getInfo(playlistitem.url)
                     ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"}).pipe(fs.createWriteStream(file, {
                         fd: fs.openSync(file, 'w'), flags: "w"
                     })).on('finish', () => {
                         pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RatedSong)
-                        ee.emit("progress",++done,total);
+                        ee.emit("progress", ++done, this.ytplaylist.items.length, playlistitem.id);
                         resolve()
+                    }).on('error', async (e: Error) => {
+                        ee.emit('warn', ++done, this.ytplaylist.items.length, playlistitem.id, e);
+                        if (fs.existsSync(file)) await fs.promises.rm(file);
+                        let index = pdata.items.findIndex(rs=>rs.file===file);
+                        if (index >= 0) pdata.items.splice(index,1)
+                        reject(e)
                     })
-                } catch (e) {
-                    ee.emit('warn', done, --total, e);
-                    if (fs.existsSync(file)) await fs.promises.rm(file);
-                    let index = pdata.items.findIndex(rs=>rs.file===file);
-                    if (index >= 0) pdata.items.splice(index,1)
-                    return reject(e)
-                }
+                })
+            })).then(async (completion: Array<PromiseSettledResult<void>>) => {
+                if (completion.every(r=>r.status==="rejected")) return Promise.reject("All downloads failed.");
+                pdata.items.forEach(rs=>Playlist.INDEX[rs.id]=Playlist.INDEX[rs.id] ?? (rs as SongReference))
+                await Playlist.setMusicIndex();
+                let playlist: Playlist = new Playlist(pdata);
+                await playlist.save();
+                return playlist;
+            }).then((playlist: Playlist)=>{
+                ee.emit("finish",playlist)
+            }).catch((e: Error)=>{
+                ee.emit("error",e)
+            }).finally(() => {
+                WebPlaylist.downloading = false;
             })
-        })).then(async (completion: Array<PromiseSettledResult<void>>) => {
-            WebPlaylist.downloading = false;
-            if (completion.every(r=>r.status==="rejected")) return;
-            pdata.items.forEach(rs=>Playlist.INDEX[rs.id]=Playlist.INDEX[rs.id] ?? (rs as SongReference))
-            await Playlist.setMusicIndex();
-            let playlist: Playlist = new Playlist(pdata);
-            await playlist.save();
-            return playlist;
-        }).then((playlist: Playlist | undefined)=>{ee.emit("finish",playlist)}).catch(e=>ee.emit("error",e))
+        })
         return ee;
     }
 }
