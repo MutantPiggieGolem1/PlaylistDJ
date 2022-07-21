@@ -45,3 +45,14 @@ export enum Genre {
     Chinese = 'Chinese'             ,// 
     Eurobeat = 'Eurobeat'           ,// Running in the 90s
 } // Philter, TheFatRat
+export const genreIds: {[key in Genre as string]: number} = {
+    "Unknown": 0,
+    "Pop": 1,
+    "Meme": 2,
+    "Minecraft": 3,
+    "Electronic": 4,
+    "Instrumental": 5,
+    "Korean": 6,
+    "Japanese": 7,
+    "Eurobeat": 8,
+}

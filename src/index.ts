@@ -6,7 +6,7 @@ export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, Ga
 const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
-function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!`})}
+function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!\no7 Techno`})}
 
 client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
