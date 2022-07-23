@@ -13,8 +13,8 @@ const Create: SubCommand = {
     description: "Creates a playlist from existing songs.",
     options: [{
         type: ApplicationCommandOptionType.String,
-        name: "ids",
-        description: "Song IDs to create your playlist with",
+        name: "url",
+        description: "Youtube playlist URL with songs to add",
         required: true,
     }],
     public: true,
@@ -22,12 +22,16 @@ const Create: SubCommand = {
     run: (ctx: CommandInteraction | Message) => { // dj playlist create 123,456,789
         if (!ctx.guild) return;
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("ids", true).value?.toString() :
-            ctx.content.split(/\s+/g).slice(3).join("")
+            ctx.options.get("url", true).value?.toString() :
+            ctx.content.split(/\s+/g)[3]
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS)
-        let ids = arg1.split(",").map(i => i.trim());
-
-        yt.Playlist.create(ctx.guild.id, ids).then((playlist: yt.Playlist) => {
+        
+        const guildid = ctx.guild.id;
+        yt.WebPlaylist.fromUrl(arg1).then((webpl: yt.WebPlaylist) => 
+            webpl.getIds()
+        ).then(ids => 
+            yt.Playlist.create(guildid, ids, arg1)
+        ).then((playlist: yt.Playlist) => {
             reply(ctx, `Created a new playlist with ${playlist.playlistdata.items.length} song(s)!`)
         }).catch((e: Error) => { error(ctx, e as Error) })
     }

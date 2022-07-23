@@ -9,16 +9,6 @@ export class WebPlaylist {
     private static downloading: boolean = false;
     public ytplaylist: ytpl.Result;
 
-    private constructor(r: ytpl.Result) {
-        let eids: Set<string> = new Set();
-        r.items = r.items.filter(i=>{
-            if (!eids.has(i.id)) {
-                eids.add(i.id)
-                return true
-            }
-        }) // Remove duplicate ids
-        this.ytplaylist=r
-    }
     public static async fromUrl(url: string): Promise<WebPlaylist> {
         if (ytpl.validateID(url)) return new WebPlaylist(await ytpl(url, { limit: Number.POSITIVE_INFINITY }))
         if (ytdl.validateURL(url)) {
@@ -62,6 +52,20 @@ export class WebPlaylist {
             } as ytpl.Result)
         }
         throw new Error("Invalid URL!")
+    }
+    private constructor(r: ytpl.Result) {
+        let eids: Set<string> = new Set();
+        r.items = r.items.filter(i=>{
+            if (!eids.has(i.id)) {
+                eids.add(i.id)
+                return true
+            }
+        }) // Remove duplicate ids
+        this.ytplaylist=r
+    }
+
+    public getIds() {
+        return this.ytplaylist.items.map((i: ytpl.Item) => i.id);
     }
 
     public remove(indices: number[]) {
