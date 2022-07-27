@@ -342,7 +342,6 @@ const Download: SubCommand = {
         // Action Execution
         const guildid: string = rctx.guild?.id;
         const idata: {index: number, exclusions: number[]} = { index: 0, exclusions: [] };
-        if (rctx instanceof ButtonInteraction && (rctx.message as Message).deletable) await (rctx.message as Message).delete();
         const msg: Message = (await rctx.editReply({
             ephemeral: true,
             "content": "Found!",
