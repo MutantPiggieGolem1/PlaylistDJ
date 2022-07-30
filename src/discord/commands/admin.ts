@@ -480,7 +480,7 @@ const Download: SubCommand = {
                     }).on('warn', (cur: number, total: number, id: string, error: Error) => {
                         editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
                     }).on('finish', (pl: Playlist | undefined) => {
-                        editReply(interaction, `Success! ${pl ? pl.playlistdata.items.length : 0} files downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
+                        editReply(interaction, `Success! Your playlist now has ${pl ? pl.playlistdata.items.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
                     }).on('error', (e: Error) => {
                         editReply(interaction, "Error: " + e.message);
                     })
