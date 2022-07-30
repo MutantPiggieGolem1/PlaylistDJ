@@ -25,7 +25,7 @@ client.on("messageCreate", (msg: Message) => {
     if (!command) {msg.reply("Command not recognized."); return;}
 
     if (!command.public && !isWhitelisted(msg)) {msg.reply("This command requires authorization."); return}    
-    console.info(`[${Day().format("DD HH:mm:ss")}] ${msg.author.tag} >> ${PREFIX} ${command.name} ${msg.content.slice(3+command.name.length)}`)
+    console.info(`[${Day().format("DD HH:mm:ss")}] ${msg.author.tag} >> ${PREFIX} ${command.name}${msg.content.slice(3+command.name.length)}`)
     command.run(msg);
 })
 

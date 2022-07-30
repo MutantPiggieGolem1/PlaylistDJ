@@ -69,7 +69,7 @@ export const Play: Command = {
                 play(player, await nextSong(guildid));
                 resetVotes(guildid);
             } catch (e) {
-                if (ctx.channel) {error(ctx.channel, e as Error)} else {console.error(e)}
+                console.error(e);
                 return leave(ctx)
             }
         })

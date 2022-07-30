@@ -45,7 +45,7 @@ const Amend: SubCommand = {
                         "type": ComponentType.Button,
                     } as MessageActionRowComponent]
                 }]
-            })
+            }, true)
         }
         const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
             componentType: ComponentType.Button,
@@ -260,9 +260,9 @@ const Clean: SubCommand = {
             // .on('progress', async (message: string) => {
             //     // await editReply(ctx, message) // 
             // }) Interaction already responded or something
-            .once('finish', (remainder: string[]) => {
-                reply(ctx, `Clean Complete! ${remainder.length} files remaining!`)
-            }).once('error', async (e: Error) => { error(ctx, e) })
+            .once('finish', (files: string[], rmfiles: string[]) => {
+                reply(ctx, `Clean Complete! Deleted ${rmfiles.length} files, ${files.length} files remaining!`)
+            }).on('error', async (e: Error) => { error(ctx, e) })
     }
 }
 const Destroy: SubCommand = {
@@ -288,6 +288,7 @@ const Destroy: SubCommand = {
         if (ids.length <= 0) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Action Execution
         let removed: string[] = await Playlist.delete(ids);
+        if (removed.length < 1) return error(ctx, ERRORS.NO_SONG);
         await editReply(ctx,`Success! Destroyed ${removed.length} song(s).`)
     }
 }
@@ -325,7 +326,7 @@ const Download: SubCommand = {
                         "type": ComponentType.Button,
                     } as MessageActionRowComponent]
                 }]
-            })
+            }, true)
         }
         const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
             componentType: ComponentType.Button,
@@ -537,7 +538,7 @@ const Index: SubCommand = {
                         "type": ComponentType.Button,
                     } as MessageActionRowComponent]
                 }]
-            })
+            }, true)
         }
         const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
             componentType: ComponentType.Button,
@@ -563,7 +564,7 @@ const Index: SubCommand = {
                     break;
             }
         }
-        const msg: Message = await reply(rctx, listMessage<ReplyMessageOptions>(items, page))
+        const msg: Message = await reply(rctx, listMessage<ReplyMessageOptions>(items, page), true)
         // Interaction Collection
         msg.createMessageComponentCollector<ComponentType.Button>({
             filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,

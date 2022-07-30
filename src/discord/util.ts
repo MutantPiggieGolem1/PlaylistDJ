@@ -23,15 +23,13 @@ export function getPlaying(player?: AudioPlayer): Song | undefined {
     return resource.metadata as Song;
 }
 
-export async function error(ctx: CommandInteraction | ButtonInteraction | Message | TextBasedChannel, error: ERRORS | Error): Promise<InteractionResponse | Message | void> {
+export async function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error): Promise<InteractionResponse | Message | void> {
     let content: string = error instanceof Error ? "Error: "+error.message : error;
     if (ctx instanceof BaseInteraction) {
         if (ctx.replied) return await ctx.editReply({content, components: []})
         return ctx.reply({content, ephemeral: true})
     } else if (ctx instanceof Message) {
         return ctx.reply(content)
-    } else {
-        return ctx.send(content)
     }
 }
 export enum ERRORS {
@@ -45,11 +43,14 @@ export enum ERRORS {
     NO_GUILD = 'Couldn\'t find guild!',
 }
 
-export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean>> {
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean> | InteractionResponse<boolean>>
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: false): Promise<Message<boolean> | InteractionResponse<boolean>>
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: true): Promise<Message<boolean>>
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: boolean = false): Promise<Message<boolean> | InteractionResponse<boolean>> {
     if (typeof content === "string") content = { content }
     if (!('ephemeral' in content)) content = { ...content, ephemeral: true }
     if (ctx instanceof Message) return ctx.reply(content)
-    return ctx.reply(content).then(async _=>(await ctx.fetchReply() as Message))
+    return ctx.reply(content).then(async _=>fetchReply ? (await ctx.fetchReply() as Message) : _)
 }
 
 export function editReply(ctx: CommandInteraction | ButtonInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {

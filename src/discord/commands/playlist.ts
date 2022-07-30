@@ -19,14 +19,16 @@ const Create: SubCommand = {
     }],
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => { // dj playlist create 123,456,789
+    run: (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
+        // Argument Processing
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("url", true).value?.toString() :
             ctx.content.split(/\s+/g)[3]
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS)
-        
+        // Action Execution
         const guildid = ctx.guild.id;
+        if (ctx instanceof CommandInteraction) ctx.deferReply();
         yt.WebPlaylist.fromUrl(arg1).then((webpl: yt.WebPlaylist) => 
             webpl.getIds()
         ).then(ids => 
@@ -61,7 +63,7 @@ const Delete: SubCommand = {
                         "style": ButtonStyle.Danger,
                         "label": `Cancel`,
                         "customId": `cancel`,
-                        "disabled": ctx instanceof CommandInteraction,
+                        "disabled": false,
                         "type": ComponentType.Button
                     }
                 ]
@@ -76,22 +78,21 @@ const Delete: SubCommand = {
                 }
             }],
             fetchReply: true
-        })
+        }, true)
         // Interaction Collection
         msg.createMessageComponentCollector<ComponentType.Button>({
             filter: (i: ButtonInteraction) => i.user.id === (ctx instanceof CommandInteraction ? ctx.user : ctx.author).id,
-            max: 1,
-            time: 5 * 1000
-        }).on('collect', (interaction: ButtonInteraction): void => {
-            if (interaction.customId === 'cancel') {interaction.update({ components: [] }); return}
+            time: 5 * 1000, max: 1
+        }).once("collect", (interaction: ButtonInteraction): void => {
+            if (interaction.customId === 'cancel') {interaction.update({ content: "Cancelled.", components: [], embeds: [] });return;}
             if (!interaction.guild) { error(ctx, ERRORS.NO_GUILD); return; }
             let playlist = yt.getPlaylist(interaction.guild.id)
             if (!playlist) { error(ctx, ERRORS.NO_PLAYLIST); return; }
             playlist.delete().then(_ => {
-                interaction.update({ content: `Deleted your playlist.`, components: [] })
+                interaction.update({ content: `Deleted your playlist.`, components: [], embeds: [] })
             }).catch((e: Error) => error(ctx, e))
-        }).on('end', (_,reason: string) => {
-            if (reason==="idle" && msg.editable) msg.edit({components:[]})
+        }).on("end", (_, reason: string) => {
+            if (msg.editable && reason === "idle") msg.edit({ content: "Cancelled. (Timed Out)", components:[]})
         })
     },
 }
@@ -118,8 +119,9 @@ const Add: SubCommand = {
         let playlist = yt.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
-        let added: RatedSong[] = playlist.addSongs(arg1.split(",").map(i => i.trim()))
-        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, Math.floor(60 / added.length))).join(", ")}`)
+        let added: RatedSong[] = playlist.addSongs(arg1.split(",").map(i => i.trim()));
+        if (added.length < 1) return error(ctx, ERRORS.NO_SONG);
+        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, Math.floor(60/added.length))).join(", ")}`)
     }
 }
 const Remove: SubCommand = {
@@ -146,7 +148,8 @@ const Remove: SubCommand = {
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
         let removed: RatedSong[] = playlist.removeSongs(arg1.split(",").map(i => i.trim()))
-        reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> ${removed.map(rs => truncateString(rs.title, 10)).join(", ")}`)
+        if (removed.length < 1) return error(ctx, ERRORS.NO_SONG);
+        reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> ${removed.map(rs => truncateString(rs.title, Math.floor(60/removed.length))).join(", ")}`)
     }
 }
 const List: SubCommand = {
@@ -225,7 +228,7 @@ const List: SubCommand = {
                         "type": ComponentType.Button,
                     } as MessageActionRowComponentData]
                 }]
-            })
+            }, true)
         }
         const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
             componentType: ComponentType.Button,
@@ -305,7 +308,7 @@ const Edit: SubCommand = {
                         "type": ComponentType.Button,
                     } as MessageActionRowComponentData]
                 }]
-            })
+            }, true)
         }
         const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
             componentType: ComponentType.Button,
