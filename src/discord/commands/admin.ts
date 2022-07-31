@@ -64,7 +64,6 @@ const Amend: SubCommand = {
                     customId: `mamendedittitle`,
                     label: "Song Title:",
                     maxLength: 64,
-                    minLength: 1,
                     placeholder: song.title,
                     required: false,
                     style: TextInputStyle.Short,
@@ -76,7 +75,6 @@ const Amend: SubCommand = {
                     customId: `mamendeditartist`,
                     label: "Song Artist:",
                     maxLength: 32,
-                    minLength: 1,
                     placeholder: song.artist,
                     required: false,
                     style: TextInputStyle.Short,
@@ -88,7 +86,6 @@ const Amend: SubCommand = {
                     customId: `mamendeditgenre`,
                     label: "Song Genre:",
                     maxLength: 16,
-                    minLength: 1,
                     placeholder: song.genre.toString(),
                     required: false,
                     style: TextInputStyle.Short,
@@ -99,17 +96,21 @@ const Amend: SubCommand = {
             if (ctx instanceof Message && await rctx.fetchReply()) await rctx.deleteReply()
             return rctx.awaitModalSubmit({time:5*60*1000})
         }).then(async (interaction: ModalSubmitInteraction) => {
+            let content: string = "_";
             song.title = interaction.fields.getTextInputValue(`mamendedittitle`) || song.title
             song.artist= interaction.fields.getTextInputValue(`mamendeditartist`)|| song.artist
             let genre = interaction.fields.getTextInputValue(`mamendeditgenre`)
             if (genre) {
-                if (!Object.keys(Genre).includes(genre)) return error(ctx, new Error(`Couldn't identify genre ${genre}!`))
-                song.genre = <Genre>(<any>Genre)[genre];
+                if (Object.keys(Genre).includes(genre)) {
+                    song.genre = <Genre>(<any>Genre)[genre];
+                } else {
+                    content = `Couldn't identify genre '${genre}'!`
+                }
             }
             await Playlist.setMusicIndex()
             return interaction.reply({
                 ephemeral: true,
-                "content": "_",
+                content,
                 "embeds": [{
                     "title": "Song ID: " + song.id,
                     "description": "Song Metadata",
@@ -473,7 +474,7 @@ const Download: SubCommand = {
                 case `c${commandname}downloadcustomall`:
                     if (idata?.exclusions) { webpl.remove(idata.exclusions) }
                 case `c${commandname}downloadall`:                    
-                    if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: []});
+                    if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: [], content: "Downloading..."});
                     webpl.download(guildid)
                     .on('progress', (cur: number, total: number, id: string) => {
                         editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
@@ -489,7 +490,7 @@ const Download: SubCommand = {
                     interaction.update({components:[]}); return;
             }
         }).on('end', (_,reason: string) => {
-            if (reason==="idle") rctx.editReply({components:[]})
+            if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
         })
     }
 }
@@ -582,7 +583,7 @@ const Index: SubCommand = {
             }
             interaction.update(listMessage<InteractionUpdateOptions>(items, page))
         }).on('end', (_,reason: string) => {
-            if (reason==="idle") rctx.editReply({components:[]})
+            if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
         })
     }
 }

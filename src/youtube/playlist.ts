@@ -1,5 +1,5 @@
 import fs from "fs";
-import internal, { EventEmitter } from "stream";
+import { EventEmitter } from "stream";
 import ytdl from "ytdl-core";
 import * as ytdsc from "ytdl-core-discord";
 import ytpl from "ytpl";
@@ -76,6 +76,7 @@ export class WebPlaylist {
         const ee: EventEmitter = new EventEmitter();
         setImmediate(() => {
             if (WebPlaylist.downloading) return ee.emit('error', new Error("Wait for the previous playlist to download first!"));
+            WebPlaylist.downloading = true;
 
             const datafile = `./resources/playlists/${guildid}.json`
             let pdata: MusicJSON = {guildid, url: [this.ytplaylist.url], items: []};
@@ -89,7 +90,6 @@ export class WebPlaylist {
             }
 
             ee.emit("start",this.ytplaylist.items)
-            WebPlaylist.downloading = true;
             let done: number = 0;
             Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item): Promise<void> => {
                 const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
@@ -161,15 +161,13 @@ export class Playlist { // Represents a playlist stored on the filesystem
         this.playlist = arg;
     }
 
-    public static create(guildid: string, ids: string[], url?: string): Promise<Playlist> {
-        return new Promise<Playlist>(async (resolve,reject) => {
-            if (getPlaylist(guildid)) return reject("This guild already has a playlist!")
-            let items: RatedSong[] = ids.filter(id=>Object.keys(Playlist.INDEX).includes(id) && fs.existsSync(Playlist.INDEX[id].file)).map(id=>{return {score:0,...Playlist.INDEX[id]}})
-            if (items.length <= 0) return reject("Couldn't find any songs!")
-            playlists[guildid] = new Playlist({guildid,url,items} as MusicJSON);
-            await playlists[guildid].save()
-            resolve(playlists[guildid])
-        })
+    public static async create(guildid: string, ids: string[], url?: string): Promise<Playlist> {
+        if (getPlaylist(guildid)) return Promise.reject("This guild already has a playlist!")
+        let items: RatedSong[] = ids.filter(id=>Object.keys(Playlist.INDEX).includes(id) && fs.existsSync(Playlist.INDEX[id].file)).map(id=>{return {score:0,...Playlist.INDEX[id]}})
+        if (items.length <= 0) return Promise.reject("Couldn't find any songs!")
+        playlists[guildid] = new Playlist({guildid,url,items} as MusicJSON);
+        await playlists[guildid].save()
+        return playlists[guildid];
     }
 
     public async delete() { // leaves lingering music, clean should be called later
@@ -223,12 +221,12 @@ export class Playlist { // Represents a playlist stored on the filesystem
 
     public static clean() {
         const ee = new EventEmitter();
-        playlists = {}; // clean cache
         ee.emit('start')
         Promise.all([
             Playlist.getAllPlaylists().then((playlists: MusicJSON[]) => 
                 playlists.flatMap(pl=>pl.items)
             ).then((items: RatedSong[]) => {
+                playlists = {}; // clean global cache
                 ee.emit('progress','Located all references!')
                 return new Set<string>(items.map(i=>i.file))
             }),
@@ -246,6 +244,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
                     return f;
                 }))
             ).then((rmfiles: string[])=>{
+                Playlist.setMusicIndex();
                 ee.emit('progress',`Removed all unrefrenced files (${rmfiles.length})!`)
                 return [refs, files, rmfiles]
             }) // pass the args along to continue chaining

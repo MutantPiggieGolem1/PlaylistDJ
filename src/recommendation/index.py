@@ -52,5 +52,7 @@
 # print(f"Recommendations for user 42: {titles[0, :3]}")
 
 import sys
-from random import randint
+from random import randint, seed
+import time
+seed(time()) # that was the issue wasnt it.
 print(randint(*[int(i) for i in sys.argv[1:3]]))

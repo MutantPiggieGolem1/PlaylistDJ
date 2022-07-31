@@ -4,7 +4,7 @@ import { client } from "../../index";
 import { Song } from "../../youtube/util";
 import { error, ERRORS, getPlayer, getPlaying, reply } from "../util";
 import { Command } from "./Commands";
-import { timeouts } from "./play";
+import { timeouts, history } from "./play";
 
 export const Playing: Command = {
     name: "playing",
@@ -22,6 +22,10 @@ export const Playing: Command = {
             title: "Now Playing:",
             description: `${song.title} - ${song.artist}\n\`${song.id}\``,
             color: 0xff0000,
+            fields: [{
+                "name": "History:",
+                "value": history[ctx.guild.id] ? history[ctx.guild.id].slice(0,10).map(id=>`\`${id}\``).join(", ") : "None"
+            }],
             footer: {
                 text: `PlaylistDJ - Playing Music - ${to > 0 ? (to >= Date.now() ? format(to-Date.now())+" left" : "Last Song") : "No Timeout"}`,
                 icon_url: client.user?.avatarURL() ?? ""

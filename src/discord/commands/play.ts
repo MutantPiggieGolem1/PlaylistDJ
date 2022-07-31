@@ -10,6 +10,7 @@ import { leave } from "./leave"
 import { resetVotes } from "./vote"
 
 export const timeouts: {[key:string]: number} = {}
+export const history:  {[key:string]: Array<String>} = {}
 
 export const Play: Command = {
     name: "play",
@@ -50,12 +51,13 @@ export const Play: Command = {
         let player: AudioPlayer = getPlayer(ctx.guild.id)
         player.removeAllListeners().stop()
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
-        if (!connection?.subscribe(player)) return error(ctx,ERRORS.NO_CONNECTION)
+        if (!connection?.subscribe(player)) return error(ctx, ERRORS.NO_CONNECTION)
         // Action Execution
         const guildid = ctx.guild.id;
         timeouts[guildid] = timeout;
         if (ctx instanceof CommandInteraction) ctx.reply({content:"Began Playing!",ephemeral:true})
         play(player, start)
+        history[guildid] = [start.id];
 
         player.on(AudioPlayerStatus.Idle, async () => {
             if (Date.now() >= timeouts[guildid]) {
@@ -66,7 +68,7 @@ export const Play: Command = {
                 return;
             }
             try {
-                play(player, await nextSong(guildid));
+                play(player, await nextSong(guildid), guildid);
                 resetVotes(guildid);
             } catch (e) {
                 console.error(e);
@@ -89,6 +91,7 @@ export const Play: Command = {
     }
 }
 
-function play(player: AudioPlayer, song: SongReference) {
+function play(player: AudioPlayer, song: SongReference, guildid?: string) {
+    if (guildid && history[guildid]) history[guildid].unshift(song.id);
     player.play(createAudioResource<Song>(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))
 }

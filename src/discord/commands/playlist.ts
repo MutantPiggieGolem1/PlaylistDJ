@@ -28,14 +28,14 @@ const Create: SubCommand = {
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS)
         // Action Execution
         const guildid = ctx.guild.id;
-        if (ctx instanceof CommandInteraction) ctx.deferReply();
+        if (ctx instanceof CommandInteraction) ctx.deferReply({ephemeral: true});
         yt.WebPlaylist.fromUrl(arg1).then((webpl: yt.WebPlaylist) => 
             webpl.getIds()
         ).then(ids => 
             yt.Playlist.create(guildid, ids, arg1)
         ).then((playlist: yt.Playlist) => {
             reply(ctx, `Created a new playlist with ${playlist.playlistdata.items.length} song(s)!`)
-        }).catch((e: Error) => { error(ctx, e as Error) })
+        }).catch((e: Error) => { error(ctx, e) })
     }
 }
 const Delete: SubCommand = {
@@ -76,8 +76,7 @@ const Delete: SubCommand = {
                     text: "PlaylistDJ - Confirmation Dialog",
                     icon_url: client.user?.avatarURL() ?? ""
                 }
-            }],
-            fetchReply: true
+            }]
         }, true)
         // Interaction Collection
         msg.createMessageComponentCollector<ComponentType.Button>({
@@ -92,7 +91,7 @@ const Delete: SubCommand = {
                 interaction.update({ content: `Deleted your playlist.`, components: [], embeds: [] })
             }).catch((e: Error) => error(ctx, e))
         }).on("end", (_, reason: string) => {
-            if (msg.editable && reason === "idle") msg.edit({ content: "Cancelled. (Timed Out)", components:[]})
+            if (reason === "idle" && msg.editable) msg.fetch().then(_=>msg.edit({ content: "Cancelled. (Timed Out)", components:[]})).catch()
         })
     },
 }
@@ -120,7 +119,7 @@ const Add: SubCommand = {
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
         let added: RatedSong[] = playlist.addSongs(arg1.split(",").map(i => i.trim()));
-        if (added.length < 1) return error(ctx, ERRORS.NO_SONG);
+        if (added.length < 1) return error(ctx, new Error("No songs were added!"));
         reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, Math.floor(60/added.length))).join(", ")}`)
     }
 }
@@ -255,7 +254,7 @@ const List: SubCommand = {
             }
             interaction.update(listMessage<InteractionUpdateOptions>(rctx, items, page))
         }).on('end', (_,reason: string) => {
-            if (reason==="idle") rctx.editReply({components:[]})
+            if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
         })
     },
 }

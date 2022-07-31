@@ -23,14 +23,8 @@ export function getPlaying(player?: AudioPlayer): Song | undefined {
     return resource.metadata as Song;
 }
 
-export async function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error): Promise<InteractionResponse | Message | void> {
-    let content: string = error instanceof Error ? "Error: "+error.message : error;
-    if (ctx instanceof BaseInteraction) {
-        if (ctx.replied) return await ctx.editReply({content, components: []})
-        return ctx.reply({content, ephemeral: true})
-    } else if (ctx instanceof Message) {
-        return ctx.reply(content)
-    }
+export async function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error): Promise<InteractionResponse | Message> {
+    return reply(ctx, error instanceof Error ? "Error: "+error.message : error, true);
 }
 export enum ERRORS {
     INVALID_ARGUMENTS = 'Invalid Arguments!',
@@ -50,10 +44,11 @@ export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitI
     if (typeof content === "string") content = { content }
     if (!('ephemeral' in content)) content = { ...content, ephemeral: true }
     if (ctx instanceof Message) return ctx.reply(content)
+    if (ctx.deferred || ctx.replied) return editReply(ctx, content);
     return ctx.reply(content).then(async _=>fetchReply ? (await ctx.fetchReply() as Message) : _)
 }
 
-export function editReply(ctx: CommandInteraction | ButtonInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {
+export function editReply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {
     if (typeof content === "string") content = { content }
     if (ctx instanceof Message) {
         let m: Message | null = [...ctx.channel.messages.cache.values()].find(msg => msg.editable &&
@@ -63,8 +58,8 @@ export function editReply(ctx: CommandInteraction | ButtonInteraction | Message,
         if (m) {return m.edit(content)}
         return ctx.reply(content);
     }
-    if (ctx.replied || ctx.deferred) return ctx.editReply(content).then(async _=>(await ctx.fetchReply() as Message))
-    return ctx.reply({...content, ephemeral: true}).then(async _=>(await ctx.fetchReply() as Message))
+    if (ctx.replied || ctx.deferred) return ctx.editReply(content);
+    return ctx.reply({...content, fetchReply: true});
 }
 
 export function truncateString(str: string, len: number): string {
