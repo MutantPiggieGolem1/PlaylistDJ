@@ -53,6 +53,6 @@
 
 import sys
 from random import randint, seed
-import time
+from time import time
 seed(time()) # that was the issue wasnt it.
 print(randint(*[int(i) for i in sys.argv[1:3]]))

@@ -18,7 +18,9 @@ function run(args: {toString:()=>string}[]): Promise<string> {
         process.stderr.on('data',errors.push);
 
         process.on('exit', (code, _) => {
-          if (code !== 0) return reject(new Error(errors.join('\n')))
+          if (code === 0) return;
+          console.error(errors.join('\n'));
+          reject();
         });
     })
 }
