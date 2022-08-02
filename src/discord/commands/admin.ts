@@ -290,7 +290,7 @@ const Destroy: SubCommand = {
         // Action Execution
         let removed: string[] = await Playlist.delete(ids);
         if (removed.length < 1) return error(ctx, ERRORS.NO_SONG);
-        await editReply(ctx,`Success! Destroyed ${removed.length} song(s).`)
+        await reply(ctx,`Success! Destroyed ${removed.length} song(s).`)
     }
 }
 const Download: SubCommand = {
