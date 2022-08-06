@@ -11,6 +11,7 @@ import { resetVotes } from "./vote"
 
 export const timeouts: {[key:string]: number} = {}
 export const history:  {[key:string]: Array<String>} = {}
+const brokenSongs: Set<string> = new Set(["QDvvt1kmL1Q"]);
 
 export const Play: Command = {
     name: "play",
@@ -68,7 +69,9 @@ export const Play: Command = {
                 return;
             }
             try {
-                play(player, await nextSong(guildid), guildid);
+                const next: SongReference = await nextSong(guildid);
+                if (brokenSongs.has(next.id)) return leave(ctx); // makeshift for now.
+                play(player, next, guildid);
                 resetVotes(guildid);
             } catch (e) {
                 console.error(e);

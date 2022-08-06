@@ -1,4 +1,4 @@
-import { CommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, ActionRow, Embed, MessageOptions, User, ModalSubmitInteraction, TextInputComponent, ModalData, AutocompleteInteraction, ApplicationCommandOptionChoiceData, ButtonStyle, ComponentType, ApplicationCommandOptionType, ActionRowComponent, ModalComponentData, ModalActionRowComponentData, TextInputStyle, ModalActionRowComponent, ActionRowModalData, TextInputModalData } from "discord.js";
+import { CommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, ActionRow, Embed, MessageOptions, User, ModalSubmitInteraction, TextInputComponent, ModalData, AutocompleteInteraction, ApplicationCommandOptionChoiceData, ButtonStyle, ComponentType, ApplicationCommandOptionType, ActionRowComponent, ModalComponentData, ModalActionRowComponentData, TextInputStyle, ModalActionRowComponent, ActionRowModalData, TextInputModalData, WebhookEditMessageOptions } from "discord.js";
 import { client, WHITELIST } from "../../index";
 import { Playlist, WebPlaylist } from "../../youtube/playlist";
 import { SongReference, Genre, Song } from "../../youtube/util";
@@ -315,7 +315,7 @@ const Download: SubCommand = {
         // Interaction Standardization
         let rmsg: Message | undefined;
         if (ctx instanceof Message) {
-            rmsg = await reply(ctx, {
+            rmsg = await ctx.reply({
                 "content": "Click this button to continue:",
                 "components": [{
                     type: ComponentType.ActionRow,
@@ -326,8 +326,9 @@ const Download: SubCommand = {
                         "disabled": false,
                         "type": ComponentType.Button,
                     } as MessageActionRowComponent]
-                }]
-            }, true)
+                }],
+                failIfNotExists: false
+            })
         }
         const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
             componentType: ComponentType.Button,
@@ -335,17 +336,16 @@ const Download: SubCommand = {
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
         if (!rctx?.guild) return;
-        if (rmsg?.deletable) await rmsg.delete()
+        if (rmsg?.deletable) await rmsg.delete();
+        const guildid: string = rctx.guild.id;
         // Playlist Locating
         await rctx.reply({content: "Searching for Playlist...", ephemeral: true})
         try {
             var webpl: WebPlaylist = await WebPlaylist.fromUrl(arg1);
         } catch (e) { return error(rctx, e as Error) }
         // Action Execution
-        const guildid: string = rctx.guild?.id;
         const idata: {index: number, exclusions: number[]} = { index: 0, exclusions: [] };
-        const msg: Message = (await rctx.editReply({
-            ephemeral: true,
+        rctx.editReply({
             "content": "Found!",
             "components": [
                 {
@@ -391,107 +391,107 @@ const Download: SubCommand = {
                     "url": webpl.ytplaylist.url,
                 } as Partial<Embed>
             ]
-        } as MessageOptions) as Message)
-        // Interaction Collection
-        msg.createMessageComponentCollector<ComponentType.Button>({
-            filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
-            idle: 20*1000
-        }).on('collect', async (interaction: ButtonInteraction): Promise<void> => {
-            switch (interaction.customId) {
-                case `c${commandname}downloadcustomskip`:
-                    idata.exclusions.push(idata.index)
-                case `c${commandname}downloadcustomkeep`:
-                    idata.index++;
-                case `c${commandname}downloadcustom`:
-                    let video = webpl.ytplaylist.items[idata.index];
-                    if (video) {
-                        interaction.update({
-                            "content": "Keep this video?",
-                            "components": [
-                                {
-                                    "type": ComponentType.ActionRow,
-                                    "components": [
-                                        {
-                                            "style": ButtonStyle.Secondary,
-                                            "label": `Keep Remaining`,
-                                            "customId": `c${commandname}downloadcustomall`,
-                                            "disabled": false,
-                                            "type": ComponentType.Button,
-                                        } as ActionRowComponent,
-                                        {
-                                            "style": ButtonStyle.Success,
-                                            "label": `Keep`,
-                                            "customId": `c${commandname}downloadcustomkeep`,
-                                            "disabled": false,
-                                            "type": ComponentType.Button
-                                        } as ActionRowComponent,
-                                        {
-                                            "style": ButtonStyle.Danger,
-                                            "label": `Skip`,
-                                            "customId": `c${commandname}downloadcustomskip`,
-                                            "disabled": false,
-                                            "type": ComponentType.Button
-                                        } as ActionRowComponent,
-                                        {
-                                            "style": ButtonStyle.Secondary,
-                                            "label": `Skip Remaining`,
-                                            "customId": `c${commandname}downloadcustomnone`,
-                                            "disabled": false,
-                                            "type": ComponentType.Button,
-                                        } as ActionRowComponent,
-                                    ]
-                                } as ActionRow<ActionRowComponent>
-                            ],
-                            "embeds": [
-                                {
-                                    type: "rich",
-                                    title: video.title,
-                                    description: "",
-                                    color: 0xFF0000,
-                                    "image": {
-                                        "url": video.bestThumbnail.url ?? "",
-                                        "height": video.bestThumbnail.height,
-                                        "width": video.bestThumbnail.width
-                                    },
-                                    "author": {
-                                        "name": video.author.name,
-                                        "url": video.author.url
-                                    },
-                                    "footer": {
-                                        "text": `PlaylistDJ - Video Selection - Video ${idata.index + 1}/${webpl.ytplaylist.items.length}`,
-                                        "icon_url": client.user?.avatarURL() ?? ""
-                                    },
-                                    "url": video.url,
-                                } as Partial<Embed>
-                            ]
-                        } as InteractionUpdateOptions)
+        } as WebhookEditMessageOptions).then(msg => {
+            msg.createMessageComponentCollector<ComponentType.Button>({
+                filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
+                idle: 20*1000
+            }).on('collect', async (interaction: ButtonInteraction) => {
+                switch (interaction.customId) {
+                    case `c${commandname}downloadcustomskip`:
+                        idata.exclusions.push(idata.index)
+                    case `c${commandname}downloadcustomkeep`:
+                        idata.index++;
+                    case `c${commandname}downloadcustom`:
+                        let video = webpl.ytplaylist.items[idata.index];
+                        if (video) {
+                            interaction.update({
+                                "content": "Keep this video?",
+                                "components": [
+                                    {
+                                        "type": ComponentType.ActionRow,
+                                        "components": [
+                                            {
+                                                "style": ButtonStyle.Secondary,
+                                                "label": `Keep Remaining`,
+                                                "customId": `c${commandname}downloadcustomall`,
+                                                "disabled": false,
+                                                "type": ComponentType.Button,
+                                            } as ActionRowComponent,
+                                            {
+                                                "style": ButtonStyle.Success,
+                                                "label": `Keep`,
+                                                "customId": `c${commandname}downloadcustomkeep`,
+                                                "disabled": false,
+                                                "type": ComponentType.Button
+                                            } as ActionRowComponent,
+                                            {
+                                                "style": ButtonStyle.Danger,
+                                                "label": `Skip`,
+                                                "customId": `c${commandname}downloadcustomskip`,
+                                                "disabled": false,
+                                                "type": ComponentType.Button
+                                            } as ActionRowComponent,
+                                            {
+                                                "style": ButtonStyle.Secondary,
+                                                "label": `Skip Remaining`,
+                                                "customId": `c${commandname}downloadcustomnone`,
+                                                "disabled": false,
+                                                "type": ComponentType.Button,
+                                            } as ActionRowComponent,
+                                        ]
+                                    } as ActionRow<ActionRowComponent>
+                                ],
+                                "embeds": [
+                                    {
+                                        type: "rich",
+                                        title: video.title,
+                                        description: "",
+                                        color: 0xFF0000,
+                                        "image": {
+                                            "url": video.bestThumbnail.url ?? "",
+                                            "height": video.bestThumbnail.height,
+                                            "width": video.bestThumbnail.width
+                                        },
+                                        "author": {
+                                            "name": video.author.name,
+                                            "url": video.author.url
+                                        },
+                                        "footer": {
+                                            "text": `PlaylistDJ - Video Selection - Video ${idata.index + 1}/${webpl.ytplaylist.items.length}`,
+                                            "icon_url": client.user?.avatarURL() ?? ""
+                                        },
+                                        "url": video.url,
+                                    } as Partial<Embed>
+                                ]
+                            } as InteractionUpdateOptions)
+                            break;
+                        }
+                    case `c${commandname}downloadcustomnone`:
+                        for (let i = idata.index; i < webpl.ytplaylist.items.length; i++) {
+                            idata.exclusions.push(i);
+                        }
+                    case `c${commandname}downloadcustomall`:
+                        if (idata?.exclusions) { webpl.remove(idata.exclusions) }
+                    case `c${commandname}downloadall`:                    
+                        if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: [], content: "Downloading..."});
+                        webpl.download(guildid)
+                        .on('progress', (cur: number, total: number, id: string) => {
+                            editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
+                        }).on('warn', (cur: number, total: number, id: string, error: Error) => {
+                            editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
+                        }).on('finish', (pl: Playlist | undefined) => {
+                            editReply(interaction, `Success! Your playlist now has ${pl ? pl.playlistdata.items.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
+                        }).on('error', (e: Error) => {
+                            editReply(interaction, "Error: " + e.message);
+                        })
                         break;
-                    }
-                case `c${commandname}downloadcustomnone`:
-                    for (let i = idata.index; i < webpl.ytplaylist.items.length; i++) {
-                        idata.exclusions.push(i);
-                    }
-                case `c${commandname}downloadcustomall`:
-                    if (idata?.exclusions) { webpl.remove(idata.exclusions) }
-                case `c${commandname}downloadall`:                    
-                    if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: [], content: "Downloading..."});
-                    webpl.download(guildid)
-                    .on('progress', (cur: number, total: number, id: string) => {
-                        editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
-                    }).on('warn', (cur: number, total: number, id: string, error: Error) => {
-                        editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
-                    }).on('finish', (pl: Playlist | undefined) => {
-                        editReply(interaction, `Success! Your playlist now has ${pl ? pl.playlistdata.items.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
-                    }).on('error', (e: Error) => {
-                        editReply(interaction, "Error: " + e.message);
-                    })
-                    break;
-                default:
-                    interaction.update({components:[]}); return;
-            }
-        }).on('end', (_,reason: string) => {
-            if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
-        })
+                    default:
+                        interaction.update({components:[]}); return;
+                }
+            }).on('end', (_,reason: string) => {
+                if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
+            })
+        }).catch((e: Error) => error(rctx, e as Error));
     }
 }
 const Index: SubCommand = {
