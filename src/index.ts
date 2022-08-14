@@ -1,7 +1,7 @@
-import { ActivityType, ApplicationCommandOptionChoiceData, ApplicationCommandOptionData, Client, Interaction, InteractionType, Message, GatewayIntentBits } from "discord.js";
+import { ActivityType, ApplicationCommandOptionChoiceData, Client, Interaction, InteractionType, Message, GatewayIntentBits } from "discord.js";
 import { Command, Commands } from "./discord/commands/Commands";
 import { isWhitelisted } from "./discord/util";
-import Day from "dayjs"
+import { checkTimings } from "./recommendation/interface";
 export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
 const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
@@ -14,6 +14,8 @@ client.on("ready", async () => {
     await client.application.commands.set(Commands);
     setActivity();
     console.info(`Bot Ready! [${client.user.tag}]`);
+    
+    checkTimings();
 })
 
 client.on("guildCreate", setActivity)
@@ -25,7 +27,6 @@ client.on("messageCreate", (msg: Message) => {
     if (!command) {msg.reply("Command not recognized."); return;}
 
     if (!command.public && !isWhitelisted(msg)) {msg.reply("This command requires authorization."); return}    
-    console.info(`[${Day().format("DD HH:mm:ss")}] ${msg.author.tag} >> ${PREFIX} ${command.name}${msg.content.slice(3+command.name.length)}`)
     command.run(msg);
 })
 
@@ -35,7 +36,6 @@ client.on("interactionCreate", (interaction: Interaction): void => {
     if (!command) {interaction.reply({"content":"Command not recognized.","ephemeral":true}); return;}
 
     if (!command.public && !isWhitelisted(interaction)) {interaction.reply({content:"This command requires authorization.",ephemeral:true}); return}
-    console.info(`[${Day().format("DD HH:mm:ss")}] ${interaction.user.tag} >> /${command.name} ${interaction.options.data.map(o=>o.name+ (o.value ? ":"+o.value : "")).join(" ")}`)
     command.run(interaction);
 })
 

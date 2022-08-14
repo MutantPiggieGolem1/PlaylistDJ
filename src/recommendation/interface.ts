@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import { ERRORS } from '../discord/util';
 import { getPlaylist, Playlist } from '../youtube/playlist';
 import { genreIds, MusicJSON, RatedSong, SongReference } from '../youtube/util';
+import fs from "fs";
 
 export default function get(gid: string): Promise<SongReference> {
     const playlist: Playlist | undefined = getPlaylist(gid)
@@ -25,6 +26,36 @@ function run(args: {toString:()=>string}[]): Promise<string> {
     })
 }
 
+export function checkTimings() {
+    const offset = Date.now() % 1000 * 60 * 60 * 24;
+    if (offset <= 1000) { // within a second of midnight
+        csvCache = null;
+        if (!fs.existsSync("./resources/csv/")) fs.mkdirSync("./resources/csv/")
+        Playlist.getAllPlaylists().then(pls => {
+            for (let pl of pls) {
+                fs.writeFileSync("./resources/csv/"+pl.guildid+".csv", toCsv(pl), {flag: "w", encoding: 'utf-8'})
+            }
+        })
+    }
+    setTimeout(checkTimings, offset-50);
+}
+
+let csvCache: string[] | null = null;
+export function getAllCsvs(): string[] | undefined {
+    if (csvCache === null) csvCache = fetchAllCsvs();
+    return csvCache;
+}
+function fetchAllCsvs(): string[] {
+    if (!fs.existsSync("./resources/csv/")) return [];
+    const dirent: fs.Dirent[] = fs.readdirSync("./resources/csv/", {withFileTypes: true, encoding: 'utf-8'})
+    return dirent.filter(ent=>ent.isFile()).map(ent => ent.name.replace(/\D/g, ""))
+}
+export function getCsv(guildid: string): Buffer | null {
+    const filepath: string = "./resources/csv/"+guildid+".csv";
+    if (!fs.existsSync(filepath)) return null;
+    return fs.readFileSync(filepath);
+}
+
 function toCsv(json: MusicJSON): string {
     function hash(str: string): number {
         let hash = 0, i, chr;
@@ -37,6 +68,6 @@ function toCsv(json: MusicJSON): string {
         return hash;
     }
 
-    // sid, length, score, genre id, artist hash, title hash, <tag hash>
-    return json.items.map((rs: RatedSong) => [rs.id, rs.length, rs.score, genreIds[rs.genre], hash(rs.artist), hash(rs.title), ].join(",")).join("\n");
+    return "Song ID, Song Length, Song Score, Song Genre, Artist Hash, Title Hash\n"+
+        json.items.map((rs: RatedSong) => [rs.id, rs.length, rs.score, genreIds[rs.genre], hash(rs.artist), hash(rs.title), ].join(",")).join("\n");
 }

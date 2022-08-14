@@ -1,4 +1,5 @@
-import { CommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, ActionRow, Embed, MessageOptions, User, ModalSubmitInteraction, TextInputComponent, ModalData, AutocompleteInteraction, ApplicationCommandOptionChoiceData, ButtonStyle, ComponentType, ApplicationCommandOptionType, ActionRowComponent, ModalComponentData, ModalActionRowComponentData, TextInputStyle, ModalActionRowComponent, ActionRowModalData, TextInputModalData, WebhookEditMessageOptions } from "discord.js";
+import { CommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, ActionRow, Embed, MessageOptions, User, ModalSubmitInteraction, TextInputComponent, ModalData, AutocompleteInteraction, ApplicationCommandOptionChoiceData, ButtonStyle, ComponentType, ApplicationCommandOptionType, ActionRowComponent, ModalComponentData, ModalActionRowComponentData, TextInputStyle, ModalActionRowComponent, ActionRowModalData, TextInputModalData, WebhookEditMessageOptions, AttachmentBuilder, AttachmentPayload, JSONEncodable } from "discord.js";
+import { getAllCsvs, getCsv } from "../../recommendation/interface";
 import { client, WHITELIST } from "../../index";
 import { Playlist, WebPlaylist } from "../../youtube/playlist";
 import { SongReference, Genre, Song } from "../../youtube/util";
@@ -587,9 +588,41 @@ const Index: SubCommand = {
         })
     }
 }
+const GrabCSV: SubCommand = {
+    type: ApplicationCommandOptionType.Subcommand,
+    name: "grabcsv",
+    description: "Gets the most recent CSV data of a guild.",
+    options: [{
+        type: ApplicationCommandOptionType.String,
+        name: "id",
+        description: "Guild ID",
+        required: true,
+        autocomplete: true
+    }],
+    public: false,
+
+    run: (ctx: CommandInteraction | Message) => {
+        if (ctx instanceof Message) return error(ctx, new Error("This command has text disabled."));
+        const gid: string | undefined = ctx.options.get("id", true).value?.toString();
+        if (!gid) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        const file: Buffer | null = getCsv(gid);
+        if (!file) return error(ctx, new Error("Couldn't find data!"));
+        ctx.reply({
+            content: "-",
+            files: [new AttachmentBuilder(file, {name: gid+".csv",description:`CSV Data for '${client.guilds.cache.get(gid)?.name}'`})],
+            ephemeral: true
+        })
+    },
+
+    ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
+        const focused = ctx.options.getFocused().toString();
+        if (!focused) return [];
+        return getAllCsvs()?.filter(s => s.startsWith(focused)).map(s => {return {name: s, value: s} as ApplicationCommandOptionChoiceData}) ?? [];
+    }
+}
 
 const SubCommands: (SubCommand|SubCommandGroup)[] = [
-    Amend, Auth, Clean, Destroy, Download, Index, 
+    Amend, Auth, Clean, Destroy, Download, Index, GrabCSV
 ]
 export const Admin: Command = {
     name: commandname,

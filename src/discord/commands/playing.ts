@@ -24,7 +24,7 @@ export const Playing: Command = {
             color: 0xff0000,
             fields: [{
                 "name": "History:",
-                "value": history[ctx.guild.id] ? history[ctx.guild.id].slice(0,10).map(id=>`\`${id}\``).join(", ") : "None"
+                "value": history[ctx.guild.id] ? history[ctx.guild.id].slice(1,11).map(id=>`\`${id}\``).join(", ") : "None"
             }],
             footer: {
                 text: `PlaylistDJ - Playing Music - ${to > 0 ? (to >= Date.now() ? format(to-Date.now())+" left" : "Last Song") : "No Timeout"}`,
