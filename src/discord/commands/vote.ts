@@ -1,8 +1,8 @@
-import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message} from "discord.js";
+import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message } from "discord.js"
+import { getPlaylist } from "../../youtube/playlist"
 import { Song } from "../../youtube/util"
-import { getPlaylist } from "../../youtube/playlist";
-import { error, ERRORS, getPlayer, getPlaying, reply, truncateString } from "../util";
-import { Command } from "./Commands";
+import { error, ERRORS, getPlayer, getPlaying, reply, truncateString } from "../util"
+import { Command } from "./Commands"
 
 const voted: {[key:string]: Set<String>} = {};
 export function resetVotes(gid: string) {voted[gid]?.clear()}

@@ -1,8 +1,8 @@
-import { AudioPlayer, getVoiceConnection, VoiceConnection } from "@discordjs/voice";
-import { CommandInteraction, Message, VoiceBasedChannel } from "discord.js";
-import { error, ERRORS, getPlayer } from "../util";
-import { Command } from "./Commands";
-import { timeouts } from "./play";
+import { AudioPlayer, getVoiceConnection, VoiceConnection } from "@discordjs/voice"
+import { CommandInteraction, Message, VoiceBasedChannel } from "discord.js"
+import { error, ERRORS, getPlayer } from "../util"
+import { Command } from "./Commands"
+import { timeouts } from "./play"
 
 export const Leave: Command = {
     name: "leave",

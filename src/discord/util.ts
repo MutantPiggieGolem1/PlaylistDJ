@@ -1,7 +1,7 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice"
-import { CommandInteraction, ButtonInteraction, CacheType, InteractionReplyOptions, Message, ModalSubmitInteraction, ReplyMessageOptions, TextBasedChannel, WebhookEditMessageOptions, BaseInteraction, InteractionResponse } from "discord.js"
-import { Song } from "../youtube/util"
+import { ButtonInteraction, CacheType, CommandInteraction, InteractionReplyOptions, InteractionResponse, Message, ModalSubmitInteraction, ReplyMessageOptions, WebhookEditMessageOptions } from "discord.js"
 import { WHITELIST } from "../index"
+import { Song } from "../youtube/util"
 
 export const ITEMS_PER_PAGE = 25;
 

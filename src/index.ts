@@ -1,7 +1,8 @@
-import { ActivityType, ApplicationCommandOptionChoiceData, Client, Interaction, InteractionType, Message, GatewayIntentBits } from "discord.js";
-import { Command, Commands } from "./discord/commands/Commands";
-import { isWhitelisted } from "./discord/util";
-import { checkTimings } from "./recommendation/interface";
+import { ActivityType, ApplicationCommandOptionChoiceData, Client, GatewayIntentBits, Interaction, InteractionType, Message } from "discord.js"
+import { scheduleJob } from "node-schedule"
+import { Command, Commands } from "./discord/commands/Commands"
+import { isWhitelisted } from "./discord/util"
+import { saveAllPlaylists } from "./recommendation/interface"
 export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
 const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
@@ -15,7 +16,7 @@ client.on("ready", async () => {
     setActivity();
     console.info(`Bot Ready! [${client.user.tag}]`);
     
-    checkTimings();
+    scheduleJob({hour: "00", minute: "00"}, saveAllPlaylists);
 })
 
 client.on("guildCreate", setActivity)
@@ -49,5 +50,5 @@ client.on("interactionCreate", async (interaction: Interaction): Promise<void> =
     interaction.respond(choices.slice(undefined,25));
 })
 
-import { readFileSync } from "fs";
+import { readFileSync } from "fs"
 client.login(readFileSync("./resources/token.txt").toString());

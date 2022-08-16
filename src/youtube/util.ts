@@ -1,5 +1,5 @@
-import ytpl from "ytpl";
-import ytdl from "ytdl-core";
+import ytdl from "ytdl-core"
+import ytpl from "ytpl"
 export const AUDIOFORMAT = ".webm"
 
 export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {

@@ -1,10 +1,10 @@
-import { CommandInteraction, Message, Embed, MessageOptions } from "discord.js";
+import { CommandInteraction, Embed, Message, MessageOptions } from "discord.js"
 import format from "format-duration"
-import { client } from "../../index";
-import { Song } from "../../youtube/util";
-import { error, ERRORS, getPlayer, getPlaying, reply } from "../util";
-import { Command } from "./Commands";
-import { timeouts, history } from "./play";
+import { client } from "../../index"
+import { Song } from "../../youtube/util"
+import { error, ERRORS, getPlayer, getPlaying, reply } from "../util"
+import { Command } from "./Commands"
+import { history, timeouts } from "./play"
 
 export const Playing: Command = {
     name: "playing",

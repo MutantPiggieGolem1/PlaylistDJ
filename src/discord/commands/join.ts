@@ -1,7 +1,7 @@
-import { CommandInteraction, Message, VoiceChannel, StageChannel, GuildBasedChannel, ApplicationCommandOptionType, ChannelType } from "discord.js";
-import { Command } from "./Commands";
-import { DiscordGatewayAdapterCreator, joinVoiceChannel } from '@discordjs/voice';
-import { error, reply } from "../util";
+import { DiscordGatewayAdapterCreator, joinVoiceChannel } from '@discordjs/voice'
+import { ApplicationCommandOptionType, ChannelType, CommandInteraction, GuildBasedChannel, Message, StageChannel, VoiceChannel } from "discord.js"
+import { error, reply } from "../util"
+import { Command } from "./Commands"
 
 export const Join: Command = {
     name: "join",

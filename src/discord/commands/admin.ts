@@ -1,10 +1,10 @@
-import { CommandInteraction, Message, ReplyMessageOptions, ButtonInteraction, InteractionUpdateOptions, EmbedField, MessageActionRowComponent, ActionRow, Embed, MessageOptions, User, ModalSubmitInteraction, TextInputComponent, ModalData, AutocompleteInteraction, ApplicationCommandOptionChoiceData, ButtonStyle, ComponentType, ApplicationCommandOptionType, ActionRowComponent, ModalComponentData, ModalActionRowComponentData, TextInputStyle, ModalActionRowComponent, ActionRowModalData, TextInputModalData, WebhookEditMessageOptions, AttachmentBuilder, AttachmentPayload, JSONEncodable } from "discord.js";
-import { getAllCsvs, getCsv } from "../../recommendation/interface";
-import { client, WHITELIST } from "../../index";
-import { Playlist, WebPlaylist } from "../../youtube/playlist";
-import { SongReference, Genre, Song } from "../../youtube/util";
-import { error, ERRORS, editReply, isWhitelisted, reply, ITEMS_PER_PAGE } from "../util";
-import { Command, SubCommand, SubCommandGroup } from "./Commands";
+import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, Embed, EmbedField, InteractionUpdateOptions, Message, MessageActionRowComponent, MessageOptions, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, ReplyMessageOptions, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
+import { client, WHITELIST } from "../../index"
+import { getAllCsvs, getCsv } from "../../recommendation/interface"
+import { Playlist, WebPlaylist } from "../../youtube/playlist"
+import { Genre, Song, SongReference } from "../../youtube/util"
+import { editReply, error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply } from "../util"
+import { Command, SubCommand, SubCommandGroup } from "./Commands"
 
 const commandname = "admin"
 

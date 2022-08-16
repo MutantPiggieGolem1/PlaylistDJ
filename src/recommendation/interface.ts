@@ -1,8 +1,8 @@
-import { spawn } from 'child_process';
-import { ERRORS } from '../discord/util';
-import { getPlaylist, Playlist } from '../youtube/playlist';
-import { genreIds, MusicJSON, RatedSong, SongReference } from '../youtube/util';
-import fs from "fs";
+import { spawn } from 'child_process'
+import fs from "fs"
+import { ERRORS } from '../discord/util'
+import { getPlaylist, Playlist } from '../youtube/playlist'
+import { genreIds, MusicJSON, RatedSong, SongReference } from '../youtube/util'
 
 export default function get(gid: string): Promise<SongReference> {
     const playlist: Playlist | undefined = getPlaylist(gid)
@@ -26,18 +26,8 @@ function run(args: {toString:()=>string}[]): Promise<string> {
     })
 }
 
-export function checkTimings() {
-    const offset = Date.now() % 1000 * 60 * 60 * 24;
-    if (offset <= 1000) { // within a second of midnight
-        csvCache = null;
-        if (!fs.existsSync("./resources/csv/")) fs.mkdirSync("./resources/csv/")
-        Playlist.getAllPlaylists().then(pls => {
-            for (let pl of pls) {
-                fs.writeFileSync("./resources/csv/"+pl.guildid+".csv", toCsv(pl), {flag: "w", encoding: 'utf-8'})
-            }
-        })
-    }
-    setTimeout(checkTimings, offset-50);
+export function saveAllPlaylists() {
+    Playlist.getAllPlaylists().then(pls => Promise.all(pls.map(genCsv))).catch(console.error)
 }
 
 let csvCache: string[] | null = null;
@@ -56,7 +46,7 @@ export function getCsv(guildid: string): Buffer | null {
     return fs.readFileSync(filepath);
 }
 
-function toCsv(json: MusicJSON): string {
+function genCsv(json: MusicJSON): Promise<void> {
     function hash(str: string): number {
         let hash = 0, i, chr;
         if (str.length === 0) return hash;
@@ -68,6 +58,9 @@ function toCsv(json: MusicJSON): string {
         return hash;
     }
 
-    return "Song ID, Song Length, Song Score, Song Genre, Artist Hash, Title Hash\n"+
-        json.items.map((rs: RatedSong) => [rs.id, rs.length, rs.score, genreIds[rs.genre], hash(rs.artist), hash(rs.title), ].join(",")).join("\n");
+    return fs.promises.writeFile("./resources/csv/"+json.guildid+".csv", 
+        "Song ID, Song Length, Song Score, Song Genre, Artist Hash, Title Hash\n"+
+            json.items.map((rs: RatedSong) => [rs.id, rs.length, rs.score, genreIds[rs.genre], hash(rs.artist), hash(rs.title), ].join(",")).join("\n"),
+        {flag: "w", encoding: 'utf-8'}
+    )
 }

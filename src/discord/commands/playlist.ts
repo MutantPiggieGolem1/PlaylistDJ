@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionChoiceData, AutocompleteInteraction, CommandInteraction, ButtonInteraction, ComponentType, EmbedField, InteractionUpdateOptions, Message, ActionRow, ActionRowComponent, Embed, ModalSubmitInteraction, ReplyMessageOptions, TextInputComponent, ApplicationCommandOptionType, ButtonStyle, MessageActionRowComponentData, TextInputComponentData, TextInputStyle, BaseInteraction, ModalActionRowComponentData, ModalData, ModalComponentData, ModalActionRowComponent } from "discord.js"
+import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, Embed, EmbedField, InteractionUpdateOptions, Message, MessageActionRowComponentData, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, ReplyMessageOptions, TextInputComponent, TextInputStyle } from "discord.js"
 import { client } from "../../index"
 import * as yt from "../../youtube/playlist"
 import { Genre, RatedSong } from "../../youtube/util"

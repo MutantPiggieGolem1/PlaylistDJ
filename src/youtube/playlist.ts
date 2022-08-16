@@ -1,9 +1,9 @@
-import fs from "fs";
-import { EventEmitter } from "stream";
-import ytdl from "ytdl-core";
-import * as ytdsc from "ytdl-core-discord";
-import ytpl from "ytpl";
-import { AUDIOFORMAT, Genre, MusicJSON, parseVideo, RatedSong, SongReference } from "./util";
+import fs from "fs"
+import { EventEmitter } from "stream"
+import ytdl from "ytdl-core"
+import * as ytdsc from "ytdl-core-discord"
+import ytpl from "ytpl"
+import { AUDIOFORMAT, Genre, MusicJSON, parseVideo, RatedSong, SongReference } from "./util"
 
 export class WebPlaylist {
     private static downloading: boolean = false;
