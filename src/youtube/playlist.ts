@@ -113,9 +113,10 @@ export class WebPlaylist {
                     if (fs.existsSync(file)) fs.rmSync(file);
                     let index = pdata.items.findIndex(rs=>rs.file===file);
                     if (index >= 0) pdata.items.splice(index,1)
+                    throw e; // as to retain the rejected status
                 })
             })).then(async (completion: Array<PromiseSettledResult<void>>) => {
-                if (completion.every(r=>r.status==="rejected")) return Promise.reject("All downloads failed.");
+                if (completion.every(r=>r.status==="rejected")) throw new Error("All downloads failed.");
                 pdata.items.forEach(rs=>Playlist.INDEX[rs.id]=Playlist.INDEX[rs.id] ?? (rs as SongReference))
                 await Playlist.setMusicIndex();
                 let playlist: Playlist = new Playlist(pdata);

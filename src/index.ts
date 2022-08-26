@@ -50,5 +50,7 @@ client.on("interactionCreate", async (interaction: Interaction): Promise<void> =
     interaction.respond(choices.slice(undefined,25));
 })
 
+client.on("error", console.error);
+
 import { readFileSync } from "fs"
 client.login(readFileSync("./resources/token.txt").toString());
