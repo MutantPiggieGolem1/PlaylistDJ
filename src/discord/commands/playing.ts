@@ -1,10 +1,9 @@
 import { CommandInteraction, Embed, Message, MessageOptions } from "discord.js"
-import format from "format-duration"
 import { client } from "../../index"
 import { Song } from "../../youtube/util"
 import { error, ERRORS, getPlayer, getPlaying, reply } from "../util"
 import { Command } from "./Commands"
-import { history, timeouts } from "./play"
+import { history } from "./play"
 
 export const Playing: Command = {
     name: "playing",
@@ -16,7 +15,6 @@ export const Playing: Command = {
         if (!ctx.guild) return;
         let song: Song | undefined = getPlaying(getPlayer(ctx.guild.id,false))
         if (!song) return error(ctx,ERRORS.NO_SONG);
-        const to: number | undefined = timeouts[ctx.guild.id];
         reply(ctx, {embeds:[{
             type: "rich",
             title: "Now Playing:",
@@ -27,7 +25,7 @@ export const Playing: Command = {
                 "value": history[ctx.guild.id]?.length > 1 ? history[ctx.guild.id].slice(1,11).map(id=>`\`${id}\``).join(", ")+(history[ctx.guild.id].length > 11 ? ", ..." : "") : "None"
             }],
             footer: {
-                text: `PlaylistDJ - Playing Music - ${to > 0 ? (to >= Date.now() ? format(to-Date.now())+" left" : "Last Song") : "No Timeout"}`,
+                text: `PlaylistDJ - Playing Music`,
                 icon_url: client.user?.avatarURL() ?? ""
             }
         } as Partial<Embed>]} as MessageOptions)

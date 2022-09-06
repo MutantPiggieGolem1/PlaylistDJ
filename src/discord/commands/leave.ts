@@ -2,7 +2,6 @@ import { AudioPlayer, getVoiceConnection, VoiceConnection } from "@discordjs/voi
 import { CommandInteraction, Message, VoiceBasedChannel } from "discord.js"
 import { error, ERRORS, getPlayer } from "../util"
 import { Command } from "./Commands"
-import { timeouts } from "./play"
 
 export const Leave: Command = {
     name: "leave",
@@ -24,7 +23,6 @@ export const Leave: Command = {
 export function leave(ctx: CommandInteraction | Message) {
     if (!ctx.guild) return;
     
-    delete timeouts[ctx.guild.id];
     let player: AudioPlayer | undefined = getPlayer(ctx.guild.id, false);
     player?.removeAllListeners().stop();
     let voiceconnection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)

@@ -16,7 +16,7 @@ function run(args: {toString:()=>string}[]): Promise<string> {
         let errors: string[] = []
 
         process.stdout.on('data', resolve)
-        process.stderr.on('data',errors.push);
+        process.stderr.on('data', errors.push);
 
         process.on('exit', (code, _) => {
           if (code === 0) return;

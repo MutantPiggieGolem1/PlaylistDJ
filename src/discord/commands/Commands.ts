@@ -1,6 +1,7 @@
 import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, ApplicationCommandSubCommandData, ApplicationCommandSubGroupData, AutocompleteInteraction, ChatInputApplicationCommandData, CommandInteraction, Message } from "discord.js"
 import { Admin } from "./admin"
 import { Join } from "./join"
+import { KickMe } from "./kickme"
 import { Leave } from "./leave"
 import { Play } from "./play"
 import { Playing } from "./playing"
@@ -27,7 +28,7 @@ export interface SubCommandGroup extends ApplicationCommandSubGroupData {
 }
 
 export const Commands: Command[] = [
-    Admin, Playlist,      // Management Commands
-    Join,Leave,Play,Playing,Vote, // Public Commands
+    Admin, Playlist, // Management Commands
+    Join,Leave,Play,Playing,KickMe,Vote, // Public Commands
     Rickroll,
 ]
