@@ -55,8 +55,7 @@ export const Play: Command = {
             play(player, await nextSong(guildid), guildid);
             resetVotes(guildid);
         }).on("error", (e: AudioPlayerError) => {
-            console.error(`Audio Player Error: ${e.name} - ${e.message}\n  Resource: [${e.resource}]`);
-            return leave(ctx);
+            console.error(`Audio Player Error: ${e.message}\n  Resource: [${e.resource.metadata ? JSON.stringify(e.resource.metadata) : JSON.stringify(e.resource)}]`);
         });
     },
     

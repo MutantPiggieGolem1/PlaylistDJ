@@ -3,7 +3,7 @@
   "displayName": "PlaylistDJ",
   "description": "A discord bot to play playlists with custom selection",
   "author": "Pew",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "keywords": [
     "discord",
     "discordjs",
@@ -11,7 +11,8 @@
   ],
   "license": "ISC",
   "scripts": {
-    "start": "ts-node src/index.ts"
+    "start": "tsc && node dist/index.js",
+    "jitstart": "ts-node src/index.ts"
   },
   "dependencies": {
     "@discordjs/voice": "^0.10.0",
