@@ -67,7 +67,7 @@ export const Play: Command = {
         if (focused.length <= 0) return []; // too many matches, don't bother
         return Object.values(playlist.playlistdata.items)
             .filter(k=>k.id.startsWith(focused) || k.title.toLowerCase().startsWith(focused.toLowerCase()))
-            .map(o=>{
+            .map(o => {
                 return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
             })
     }
