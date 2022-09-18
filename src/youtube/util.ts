@@ -1,6 +1,6 @@
 import ytdl from "ytdl-core"
 import ytpl from "ytpl"
-export const AUDIOFORMAT = ".webm"
+export const AUDIOFORMAT: string = ".webm"
 
 export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {
     let titlesegments = video.title.split(" - ").slice(0,2)
