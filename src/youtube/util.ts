@@ -40,6 +40,8 @@ export enum Genre {
     Minecraft = 'Minecraft'         ,// Dragonhearted - TryHardNinja
     Electronic = 'Electronic'       ,// Base After Base - DJVI
     Instrumental = 'Instrumental'   ,// 
+    Piano = 'Piano'                 ,//
+    Guitar = 'Guitar'               ,//
     Korean = 'Korean'               ,// Way Back Home - SHAUN
     Japanese = 'Japanese'           ,// Into the Night - YOASABI
     Chinese = 'Chinese'             ,// 
@@ -51,8 +53,12 @@ export const genreIds: {[key in Genre as string]: number} = {
     "Meme": 2,
     "Minecraft": 3,
     "Electronic": 4,
-    "Instrumental": 5,
+    
     "Korean": 6,
     "Japanese": 7,
     "Eurobeat": 8,
+
+    "Instrumental": 100,
+    "Piano": 101,
+    "Guitar": 102,
 }
