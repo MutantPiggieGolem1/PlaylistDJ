@@ -16,7 +16,7 @@ export const Leave: Command = {
         try {
             leave(ctx)
             if (ctx instanceof CommandInteraction) ctx.reply({content:"Left "+voicechannel.toString(),ephemeral: true});
-        } catch (e) {error(ctx,e as Error)}
+        } catch (e) {error(ctx, e as Error)}
     }
 }
 

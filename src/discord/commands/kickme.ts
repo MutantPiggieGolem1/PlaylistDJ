@@ -24,7 +24,7 @@ export const KickMe: Command = {
             ctx.content.split(/\s+/g)[2].trim();
         if (!arg1 || Number.isNaN(arg1)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Condition Validation
-        const channel: VoiceBasedChannel | null =  member.voice.channel;
+        const channel: VoiceBasedChannel | null = member.voice.channel;
         if (!channel) return error(ctx, new Error("You aren't in a voice channel!"))
         if (channel !== guild.members.me?.voice.channel) return error(ctx, new Error("You aren't in the same channel!"))
         const mystate: AudioPlayerState | undefined = getPlayer(guild.id, false)?.state;
@@ -33,7 +33,7 @@ export const KickMe: Command = {
         let timeout = Math.abs(Number.parseInt(arg1));
         reply(ctx, `Auto-Kicking you in ${arg1} minute${timeout !== 1 ? "s" : ""}!`)
         setTimeout(() => {
-            const channel: VoiceBasedChannel | null =  member.voice.channel;
+            const channel: VoiceBasedChannel | null = member.voice.channel;
             if (!channel || channel !== guild.members.me?.voice.channel) return;
             member.voice.disconnect("Auto-Kick after "+timeout+"m").catch(console.error);
         }, timeout * 60 * 1000);
