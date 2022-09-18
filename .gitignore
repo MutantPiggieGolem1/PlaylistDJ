@@ -7,7 +7,7 @@ build/Release
 # TypeScript v1 declaration files
 typings/
 
-# TypeScript cache
+# TypeScript
 *.tsbuildinfo
 dist
 
