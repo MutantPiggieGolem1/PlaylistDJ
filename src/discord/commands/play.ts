@@ -2,7 +2,6 @@ import { AudioPlayer, AudioPlayerError, AudioPlayerStatus, AudioResource, create
 import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction, Message } from "discord.js"
 import { createReadStream } from "fs"
 import nextSong from "../../recommendation/interface"
-import { getPlaylist } from "../../youtube/playlist"
 import { MusicJSON, Song, SongReference } from "../../youtube/util"
 import { error, ERRORS, getPlayer } from "../util"
 import { Command } from "./Commands"
@@ -74,6 +73,7 @@ export const Play: Command = {
 }
 
 function play(player: AudioPlayer, song: SongReference, guildid?: string) {
+    // TODO: check if song is playable
     if (guildid && history[guildid]) history[guildid].unshift(song.id);
     player.play(createAudioResource<Song>(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))
 }

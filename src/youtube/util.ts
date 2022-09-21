@@ -15,14 +15,7 @@ export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {
     }
 }
 
-export type MusicJSON = {
-    guildid: string,
-    url?: string[],
-
-    items: Array<RatedSong>,
-}
-
-export type RatedSong = SongReference & {tags?: Array<string>, score: number}
+export type RatedSong = {id: string, tags?: Array<string>, score: number}
 export type SongReference = Song & {file: string, url: string}
 export type Song = { // objective properties
     id: string,

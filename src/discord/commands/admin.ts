@@ -1,8 +1,9 @@
 import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, Embed, EmbedField, InteractionUpdateOptions, Message, MessageActionRowComponent, MessageOptions, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, ReplyMessageOptions, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
 import { client, WHITELIST } from "../../index"
 import { getAllCsvs, getCsv } from "../../recommendation/interface"
-import { Playlist, WebPlaylist } from "../../youtube/playlist"
+import { Playlist } from "../../youtube/playlist"
 import { Genre, Song, SongReference } from "../../youtube/util"
+import { WebPlaylist } from "../../youtube/webplaylist"
 import { editReply, error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply } from "../util"
 import { Command, SubCommand, SubCommandGroup } from "./Commands"
 
