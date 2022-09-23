@@ -1,8 +1,9 @@
 import { AudioPlayer, AudioPlayerError, AudioPlayerStatus, AudioResource, createAudioResource, demuxProbe, getVoiceConnection, ProbeInfo, StreamType, VoiceConnection } from "@discordjs/voice"
 import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction, Message } from "discord.js"
 import { createReadStream } from "fs"
+import { Playlist } from "src/youtube/playlist"
 import nextSong from "../../recommendation/interface"
-import { MusicJSON, Song, SongReference } from "../../youtube/util"
+import { RatedSong, Song, SongReference } from "../../youtube/util"
 import { error, ERRORS, getPlayer } from "../util"
 import { Command } from "./Commands"
 import { leave } from "./leave"
@@ -27,15 +28,15 @@ export const Play: Command = {
         if (!ctx.guild) return;
         const guildid = ctx.guild.id;
         // Playlist Locating
-        let pl = getPlaylist(ctx.guild.id)
+        let pl = Playlist.getPlaylist(ctx.guild.id)
         if (!pl) return error(ctx,ERRORS.NO_PLAYLIST);
-        let playlist: MusicJSON = pl.playlistdata;
-        if (!playlist.items) return error(ctx,ERRORS.NO_SONG);
+        let playlist: RatedSong[] = pl.getSongs;
+        if (!playlist) return error(ctx,ERRORS.NO_SONG);
         // Argument Processing
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("id",false)?.value?.toString() :
             ctx.content.split(/\s+/g)[2];
-        let start: SongReference | undefined = playlist.items.find(s=>s.id===arg1);
+        let start: SongReference | undefined = playlist.find(s=>s.id===arg1);
         if (!start) {
             if (arg1) await error(ctx, ERRORS.NO_SONG);
             start = await nextSong(ctx.guild.id);

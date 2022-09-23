@@ -30,7 +30,7 @@ const Amend: SubCommand = {
             ctx.content.split(/\s+/g)[3]
         if (!id) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating (ish)
-        const song: SongReference | undefined = Playlist.INDEX[id]
+        const song: SongReference | null = Playlist.getSong(id)
         if (!song) return error(ctx, ERRORS.NO_SONG);
         // Interaction Standardization
         let rmsg: Message | undefined;
@@ -109,7 +109,7 @@ const Amend: SubCommand = {
                     content = `Couldn't identify genre '${genre}'!`
                 }
             }
-            await Playlist.setMusicIndex()
+            await Playlist.save()
             return interaction.reply({
                 ephemeral: true,
                 content,
@@ -149,7 +149,7 @@ const Amend: SubCommand = {
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
         const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0) return []; // too many matches, don't bother
-        return Object.values(Playlist.INDEX)
+        return Object.values(Playlist.)
             .filter(k=>k.id.startsWith(focused))
             .map(o=>{
                 return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
