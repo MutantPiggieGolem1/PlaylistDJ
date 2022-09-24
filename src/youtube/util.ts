@@ -1,3 +1,4 @@
+import { Playlist } from "./playlist"
 import ytdl from "ytdl-core"
 import ytpl from "ytpl"
 export const AUDIOFORMAT: string = ".webm"
@@ -15,6 +16,10 @@ export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {
     }
 }
 
+export function getFullSong(rs: RatedSong): (RatedSong & SongReference) | null {
+    const sr = Playlist.getSong(rs);
+    return sr ? {...rs, ...sr} : null;
+}
 export type RatedSong = {id: string, tags?: Array<string>, score: number}
 export type SongReference = Song & {file: string, url: string}
 export type Song = { // objective properties

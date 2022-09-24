@@ -20,11 +20,12 @@ export const Leave: Command = {
     }
 }
 
-export function leave(ctx: CommandInteraction | Message) {
-    if (!ctx.guild) return;
+export function leave(ctx: CommandInteraction | Message | string) {
+    const gid = typeof ctx === "string" ? ctx : ctx.guild?.id;
+    if (!gid) return;
     
-    let player: AudioPlayer | undefined = getPlayer(ctx.guild.id, false);
+    let player: AudioPlayer | undefined = getPlayer(gid, false);
     player?.removeAllListeners().stop();
-    let voiceconnection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
+    let voiceconnection: VoiceConnection | undefined = getVoiceConnection(gid)
     if (!voiceconnection?.disconnect()) throw new Error("Failed to leave voice channel.");
 }

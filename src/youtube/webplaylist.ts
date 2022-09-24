@@ -1,9 +1,10 @@
 import EventEmitter from "events"
 import fs from "fs"
 import ytdl from "ytdl-core"
+import ytdsc from "ytdl-core-discord"
 import ytpl from "ytpl"
 import { Playlist } from "./playlist"
-import { AUDIOFORMAT, parseVideo, RatedSong, SongReference } from "./util"
+import { AUDIOFORMAT, parseVideo, SongReference } from "./util"
 
 export class WebPlaylist {
     private static downloading: boolean = false;
@@ -77,22 +78,18 @@ export class WebPlaylist {
         setImmediate(() => {
             if (WebPlaylist.downloading) return ee.emit('error', new Error("Wait for the previous playlist to download first!"));
             WebPlaylist.downloading = true;
-
             
-            let items: SongReference[] = [];
-            const opl: Playlist | null = Playlist.getPlaylist(guildid);
-            if (opl) {
-                opl.getSongs.map(rs=>Playlist.getSong(rs.id)).filter(sr => !!sr) as SongReference[];
-            }
-            const datafile = `./resources/playlists/${guildid}.json`
+            let items: SongReference[] =
+                Playlist.getPlaylist(guildid)?.getSongs
+                ?.map(Playlist.getSong)?.filter((sr: SongReference | null): sr is SongReference => !!sr) || [];
 
             ee.emit("start",this.ytplaylist.items)
             let done: number = 0;
             Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item): Promise<void> => {
                 const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
                 if (fs.existsSync(file)) {
-                    if (!pdata.items.some(i=>i.id===playlistitem.id)) {
-                        pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) } as RatedSong);
+                    if (!items.some(i=>i.id===playlistitem.id)) {
+                        items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) });
                     }
                     done++;
                     return Promise.resolve();
@@ -101,22 +98,22 @@ export class WebPlaylist {
                     ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"})
                     .pipe(fs.createWriteStream(file, {fd: fs.openSync(file, 'w'), flags: "w"}))
                     .on('finish', () => {
-                        pdata.items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) } as RatedSong)
+                        items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo) })
                         ee.emit("progress", ++done, this.ytplaylist.items.length, playlistitem.id);
                         resolve();
                     })
                 })).catch((e: Error) => {
                     ee.emit('warn', ++done, this.ytplaylist.items.length, playlistitem.id, e);
                     if (fs.existsSync(file)) fs.rmSync(file);
-                    let index = pdata.items.findIndex(rs=>rs.file===file);
-                    if (index >= 0) pdata.items.splice(index,1)
+                    let index = items.findIndex(sr=>sr.file===file);
+                    if (index >= 0) items.splice(index,1)
                     throw e; // as to retain the rejected status
                 })
             })).then(async (completion: Array<PromiseSettledResult<void>>) => {
                 if (completion.every(r=>r.status==="rejected")) throw new Error("All downloads failed.");
-                pdata.items.forEach(rs=>Playlist.INDEX[rs.id]=Playlist.INDEX[rs.id] ?? (rs as SongReference))
-                await Playlist.setMusicIndex();
-                let playlist: Playlist = new Playlist(pdata);
+                items.forEach(rs=>Playlist.getSong(rs.id) ? null : Playlist.addSong(rs as SongReference))
+                await Playlist.save();
+                let playlist: Playlist = new Playlist(guildid, items.map(sr=>{return {id: sr.id, tags: [], score: 0}}));
                 await playlist.save();
                 return playlist;
             }).then((playlist: Playlist)=>{

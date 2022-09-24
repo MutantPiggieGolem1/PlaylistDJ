@@ -1,5 +1,5 @@
 import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message } from "discord.js"
-import { getPlaylist } from "../../youtube/playlist"
+import { Playlist } from "../../youtube/playlist"
 import { Song } from "../../youtube/util"
 import { error, ERRORS, getPlayer, getPlaying, reply, truncateString } from "../util"
 import { Command } from "./Commands"
@@ -34,7 +34,7 @@ export const Vote: Command = {
         const me: GuildMember = await ctx.guild.members.fetchMe();
         if (!ctx.member.voice || ctx.member.voice.channelId !== me.voice.channelId || ctx.member.voice.deaf || me.voice.serverMute) return error(ctx,new Error("You aren't even listening to the music!"))
         // Playlist Locating
-        let playlist = getPlaylist(ctx.guild.id)
+        let playlist = Playlist.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx,ERRORS.NO_PLAYLIST);
         let song: Song | undefined = getPlaying(getPlayer(ctx.guild.id,false))
         if (!song) return error(ctx,ERRORS.NO_SONG);
@@ -42,6 +42,6 @@ export const Vote: Command = {
         if (!voted[ctx.guild.id]) voted[ctx.guild.id] = new Set<string>();
         voted[ctx.guild.id].add(ctx.member.user.id);
         playlist.vote(song.id,arg1==="up");
-        reply(ctx,`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.playlistdata.items.find(i=>i.id===song?.id)?.score} score)`)
+        reply(ctx,`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.getSongs.find(i=>i.id===song?.id)?.score} score)`)
     }
 }

@@ -45,7 +45,7 @@ export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitI
     if (!('ephemeral' in content)) content = { ...content, ephemeral: true }
     if (ctx instanceof Message) return ctx.reply(content)
     if (ctx.deferred || ctx.replied) return editReply(ctx, content);
-    return ctx.reply(content).then(async _=>fetchReply ? (await ctx.fetchReply() as Message) : _)
+    return ctx.reply(content).then(async _=>fetchReply ? (await ctx.fetchReply()) : _)
 }
 
 export function editReply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {

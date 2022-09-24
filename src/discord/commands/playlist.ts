@@ -1,7 +1,8 @@
-import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, Embed, EmbedField, InteractionUpdateOptions, Message, MessageActionRowComponentData, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, ReplyMessageOptions, TextInputComponent, TextInputStyle } from "discord.js"
+import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, Embed, EmbedField, InteractionUpdateOptions, Message, MessageActionRowComponentData, ReplyMessageOptions } from "discord.js"
 import { client } from "../../index"
 import * as yt from "../../youtube/playlist"
-import { Genre, RatedSong } from "../../youtube/util"
+import { getFullSong, RatedSong, Song, SongReference } from "../../youtube/util"
+import { WebPlaylist } from "../../youtube/webplaylist"
 import { error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply, truncateString } from "../util"
 import { Command, SubCommand } from "./Commands"
 
@@ -29,12 +30,12 @@ const Create: SubCommand = {
         // Action Execution
         const guildid = ctx.guild.id;
         if (ctx instanceof CommandInteraction) ctx.deferReply({ephemeral: true});
-        yt.WebPlaylist.fromUrl(arg1).then((webpl: yt.WebPlaylist) => 
+        WebPlaylist.fromUrl(arg1).then((webpl: WebPlaylist) => 
             webpl.getIds()
         ).then(ids => 
-            yt.Playlist.create(guildid, ids, arg1)
+            yt.Playlist.create(guildid, ids)
         ).then((playlist: yt.Playlist) => {
-            reply(ctx, `Created a new playlist with ${playlist.playlistdata.items.length} song(s)!`)
+            reply(ctx, `Created a new playlist with ${playlist.getSongs.length} song(s)!`)
         }).catch((e: Error) => { error(ctx, e) })
     }
 }
@@ -85,7 +86,7 @@ const Delete: SubCommand = {
         }).once("collect", (interaction: ButtonInteraction): void => {
             if (interaction.customId === 'cancel') {interaction.update({ content: "Cancelled.", components: [], embeds: [] });return;}
             if (!interaction.guild) { error(ctx, ERRORS.NO_GUILD); return; }
-            let playlist = yt.getPlaylist(interaction.guild.id)
+            let playlist = yt.Playlist.getPlaylist(interaction.guild.id)
             if (!playlist) { error(ctx, ERRORS.NO_PLAYLIST); return; }
             playlist.delete().then(_ => {
                 interaction.update({ content: `Deleted your playlist.`, components: [], embeds: [] })
@@ -115,12 +116,13 @@ const Add: SubCommand = {
             ctx.content.split(/\s+/g)[3]
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating
-        let playlist = yt.getPlaylist(ctx.guild.id)
+        let playlist = yt.Playlist.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
-        let added: RatedSong[] = playlist.addSongs(arg1.split(",").map(i => i.trim()));
+        let added: (SongReference | null)[] = playlist.addSongs(arg1.split(",").map(i => i.trim())).map(yt.Playlist.getSong);
         if (added.length < 1) return error(ctx, new Error("No songs were added!"));
-        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> ${added.map(rs => truncateString(rs.title, Math.floor(60/added.length))).join(", ")}`)
+        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> `+added.filter((sr: SongReference | null): sr is SongReference => !!sr)
+            .map((s: Song) => truncateString(s.title, Math.floor(60/added.length))).join(", "));
     }
 }
 const Remove: SubCommand = {
@@ -143,12 +145,13 @@ const Remove: SubCommand = {
             ctx.content.split(/\s+/g)[3]
         if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating
-        let playlist = yt.getPlaylist(ctx.guild.id)
+        let playlist = yt.Playlist.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
-        let removed: RatedSong[] = playlist.removeSongs(arg1.split(",").map(i => i.trim()))
+        let removed: (SongReference | null)[] = playlist.removeSongs(arg1.split(",").map(i => i.trim())).map(yt.Playlist.getSong)
         if (removed.length < 1) return error(ctx, ERRORS.NO_SONG);
-        reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> ${removed.map(rs => truncateString(rs.title, Math.floor(60/removed.length))).join(", ")}`)
+        reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> `+removed.filter((sr: SongReference | null): sr is SongReference => !!sr)
+            .map((s: Song) => truncateString(s.title, Math.floor(60/removed.length))).join(", "));
     }
 }
 const List: SubCommand = {
@@ -185,22 +188,22 @@ const List: SubCommand = {
             ctx.options.get("term", false)?.value?.toString() :
             ctx.content.split(/\s+/g).slice(4).join(" ");
         // Playlist Locating
-        let playlist = yt.getPlaylist(ctx.guild.id)
+        let playlist = yt.Playlist.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Action Execution
-        let items: RatedSong[] = playlist.playlistdata.items
+        let items: (SongReference & RatedSong)[] = playlist.getSongs.map(getFullSong).filter((r): r is SongReference & RatedSong => !!r)
         let page = 0;
         if (arg1 && arg2) {
             let term = arg2.toLowerCase() ?? "";
             switch (arg1) {
                 case 'title':
-                    items = items.filter((i: RatedSong) => i.title.toLowerCase().includes(term));
+                    items = items.filter((i: Song) => i.title.toLowerCase().includes(term));
                     break;
                 case 'artist':
-                    items = items.filter((i: RatedSong) => i.artist.toLowerCase().includes(term));
+                    items = items.filter((i: Song) => i.artist.toLowerCase().includes(term));
                     break;
                 case 'genre':
-                    items = items.filter((i: RatedSong) => i.genre.toString().toLowerCase() === term);
+                    items = items.filter((i: Song) => i.genre.toString().toLowerCase() === term);
                     break;
                 case 'sort':
                     switch (term) {
@@ -258,187 +261,58 @@ const List: SubCommand = {
         })
     },
 }
-const Edit: SubCommand = {
+const Tag: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
-    name: "edit",
-    description: "Modifies music metadata in your playlist.",
+    name: "tag",
+    description: "Modifies music tags",
     options: [{
         name: "id",
         description: "Song ID to edit",
         type: ApplicationCommandOptionType.String,
         required: true,
         autocomplete: true,
+    }, {
+        name: "tags",
+        description: "Tags to set",
+        type: ApplicationCommandOptionType.String,
+        required: true
     }],
     public: true,
 
     run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let id: string | undefined, field: string | undefined, value: string | undefined;
-        if (ctx instanceof CommandInteraction) {
-            id = ctx.options.get("id", true).value?.toString()
-            field = ctx.options.get("field", false)?.value?.toString()?.toLowerCase()
-            value = ctx.options.get("value", false)?.value?.toString()
-        } else {
-            let args: string[] = ctx.content.split(/\s+/g).slice(3);
-            id = args[0]
-            field = args[1]?.toLowerCase()
-            value = args.slice(2)?.join(" ")
-        }
-        if (!id || (field && !value)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        let id: string | undefined = ctx instanceof CommandInteraction ?
+            ctx.options.get("id", true).value?.toString() :
+            ctx.content.split(/\s+/g)[3]
+        if (!id) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating (ish)
-        const playlist = yt.getPlaylist(ctx.guild.id)
+        const playlist = yt.Playlist.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
-        let songindex: number = playlist.playlistdata.items.findIndex(i => i.id === id)
-        if (songindex < 0) return error(ctx, ERRORS.NO_SONG);
-        const song: RatedSong = playlist.playlistdata.items[songindex]
-        // Interaction Standardization
-        let rmsg: Message | undefined;
-        if (ctx instanceof Message) {
-            rmsg = await reply(ctx, {
-                "content": "Click this button to continue:",
-                "components": [{
-                    type: ComponentType.ActionRow,
-                    components: [{
-                        "style": ButtonStyle.Success,
-                        "label": `Continue`,
-                        "customId": `continue`,
-                        "disabled": false,
-                        "type": ComponentType.Button,
-                    } as MessageActionRowComponentData]
-                }]
-            }, true)
-        }
-        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: ComponentType.Button,
-            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
-            time: 10*1000
-        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx) return;
-        if (rmsg?.deletable) await rmsg.delete()
+        const song: RatedSong | undefined = playlist.getSongs.find(rs => rs.id === id)
+        if (!song) return error(ctx, ERRORS.NO_SONG);
         // Action Execution
-        await rctx.showModal({
-            customId: `c${commandname}editedit`,
-            title: `Song Metadata Editor [${song.id}]`,
-            components: [{
-                type: ComponentType.ActionRow,
-                components: [{
-                    customId: `meditedittitle`,
-                    label: "Song Title:",
-                    maxLength: 64,
-                    placeholder: song.title,
-                    required: false,
-                    style: TextInputStyle.Short,
-                    type: ComponentType.TextInput
-                } as ModalActionRowComponentData]
-            } as ActionRow<TextInputComponent>, {
-                type: ComponentType.ActionRow,
-                components: [{
-                    customId: `mediteditartist`,
-                    label: "Song Artist:",
-                    maxLength: 32,
-                    placeholder: song.artist,
-                    required: false,
-                    style: TextInputStyle.Short,
-                    type: ComponentType.TextInput
-                } as ModalActionRowComponentData]
-            } as ActionRow<ModalActionRowComponent>, {
-                type: ComponentType.ActionRow,
-                components: [{
-                    customId: `mediteditgenre`,
-                    label: "Song Genre:",
-                    maxLength: 16,
-                    placeholder: song.genre.toString(),
-                    required: false,
-                    style: TextInputStyle.Short,
-                    type: ComponentType.TextInput
-                } as ModalActionRowComponentData]
-            } as ActionRow<ModalActionRowComponent>, {
-                type: ComponentType.ActionRow,
-                components: [{
-                    customId: `meditedittags`,
-                    label: "Tags:",
-                    maxLength: 128,
-                    placeholder: song.tags?.join(", ") || "None",
-                    required: false,
-                    style: TextInputStyle.Paragraph,
-                    type: ComponentType.TextInput
-                } as ModalActionRowComponentData]
-            } as ActionRow<ModalActionRowComponent>]
-        } as ModalComponentData)
-        // Interaction Collection
-        const interaction: ModalSubmitInteraction | void = await rctx.awaitModalSubmit({ time: 5 * 60 * 1000 }).catch((e: Error) => {error(rctx,e)})
-        if (!interaction) return;
-        song.title = interaction.fields.getTextInputValue(`meditedittitle`) || song.title
-        song.artist = interaction.fields.getTextInputValue(`mediteditartist`) || song.artist
-        let genre = interaction.fields.getTextInputValue(`mediteditgenre`)
-        if (genre) {
-            if (!Object.keys(Genre).includes(genre)) return error(ctx, new Error(`Couldn't identify genre ${genre}!`))
-            song.genre = <Genre>(<any>Genre)[genre];
-        }
-        song.tags = interaction.fields.getTextInputValue(`meditedittags`)?.split(",")?.map(i => i.trim()) || song.tags
-
-        playlist.editSong(song);
-        await playlist.save()
-        await reply(interaction, {
-            ephemeral: true,
-            "content": "Saved!",
-            "embeds": [{
-                "title": "Song ID: " + song.id,
-                "description": "Song Metadata",
-                "color": 0xff0000,
-                "fields": [
-                    {
-                        "name": `Title:`,
-                        "value": song.title || "-",
-                        "inline": true
-                    } as EmbedField,
-                    {
-                        "name": `Artist:`,
-                        "value": song.artist || "-",
-                        "inline": true
-                    } as EmbedField,
-                    {
-                        "name": `Genre:`,
-                        "value": song.genre?.toString() || "-",
-                        "inline": true
-                    } as EmbedField,
-                    {
-                        "name": `Score:`,
-                        "value": song.score?.toString() || "-",
-                        "inline": true
-                    } as EmbedField,
-                    {
-                        "name": `Tags:`,
-                        "value": song.tags?.join(", ") || "None",
-                        inline: false
-                    } as EmbedField
-                ],
-                "footer": {
-                    "text": `PlaylistDJ - Metadata Viewer`,
-                    "icon_url": client.user?.avatarURL() ?? ""
-                },
-                "url": song.url
-            }]
-        })
+        // TODO: This
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] | Error {
         if (!ctx.guild) return new Error(ERRORS.NO_GUILD);
-        const playlist = yt.getPlaylist(ctx.guild.id);
-        if (!playlist?.playlistdata.items || playlist.playlistdata.items.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
+        const playlist = yt.Playlist.getPlaylist(ctx.guild.id);
+        if (!playlist || playlist.getSongs?.length < 1) return new Error(ERRORS.NO_PLAYLIST);
         const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0) return []; // too many matches, don't bother
-        return Object.values(playlist.playlistdata.items)
-            .filter(k=>k.id.startsWith(focused))
-            .map(o=>{
-                return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
-            })
+        return Object.values(playlist.getSongs)
+        .map(yt.Playlist.getSong)
+        .filter((sr: SongReference | null): sr is SongReference => !!sr)
+        .filter((sr: SongReference)=>sr.id.startsWith(focused) || sr.title.toLowerCase().startsWith(focused.toLowerCase()))
+        .map((s: Song) => {
+            return {name:s.title,value:s.id} as ApplicationCommandOptionChoiceData
+        })
     }
 }
 
 const SubCommands: SubCommand[] = [
-    Create, Delete, Add, Remove, List, Edit
+    Create, Delete, Add, Remove, List, Tag
 ]
 export const Playlist: Command = {
     name: commandname,
@@ -465,27 +339,24 @@ export const Playlist: Command = {
     }
 }
 
-function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: BaseInteraction, items: RatedSong[], page: number): T {
+function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: BaseInteraction, items: Song[], page: number): T {
     if (!ctx.guild) return { content: "Couldn't find guild!" } as T;
     return {
         "content": "_",
         "components": [{
-            "type": ComponentType.ActionRow, "components": [
-                {
-                    "style": ButtonStyle.Primary,
-                    "label": `Prev Page`,
-                    "customId": `c${commandname}listpagedown`,
-                    "disabled": page <= 0,
-                    "type": ComponentType.Button
-                } as ActionRowComponent,
-                {
-                    "style": ButtonStyle.Primary,
-                    "label": `Next Page`,
-                    "customId": `c${commandname}listpageup`,
-                    "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
-                    "type": ComponentType.Button
-                } as ActionRowComponent
-            ]
+            "type": ComponentType.ActionRow, "components": [{
+                "style": ButtonStyle.Primary,
+                "label": `Prev Page`,
+                "customId": `c${commandname}listpagedown`,
+                "disabled": page <= 0,
+                "type": ComponentType.Button
+            }, {
+                "style": ButtonStyle.Primary,
+                "label": `Next Page`,
+                "customId": `c${commandname}listpageup`,
+                "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
+                "type": ComponentType.Button
+            }]
         } as ActionRow<ActionRowComponent>],
         "embeds": [{
             "type": "rich",

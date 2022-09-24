@@ -1,8 +1,8 @@
-import { AudioPlayer, AudioPlayerError, AudioPlayerStatus, AudioResource, createAudioResource, demuxProbe, getVoiceConnection, ProbeInfo, StreamType, VoiceConnection } from "@discordjs/voice"
+import { AudioPlayer, AudioPlayerError, AudioPlayerStatus, createAudioResource, getVoiceConnection, StreamType, VoiceConnection } from "@discordjs/voice"
 import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction, Message } from "discord.js"
 import { createReadStream } from "fs"
-import { Playlist } from "src/youtube/playlist"
 import nextSong from "../../recommendation/interface"
+import { Playlist } from "../../youtube/playlist"
 import { RatedSong, Song, SongReference } from "../../youtube/util"
 import { error, ERRORS, getPlayer } from "../util"
 import { Command } from "./Commands"
@@ -36,10 +36,11 @@ export const Play: Command = {
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("id",false)?.value?.toString() :
             ctx.content.split(/\s+/g)[2];
-        let start: SongReference | undefined = playlist.find(s=>s.id===arg1);
+        let rs: RatedSong | undefined = playlist.find(s=>s.id===arg1);
+        let start: SongReference | null = rs ? Playlist.getSong(rs) : null;
         if (!start) {
             if (arg1) await error(ctx, ERRORS.NO_SONG);
-            start = await nextSong(ctx.guild.id);
+            start = await nextSong(ctx.guild.id)
         }
         // Condition Validation
         let player: AudioPlayer = getPlayer(ctx.guild.id)
@@ -48,8 +49,8 @@ export const Play: Command = {
         if (!connection?.subscribe(player)) return error(ctx, ERRORS.NO_CONNECTION)
         // Action Execution
         if (ctx instanceof CommandInteraction && !ctx.deferred && !ctx.replied) ctx.reply({content:"Began Playing!",ephemeral:true})
-        play(player, start)
-        history[guildid] = [start.id];
+        history[guildid] = [];
+        play(player, start, guildid)
 
         player.on(AudioPlayerStatus.Idle, async () => {
             play(player, await nextSong(guildid), guildid);
@@ -61,20 +62,23 @@ export const Play: Command = {
     
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] | Error {
         if (!ctx.guild) return new Error(ERRORS.NO_GUILD);
-        const playlist = getPlaylist(ctx.guild.id);
-        if (!playlist?.playlistdata.items || playlist.playlistdata.items.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
+        const playlist = Playlist.getPlaylist(ctx.guild.id);
+        if (!playlist?.getSongs || playlist.getSongs.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
         const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0) return []; // too many matches, don't bother
-        return Object.values(playlist.playlistdata.items)
-            .filter(k=>k.id.startsWith(focused) || k.title.toLowerCase().startsWith(focused.toLowerCase()))
-            .map(o => {
-                return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
+        return Object.values(playlist.getSongs)
+            .map(Playlist.getSong)
+            .filter((sr: SongReference | null): sr is SongReference => !!sr)
+            .filter((sr: SongReference)=>sr.id.startsWith(focused) || sr.title.toLowerCase().startsWith(focused.toLowerCase()))
+            .map((s: Song) => {
+                return {name:s.title,value:s.id} as ApplicationCommandOptionChoiceData
             })
     }
 }
 
-function play(player: AudioPlayer, song: SongReference, guildid?: string) {
+function play(player: AudioPlayer, song: SongReference | null, guildid: string) {
     // TODO: check if song is playable
-    if (guildid && history[guildid]) history[guildid].unshift(song.id);
+    if (!song) return leave(guildid);
+    if (guildid && history[guildid] !== undefined) history[guildid].unshift(song.id);
     player.play(createAudioResource<Song>(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))
 }

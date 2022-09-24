@@ -30,7 +30,7 @@ const Amend: SubCommand = {
             ctx.content.split(/\s+/g)[3]
         if (!id) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating (ish)
-        const song: SongReference | null = Playlist.getSong(id)
+        const song: SongReference | null = Playlist.getSong(id);
         if (!song) return error(ctx, ERRORS.NO_SONG);
         // Interaction Standardization
         let rmsg: Message | undefined;
@@ -45,7 +45,7 @@ const Amend: SubCommand = {
                         "customId": `continue`,
                         "disabled": false,
                         "type": ComponentType.Button,
-                    } as MessageActionRowComponent]
+                    }]
                 }]
             }, true)
         }
@@ -117,23 +117,19 @@ const Amend: SubCommand = {
                     "title": "Song ID: " + song.id,
                     "description": "Song Metadata",
                     "color": 0xff0000,
-                    "fields": [
-                        {
-                            "name": `Title:`,
-                            "value": song.title,
-                            "inline": true
-                        } as EmbedField,
-                        {
-                            "name": `Artist:`,
-                            "value": song.artist,
-                            "inline": true
-                        } as EmbedField,
-                        {
-                            "name": `Genre:`,
-                            "value": song.genre.toString(),
-                            "inline": true
-                        } as EmbedField
-                    ],
+                    "fields": [{
+                        "name": `Title:`,
+                        "value": song.title,
+                        "inline": true
+                    }, {
+                        "name": `Artist:`,
+                        "value": song.artist,
+                        "inline": true
+                    }, {
+                        "name": `Genre:`,
+                        "value": song.genre.toString(),
+                        "inline": true
+                    }],
                     "footer": {
                         "text": `PlaylistDJ - Global Metadata Viewer`,
                         "icon_url": client.user?.avatarURL() ?? ""
@@ -149,7 +145,7 @@ const Amend: SubCommand = {
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
         const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0) return []; // too many matches, don't bother
-        return Object.values(Playlist.)
+        return Object.values(Playlist.getSong)
             .filter(k=>k.id.startsWith(focused))
             .map(o=>{
                 return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
@@ -260,12 +256,9 @@ const Clean: SubCommand = {
 
     run: (ctx: CommandInteraction | Message) => {
         Playlist.clean()
-            // .on('progress', async (message: string) => {
-            //     // await editReply(ctx, message) // 
-            // }) Interaction already responded or something
-            .once('finish', (files: string[], rmfiles: string[]) => {
-                reply(ctx, `Clean Complete! Deleted ${rmfiles.length} files, ${files.length} files remaining!`)
-            }).on('error', async (e: Error) => { error(ctx, e) })
+        .then((rmfiles: string[]) =>
+            reply(ctx, `Clean Complete! [Deleted ${rmfiles.length} files]`)
+        ).catch((e: Error) => error(ctx, e))
     }
 }
 const Destroy: SubCommand = {
@@ -482,7 +475,7 @@ const Download: SubCommand = {
                         }).on('warn', (cur: number, total: number, id: string, error: Error) => {
                             editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
                         }).on('finish', (pl: Playlist | undefined) => {
-                            editReply(interaction, `Success! Your playlist now has ${pl ? pl.playlistdata.items.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
+                            editReply(interaction, `Success! Your playlist now has ${pl ? pl.getSongs.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
                         }).on('error', (e: Error) => {
                             editReply(interaction, "Error: " + e.message);
                         })
@@ -551,7 +544,7 @@ const Index: SubCommand = {
         if (!rctx) return;
         if (rmsg?.deletable) await rmsg.delete()
         // Action Execution
-        let items: Song[] = Object.values(Playlist.INDEX)
+        let items: Song[] = Object.values(Playlist.getSong)
         let page = 0;
         if (arg1 && arg2) {
             let term = arg2.toLowerCase() ?? "";

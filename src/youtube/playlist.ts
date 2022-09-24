@@ -1,5 +1,5 @@
-import fs from "fs"
-import { AUDIOFORMAT, RatedSong, SongReference } from "./util"
+import fs from "fs";
+import { AUDIOFORMAT, RatedSong, SongReference } from "./util";
 
 export class Playlist { // Represents a playlist stored on the filesystem
     private static index: {[key: string]: SongReference};
@@ -14,8 +14,15 @@ export class Playlist { // Represents a playlist stored on the filesystem
         );
     }
     public static async save() {return fs.promises.writeFile('./resources/music.json',JSON.stringify(Playlist.index))}
-    public static getPlaylist(id: string): Playlist | null {return Playlist.playlists[id]}
-    public static getSong(id: string): SongReference | null {return Playlist.index[id]}
+    public static getPlaylist(id: undefined): typeof Playlist.playlists;
+    public static getPlaylist(id: string): Playlist | null;
+    public static getPlaylist(id: string | undefined): Playlist | typeof Playlist.playlists | null {return id ? Playlist.playlists[id] : Playlist.playlists}
+    public static getSong(arg1: undefined): typeof Playlist.index;
+    public static getSong(arg1: string | RatedSong): SongReference | null;
+    public static getSong(arg1: RatedSong | string | undefined): SongReference | typeof Playlist.index | null {
+        return arg1 ? Playlist.index[typeof arg1 === "string" ? arg1 : arg1.id] : Playlist.index
+    }
+    public static addSong(sr: SongReference) {Playlist.index[sr.id] = sr;}
 
     private guildid: string;
     private songs: RatedSong[];
@@ -23,7 +30,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
         const file: string = "./resources/playlists/"+gid;
         return new Playlist(gid, fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, {encoding: "utf8"})) as RatedSong[] : []);
     }
-    private constructor(guildid: string, songs: RatedSong[])  {
+    public constructor(guildid: string, songs: RatedSong[]) { // this should be private.
         this.guildid = guildid;
         let eids: Set<string> = new Set<string>();
         this.songs = songs.filter(rs=>{
@@ -34,6 +41,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
     public async save() {return fs.promises.writeFile(`./resources/playlists/${this.guildid}.json`,JSON.stringify(this.songs))}
     get getSongs() {return this.songs;}
+    get gid() {return this.guildid;}
 
     public vote(songid: string, voteup: boolean) {
         let index: number = this.songs.findIndex(i => i.id === songid)
@@ -60,7 +68,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
 
     public addSongs(ids: string[]): RatedSong[] {
         let added: RatedSong[] = ids
-            .filter(id=>Playlist.index[id]&&this.songs.every(s=>s.id!==id)) // song is in database & not in playlist
+            .filter(id=>Playlist.index[id]&&this.songs.every(s=>s.id!==id)) // song in database & not in playlist
             .map(id=>{return {score:0,...Playlist.index[id]}}) // turn into ratedsongs
         this.songs = this.songs.concat(added);
         return added;
