@@ -1,5 +1,5 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice"
-import { ButtonInteraction, CacheType, CommandInteraction, InteractionReplyOptions, InteractionResponse, Message, ModalSubmitInteraction, ReplyMessageOptions, WebhookEditMessageOptions } from "discord.js"
+import { BaseMessageOptions, ButtonInteraction, CacheType, CommandInteraction, InteractionReplyOptions, InteractionResponse, Message, MessageEditOptions, MessageReplyOptions, ModalSubmitInteraction, WebhookEditMessageOptions } from "discord.js"
 import { WHITELIST } from "../index"
 import { Song } from "../youtube/util"
 
@@ -37,10 +37,10 @@ export enum ERRORS {
     NO_GUILD = 'Couldn\'t find guild!',
 }
 
-export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean> | InteractionResponse<boolean>>
-export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: false): Promise<Message<boolean> | InteractionResponse<boolean>>
-export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: true): Promise<Message<boolean>>
-export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<ReplyMessageOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: boolean = false): Promise<Message<boolean> | InteractionResponse<boolean>> {
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean> | InteractionResponse<boolean>>
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: false): Promise<Message<boolean> | InteractionResponse<boolean>>
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: true): Promise<Message<boolean>>
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: boolean = false): Promise<Message<boolean> | InteractionResponse<boolean>> {
     if (typeof content === "string") content = { content }
     if (!('ephemeral' in content)) content = { ...content, ephemeral: true }
     if (ctx instanceof Message) return ctx.reply(content)
@@ -48,7 +48,7 @@ export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitI
     return ctx.reply(content).then(async _=>fetchReply ? (await ctx.fetchReply()) : _)
 }
 
-export function editReply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: WebhookEditMessageOptions | string): Promise<Message<boolean>> {
+export function editReply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: BaseMessageOptions | string): Promise<Message<boolean>> {
     if (typeof content === "string") content = { content }
     if (ctx instanceof Message) {
         let m: Message | null = [...ctx.channel.messages.cache.values()].find(msg => msg.editable &&

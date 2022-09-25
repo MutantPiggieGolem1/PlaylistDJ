@@ -107,16 +107,15 @@ export class WebPlaylist {
                     if (fs.existsSync(file)) fs.rmSync(file);
                     let index = items.findIndex(sr=>sr.file===file);
                     if (index >= 0) items.splice(index,1)
-                    throw e; // as to retain the rejected status
+                    throw e; // to retain the rejected status
                 })
             })).then(async (completion: Array<PromiseSettledResult<void>>) => {
                 if (completion.every(r=>r.status==="rejected")) throw new Error("All downloads failed.");
                 items.forEach(rs=>Playlist.getSong(rs.id) ? null : Playlist.addSong(rs as SongReference))
                 await Playlist.save();
-                let playlist: Playlist = new Playlist(guildid, items.map(sr=>{return {id: sr.id, tags: [], score: 0}}));
-                await playlist.save();
-                return playlist;
-            }).then((playlist: Playlist)=>{
+                Playlist.getPlaylist(guildid)?.addSongs(items.map(sr=>sr.id))
+                return Playlist.getPlaylist(guildid);
+            }).then((playlist: Playlist | null)=>{
                 ee.emit("finish",playlist)
             }).catch((e: Error)=>{
                 ee.emit("error",e)

@@ -1,9 +1,9 @@
-import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, Embed, EmbedField, InteractionUpdateOptions, Message, MessageActionRowComponentData, ReplyMessageOptions } from "discord.js"
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedField, EmbedType, Message, MessageActionRowComponentData } from "discord.js"
 import { client } from "../../index"
 import * as yt from "../../youtube/playlist"
 import { getFullSong, RatedSong, Song, SongReference } from "../../youtube/util"
 import { WebPlaylist } from "../../youtube/webplaylist"
-import { error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply, truncateString } from "../util"
+import { editReply, error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply, truncateString } from "../util"
 import { Command, SubCommand } from "./Commands"
 
 const commandname = "playlist"
@@ -21,7 +21,9 @@ const Create: SubCommand = {
     public: true,
 
     run: (ctx: CommandInteraction | Message) => {
+        // Condition Validation
         if (!ctx.guild) return;
+        if (yt.Playlist.getPlaylist(ctx.guild.id)) return error(ctx, new Error("This guild already has a playlist!"));
         // Argument Processing
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("url", true).value?.toString() :
@@ -30,12 +32,10 @@ const Create: SubCommand = {
         // Action Execution
         const guildid = ctx.guild.id;
         if (ctx instanceof CommandInteraction) ctx.deferReply({ephemeral: true});
-        WebPlaylist.fromUrl(arg1).then((webpl: WebPlaylist) => 
-            webpl.getIds()
-        ).then(ids => 
+        WebPlaylist.fromUrl(arg1).then((webpl: WebPlaylist) => webpl.getIds()).then(ids => 
             yt.Playlist.create(guildid, ids)
         ).then((playlist: yt.Playlist) => {
-            reply(ctx, `Created a new playlist with ${playlist.getSongs.length} song(s)!`)
+            editReply(ctx, `Created a new playlist with ${playlist.getSongs.length} song(s)!`)
         }).catch((e: Error) => { error(ctx, e) })
     }
 }
@@ -240,7 +240,7 @@ const List: SubCommand = {
         if (!rctx) return;
         if (rmsg?.deletable) await rmsg.delete()
         // Message
-        const msg = await reply(rctx, listMessage<ReplyMessageOptions>(rctx, items, page))
+        const msg = await reply(rctx, listMessage(rctx, items, page))
         // Interaction Collection
         msg.createMessageComponentCollector({
             componentType: ComponentType.Button,
@@ -255,7 +255,7 @@ const List: SubCommand = {
                     page--;
                     break;
             }
-            interaction.update(listMessage<InteractionUpdateOptions>(rctx, items, page))
+            interaction.update(listMessage(rctx, items, page))
         }).on('end', (_,reason: string) => {
             if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
         })
@@ -339,8 +339,8 @@ export const Playlist: Command = {
     }
 }
 
-function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(ctx: BaseInteraction, items: Song[], page: number): T {
-    if (!ctx.guild) return { content: "Couldn't find guild!" } as T;
+function listMessage(ctx: BaseInteraction, items: Song[], page: number) {
+    if (!ctx.guild) return { content: "Couldn't find guild!" };
     return {
         "content": "_",
         "components": [{
@@ -350,16 +350,16 @@ function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(c
                 "customId": `c${commandname}listpagedown`,
                 "disabled": page <= 0,
                 "type": ComponentType.Button
-            }, {
+            } as ButtonComponentData, {
                 "style": ButtonStyle.Primary,
                 "label": `Next Page`,
                 "customId": `c${commandname}listpageup`,
                 "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
                 "type": ComponentType.Button
-            }]
-        } as ActionRow<ActionRowComponent>],
+            } as ButtonComponentData]
+        }],
         "embeds": [{
-            "type": "rich",
+            "type": EmbedType.Rich,
             "title": `All Results (${items.length})`,
             "description": `${ctx.guild.name.length > 20 ? ctx.guild.nameAcronym : ctx.guild.name} Server Playlist`,
             "color": 0xff0000,
@@ -368,12 +368,12 @@ function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(c
                     "name": s.title,
                     "value": s.id,
                     "inline": true,
-                } as EmbedField
+                }
             }) || { "name": "No Results", "value": "Out Of Bounds", "inline": false } as EmbedField,
             "footer": {
                 "text": `PlaylistDJ - Song List - Page ${page + 1}/${Math.ceil(items.length / ITEMS_PER_PAGE)}`,
                 "icon_url": client.user?.avatarURL() ?? ""
             }
-        } as Partial<Embed>]
-    } as T
+        }]
+    }
 }

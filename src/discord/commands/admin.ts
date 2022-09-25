@@ -1,4 +1,4 @@
-import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, Embed, EmbedField, InteractionUpdateOptions, Message, MessageActionRowComponent, MessageOptions, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, ReplyMessageOptions, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
+import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, InteractionUpdateOptions, Message, MessageActionRowComponent, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
 import { client, WHITELIST } from "../../index"
 import { getAllCsvs, getCsv } from "../../recommendation/interface"
 import { Playlist } from "../../youtube/playlist"
@@ -143,13 +143,11 @@ const Amend: SubCommand = {
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
-        const focused = ctx.options.getFocused().toString();
+        const focused = ctx.options.getFocused();
         if (focused.length <= 0) return []; // too many matches, don't bother
-        return Object.values(Playlist.getSong)
+        return Object.values(Playlist.getSong())
             .filter(k=>k.id.startsWith(focused))
-            .map(o=>{
-                return {name:o.title,value:o.id} as ApplicationCommandOptionChoiceData
-            })
+            .map(o=>{return {name:o.title,value:o.id}})
     }
 }
 const Auth: SubCommandGroup = {
@@ -207,7 +205,7 @@ const Auth: SubCommandGroup = {
                 if (!user) return error(ctx, ERRORS.NO_USER);
                 if (!WHITELIST.has(user.id)) {
                     WHITELIST.add(user.id)
-                    editReply(ctx, `Added ${user.tag} to the whitelist.`)
+                    reply(ctx, `Added ${user.tag} to the whitelist.`)
                 } else {
                     error(ctx, new Error(`${user.tag} was already on the whitelist.`))
                 }
@@ -216,22 +214,22 @@ const Auth: SubCommandGroup = {
                 if (!user) return error(ctx, ERRORS.NO_USER);
                 if (WHITELIST.has(user.id)) {
                     WHITELIST.delete(user.id)
-                    editReply(ctx, `Removed ${user.tag} from the whitelist.`)
+                    reply(ctx, `Removed ${user.tag} from the whitelist.`)
                 } else {
                     error(ctx, new Error(`${user.tag} wasn't on the whitelist.`))
                 }
                 break
             case 'list':
-                editReply(ctx, {
+                reply(ctx, {
                     "content": `_`,
                     "embeds": [
                         {
-                            "type": "rich",
+                            "type": EmbedType.Rich,
                             "title": `Bot Administrators`,
                             "description": "",
                             "color": 0x123456,
                             "fields": [...WHITELIST.keys()].map(id => {return {
-                                "name": client.users.resolve(id)?.tag,
+                                "name": client.users.resolve(id)?.tag ?? id,
                                 "value": id
                             }}),
                             "footer": {
@@ -240,8 +238,8 @@ const Auth: SubCommandGroup = {
                             }
                         }
                     ]
-                } as MessageOptions)
-                break
+                })
+                break;
             default:
                 error(ctx, ERRORS.INVALID_ARGUMENTS);
                 break
@@ -365,7 +363,7 @@ const Download: SubCommand = {
             ],
             "embeds": [
                 {
-                    type: "rich",
+                    type: EmbedType.Rich,
                     title: `${webpl.ytplaylist.title} - ${webpl.ytplaylist.estimatedItemCount} Items`,
                     description: webpl.ytplaylist.description,
                     color: 0xFF0000,
@@ -384,7 +382,7 @@ const Download: SubCommand = {
                         "icon_url": client.user?.avatarURL() ?? ""
                     },
                     "url": webpl.ytplaylist.url,
-                } as Partial<Embed>
+                }
             ]
         } as WebhookEditMessageOptions).then(msg => {
             msg.createMessageComponentCollector<ComponentType.Button>({
@@ -438,7 +436,7 @@ const Download: SubCommand = {
                                 ],
                                 "embeds": [
                                     {
-                                        type: "rich",
+                                        type: EmbedType.Rich,
                                         title: video.title,
                                         description: "",
                                         color: 0xFF0000,
@@ -456,7 +454,7 @@ const Download: SubCommand = {
                                             "icon_url": client.user?.avatarURL() ?? ""
                                         },
                                         "url": video.url,
-                                    } as Partial<Embed>
+                                    }
                                 ]
                             } as InteractionUpdateOptions)
                             break;
@@ -474,7 +472,7 @@ const Download: SubCommand = {
                             editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
                         }).on('warn', (cur: number, total: number, id: string, error: Error) => {
                             editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
-                        }).on('finish', (pl: Playlist | undefined) => {
+                        }).on('finish', (pl: Playlist | null | undefined) => {
                             editReply(interaction, `Success! Your playlist now has ${pl ? pl.getSongs.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
                         }).on('error', (e: Error) => {
                             editReply(interaction, "Error: " + e.message);
@@ -544,10 +542,10 @@ const Index: SubCommand = {
         if (!rctx) return;
         if (rmsg?.deletable) await rmsg.delete()
         // Action Execution
-        let items: Song[] = Object.values(Playlist.getSong)
+        let items: Song[] = Object.values(Playlist.getSong())
         let page = 0;
         if (arg1 && arg2) {
-            let term = arg2.toLowerCase() ?? "";
+            const term = arg2.toLowerCase() ?? "";
             switch (arg1) {
                 case 'title':
                     items = items.filter((i: Song) => i.title.toLowerCase().includes(term));
@@ -560,7 +558,8 @@ const Index: SubCommand = {
                     break;
             }
         }
-        const msg: Message = await reply(rctx, listMessage<ReplyMessageOptions>(items, page), true)
+        
+        const msg = await rctx.reply({...listMessage(items, page), ephemeral: true});
         // Interaction Collection
         msg.createMessageComponentCollector<ComponentType.Button>({
             filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
@@ -576,7 +575,7 @@ const Index: SubCommand = {
                 default:
                     interaction.update({components:[]}); return;
             }
-            interaction.update(listMessage<InteractionUpdateOptions>(items, page))
+            interaction.update(listMessage(items, page))
         }).on('end', (_,reason: string) => {
             if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
         })
@@ -592,26 +591,32 @@ const GrabCSV: SubCommand = {
         description: "Guild ID",
         required: true,
         autocomplete: true
+    }, {
+        type: ApplicationCommandOptionType.Boolean,
+        name: "public",
+        description: "Allow anyone to download this file?",
+        required: false
     }],
     public: false,
 
     run: (ctx: CommandInteraction | Message) => {
         if (ctx instanceof Message) return error(ctx, new Error("This command has text disabled."));
         const gid: string | undefined = ctx.options.get("id", true).value?.toString();
+        const ephemeral: boolean = !!(ctx.options.get("public", false)?.value ?? true);
         if (!gid) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         const file: Buffer | null = getCsv(gid);
         if (!file) return error(ctx, new Error("Couldn't find data!"));
         ctx.reply({
             content: "-",
             files: [new AttachmentBuilder(file, {name: gid+".csv",description:`CSV Data for '${client.guilds.cache.get(gid)?.name}'`})],
-            ephemeral: true
+            ephemeral
         })
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
         const focused = ctx.options.getFocused().toString();
         if (!focused) return [];
-        return getAllCsvs()?.filter(s => s.startsWith(focused)).map(s => {return {name: s, value: s} as ApplicationCommandOptionChoiceData}) ?? [];
+        return getAllCsvs()?.filter(s => s.startsWith(focused)).map(s => {return {name: s, value: s}}) ?? [];
     }
 }
 
@@ -643,29 +648,27 @@ export const Admin: Command = {
     }
 }
 
-function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(items: Song[], page: number): T {
+function listMessage(items: Song[], page: number) {
     return {
         "content": "_",
         "components": [{
-            "type": ComponentType.ActionRow, "components": [
-                {
-                    "style": ButtonStyle.Primary,
-                    "label": `Prev Page`,
-                    "customId": `c${commandname}indexpagedown`,
-                    "disabled": page <= 0,
-                    "type": ComponentType.Button
-                } as ActionRowComponent,
-                {
-                    "style": ButtonStyle.Primary,
-                    "label": `Next Page`,
-                    "customId": `c${commandname}indexpageup`,
-                    "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
-                    "type": ComponentType.Button
-                } as ActionRowComponent,
-            ]
-        } as ActionRow<ActionRowComponent>],
+            type: ComponentType.ActionRow,
+            components: [{
+                "style": ButtonStyle.Primary,
+                "label": `Prev Page`,
+                "customId": `c${commandname}indexpagedown`,
+                "disabled": page <= 0,
+                type: ComponentType.Button
+            } as ButtonComponentData, {
+                "style": ButtonStyle.Primary,
+                "label": `Next Page`,
+                "customId": `c${commandname}indexpageup`,
+                "disabled": page >= Math.floor(items.length / ITEMS_PER_PAGE),
+                type: ComponentType.Button
+            } as ButtonComponentData]
+        }],
         "embeds": [{
-            "type": "rich",
+            type: EmbedType.Rich,
             "title": `All Results (${items.length})`,
             "description": "Global Music Index",
             "color": 0xff0000,
@@ -674,12 +677,12 @@ function listMessage<T extends ReplyMessageOptions | InteractionUpdateOptions>(i
                     "name": s.title,
                     "value": s.id,
                     "inline": true,
-                } as EmbedField
-            }) || { "name": "No Results", "value": "Out Of Bounds", "inline": false } as EmbedField,
+                }
+            }) || { "name": "No Results", "value": "Out Of Bounds", "inline": false },
             "footer": {
                 "text": `PlaylistDJ - Song Index - Page ${page + 1}/${Math.ceil(items.length / ITEMS_PER_PAGE)}`,
                 "icon_url": client.user?.avatarURL() ?? ""
             }
-        } as Partial<Embed>]
-    } as T
+        }]
+    }
 }

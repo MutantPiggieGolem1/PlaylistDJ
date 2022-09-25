@@ -1,4 +1,4 @@
-import { CommandInteraction, Embed, Message, MessageOptions } from "discord.js"
+import { CommandInteraction, EmbedType, Message } from "discord.js"
 import { client } from "../../index"
 import { Song } from "../../youtube/util"
 import { error, ERRORS, getPlayer, getPlaying, reply } from "../util"
@@ -16,7 +16,7 @@ export const Playing: Command = {
         let song: Song | undefined = getPlaying(getPlayer(ctx.guild.id,false))
         if (!song) return error(ctx,ERRORS.NO_SONG);
         reply(ctx, {embeds:[{
-            type: "rich",
+            type: EmbedType.Rich,
             title: "Now Playing:",
             description: `${song.title} - ${song.artist}\n\`${song.id}\``,
             color: 0xff0000,
@@ -28,6 +28,6 @@ export const Playing: Command = {
                 text: `PlaylistDJ - Playing Music`,
                 icon_url: client.user?.avatarURL() ?? ""
             }
-        } as Partial<Embed>]} as MessageOptions)
+        }]})
     }
 }

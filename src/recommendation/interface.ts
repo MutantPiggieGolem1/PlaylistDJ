@@ -27,7 +27,9 @@ function run(args: {toString:()=>string}[]): Promise<string> {
 }
 
 export function saveAllPlaylists() {
-    Object.values(Playlist.getPlaylist).map(genCsv)
+    const pls: Playlist[] = Object.values(Playlist.getPlaylist);
+    pls.forEach(pl=>pl.save())
+    pls.forEach(genCsv);
 }
 
 let csvCache: string[] | null = null;

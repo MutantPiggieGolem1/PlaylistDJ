@@ -3,17 +3,19 @@ import { scheduleJob } from "node-schedule"
 import { Command, Commands } from "./discord/commands/Commands"
 import { isWhitelisted } from "./discord/util"
 import { saveAllPlaylists } from "./recommendation/interface"
+import { Playlist } from "./youtube/playlist"
 export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
 const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
-function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!\no7 Techno`})}
+function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!`})}
 
 client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
     setActivity();
+    await Playlist.init();
     console.info(`Bot Ready! [${client.user.tag}]`);
     
     scheduleJob({hour: "00", minute: "00"}, saveAllPlaylists);
