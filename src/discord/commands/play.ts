@@ -77,7 +77,6 @@ export const Play: Command = {
 }
 
 function play(player: AudioPlayer, song: SongReference | null, guildid: string) {
-    // TODO: check if song is playable
     if (!song) return leave(guildid);
     if (guildid && history[guildid] !== undefined) history[guildid].unshift(song.id);
     player.play(createAudioResource<Song>(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))

@@ -273,7 +273,7 @@ const Tag: SubCommand = {
         autocomplete: true,
     }, {
         name: "tags",
-        description: "Tags to set",
+        description: "Tags to set (comma seperated)",
         type: ApplicationCommandOptionType.String,
         required: true
     }],
@@ -282,17 +282,45 @@ const Tag: SubCommand = {
     run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         // Argument Processing
-        let id: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("id", true).value?.toString() :
-            ctx.content.split(/\s+/g)[3]
-        if (!id) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-        // Playlist Locating (ish)
+        let id: string | undefined, arg2: string | undefined;
+        if (ctx instanceof CommandInteraction) {
+            id = ctx.options.get("id", true).value?.toString();
+            arg2 = ctx.options.get("tags", true).value?.toString();
+        } else {
+            let args = ctx.content.split(/\s+/g).slice(3)
+            id = args[0];
+            arg2 = args.slice(1).join(" ");
+        }
+        if (!id || !arg2) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        const tags = arg2.split(",").map(s=>s.trim());
+        // Playlist Locating
         const playlist = yt.Playlist.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         const song: RatedSong | undefined = playlist.getSongs.find(rs => rs.id === id)
         if (!song) return error(ctx, ERRORS.NO_SONG);
         // Action Execution
-        // TODO: This
+        song.tags = tags;
+        reply(ctx, {
+            content: "_",
+            "embeds": [{
+                "title": "Song ID: " + song.id,
+                "description": "Local Song Metadata",
+                "color": 0xff0000,
+                "fields": [{
+                    "name": `Score:`,
+                    "value": song.score.toString(),
+                    "inline": true
+                }, {
+                    "name": `Tags:`,
+                    "value": song.tags.join(", ") || "None",
+                    "inline": false
+                }],
+                "footer": {
+                    "text": `PlaylistDJ - Local Metadata Viewer`,
+                    "icon_url": client.user?.avatarURL() ?? ""
+                }
+            }]
+        })
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] | Error {

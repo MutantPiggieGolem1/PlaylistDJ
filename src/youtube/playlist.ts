@@ -28,8 +28,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
     private songs: RatedSong[];
     private static fromFile(gid: string): Playlist {
         const file: string = "./resources/playlists/"+gid+".json";
-        const data = JSON.parse(fs.readFileSync(file, {encoding: "utf8"})); // TODO: backwards compat. remove later
-        return new Playlist(gid, (fs.existsSync(file) ? Array.isArray(data) ? data : data.items : []) as RatedSong[]);
+        return new Playlist(gid, fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, {encoding: "utf8"})) as RatedSong[] : []);
     }
     public constructor(guildid: string, songs: RatedSong[]) { // this should be private.
         this.guildid = guildid;

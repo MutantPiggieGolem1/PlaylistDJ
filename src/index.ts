@@ -5,7 +5,6 @@ import { isWhitelisted } from "./discord/util"
 import { saveAllPlaylists } from "./recommendation/interface"
 import { Playlist } from "./youtube/playlist"
 export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
-const PREFIX: string = "dj";
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
 function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!`})}
@@ -25,7 +24,7 @@ client.on("guildCreate", setActivity)
 client.on("guildDelete", setActivity)
 
 client.on("messageCreate", (msg: Message) => {
-    if (msg.author.id === client.user?.id || !msg.content.startsWith(PREFIX)) return;
+    if (msg.author.id === client.user?.id || !msg.content.startsWith("dj")) return;
     let command: Command | null | undefined = Commands.find(c=>c.name===msg.content.split(" ")[1]);
     if (!command) {msg.reply("Command not recognized."); return;}
 
