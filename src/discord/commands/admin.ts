@@ -1,10 +1,10 @@
 import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, InteractionUpdateOptions, Message, MessageActionRowComponent, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
+import { ERRORS, Genre, Song, SongReference } from "../../constants"
 import { client, WHITELIST } from "../../index"
 import { getAllCsvs, getCsv } from "../../recommendation/interface"
-import { Playlist } from "../../youtube/playlist"
-import { Genre, Song, SongReference } from "../../youtube/util"
-import { WebPlaylist } from "../../youtube/webplaylist"
-import { editReply, error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply } from "../util"
+import { Playlist } from "../../web/playlist"
+import { YTPlaylist } from "../../web/ytplaylist"
+import { editReply, error, isWhitelisted, ITEMS_PER_PAGE, reply } from "../util"
 import { Command, SubCommand, SubCommandGroup } from "./Commands"
 
 const commandname = "admin"
@@ -334,7 +334,7 @@ const Download: SubCommand = {
         // Playlist Locating
         await rctx.reply({content: "Searching for Playlist...", ephemeral: true})
         try {
-            var webpl: WebPlaylist = await WebPlaylist.fromUrl(arg1);
+            var webpl: YTPlaylist = await YTPlaylist.fromUrl(arg1);
         } catch (e) { return error(rctx, e as Error) }
         // Action Execution
         const idata: {index: number, exclusions: number[]} = { index: 0, exclusions: [] };

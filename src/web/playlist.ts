@@ -1,5 +1,5 @@
 import fs from "fs";
-import { AUDIOFORMAT, RatedSong, SongReference } from "./util";
+import { RatedSong, SongReference } from "../constants";
 
 export class Playlist { // Represents a playlist stored on the filesystem
     private static index: {[key: string]: SongReference};
@@ -100,9 +100,9 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
 
     public static delete(ids: string[]): Promise<string[]> { // destroy files from the filesystem
-        ids.forEach(id=>delete Playlist.index[id]);
-        return Playlist.save().then(_=>Promise.all(ids.map(id=>{
-            let file = `./resources/music/${id}${AUDIOFORMAT}`;
+        const files = ids.filter(id=>id in Playlist.index).map(id=>Playlist.index[id].file);
+        ids.forEach(id=>delete Playlist.index[id])
+        return Playlist.save().then(_=>Promise.all(files.map(file=>{
             if (!fs.existsSync(file)) return false;
             return fs.promises.rm(file).then(_=>file).catch(_=>false)
         })).then(files=>files.filter((file): file is string => !!file)))

@@ -3,7 +3,7 @@ import { scheduleJob } from "node-schedule"
 import { Command, Commands } from "./discord/commands/Commands"
 import { isWhitelisted } from "./discord/util"
 import { saveAllPlaylists } from "./recommendation/interface"
-import { Playlist } from "./youtube/playlist"
+import { Playlist } from "./web/playlist"
 export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 

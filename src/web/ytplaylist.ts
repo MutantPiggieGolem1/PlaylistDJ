@@ -4,17 +4,18 @@ import ytdl from "ytdl-core"
 import ytdsc from "ytdl-core-discord"
 import ytpl from "ytpl"
 import { Playlist } from "./playlist"
-import { AUDIOFORMAT, parseVideo, SongReference } from "./util"
+import { AUDIOFORMAT, parseVideo } from "./util"
+import { SongReference } from "../constants"
 
-export class WebPlaylist {
+export class YTPlaylist {
     private static downloading: boolean = false;
     public ytplaylist: ytpl.Result;
 
-    public static async fromUrl(url: string): Promise<WebPlaylist> {
-        if (ytpl.validateID(url)) return new WebPlaylist(await ytpl(url, { limit: Number.POSITIVE_INFINITY }))
+    public static async fromUrl(url: string): Promise<YTPlaylist> {
+        if (ytpl.validateID(url)) return new YTPlaylist(await ytpl(url, { limit: Number.POSITIVE_INFINITY }))
         if (ytdl.validateURL(url)) {
             let vi: ytdl.videoInfo = await ytdl.getBasicInfo(url);
-            return new WebPlaylist({
+            return new YTPlaylist({
                 author: {
                     ...vi.videoDetails.author,
                     avatars: vi.videoDetails.author.thumbnails,
@@ -76,8 +77,8 @@ export class WebPlaylist {
     public download(guildid: string): EventEmitter {
         const ee: EventEmitter = new EventEmitter();
         setImmediate(() => {
-            if (WebPlaylist.downloading) return ee.emit('error', new Error("Wait for the previous playlist to download first!"));
-            WebPlaylist.downloading = true;
+            if (YTPlaylist.downloading) return ee.emit('error', new Error("Wait for the previous playlist to download first!"));
+            YTPlaylist.downloading = true;
             
             let items: SongReference[] =
                 Playlist.getPlaylist(guildid)?.getSongs
@@ -120,7 +121,7 @@ export class WebPlaylist {
             }).catch((e: Error)=>{
                 ee.emit("error",e)
             }).finally(() => {
-                WebPlaylist.downloading = false;
+                YTPlaylist.downloading = false;
             })
         })
         return ee;

@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message } from "discord.js"
-import { Playlist } from "../../youtube/playlist"
-import { Song } from "../../youtube/util"
-import { error, ERRORS, getPlayer, getPlaying, reply, truncateString } from "../util"
+import { ERRORS, Song } from "../../constants"
+import { Playlist } from "../../web/playlist"
+import { error, getPlayer, getPlaying, reply, truncateString } from "../util"
 import { Command } from "./Commands"
 
 const voted: {[key:string]: Set<String>} = {};

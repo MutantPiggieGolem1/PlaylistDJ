@@ -1,9 +1,10 @@
 import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedField, EmbedType, Message, MessageActionRowComponentData } from "discord.js"
+import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
 import { client } from "../../index"
-import * as yt from "../../youtube/playlist"
-import { getFullSong, RatedSong, Song, SongReference } from "../../youtube/util"
-import { WebPlaylist } from "../../youtube/webplaylist"
-import { editReply, error, ERRORS, isWhitelisted, ITEMS_PER_PAGE, reply, truncateString } from "../util"
+import * as yt from "../../web/playlist"
+import { getFullSong } from "../../web/util"
+import { YTPlaylist } from "../../web/ytplaylist"
+import { editReply, error, isWhitelisted, ITEMS_PER_PAGE, reply, truncateString } from "../util"
 import { Command, SubCommand } from "./Commands"
 
 const commandname = "playlist"
@@ -32,7 +33,7 @@ const Create: SubCommand = {
         // Action Execution
         const guildid = ctx.guild.id;
         if (ctx instanceof CommandInteraction) ctx.deferReply({ephemeral: true});
-        WebPlaylist.fromUrl(arg1).then((webpl: WebPlaylist) => webpl.getIds()).then(ids => 
+        YTPlaylist.fromUrl(arg1).then((webpl: YTPlaylist) => webpl.getIds()).then(ids => 
             yt.Playlist.create(guildid, ids)
         ).then((playlist: yt.Playlist) => {
             editReply(ctx, `Created a new playlist with ${playlist.getSongs.length} song(s)!`)

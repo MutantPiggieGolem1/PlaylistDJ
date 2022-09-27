@@ -1,6 +1,7 @@
 import { AudioPlayerState, AudioPlayerStatus } from "@discordjs/voice"
 import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message, VoiceBasedChannel } from "discord.js"
-import { error, ERRORS, getPlayer, reply } from "../util"
+import { ERRORS } from "../../constants"
+import { error, getPlayer, reply } from "../util"
 import { Command } from "./Commands"
 
 export const KickMe: Command = {

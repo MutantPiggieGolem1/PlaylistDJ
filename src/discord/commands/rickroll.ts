@@ -1,6 +1,7 @@
 import { AudioPlayer, createAudioPlayer, createAudioResource, getVoiceConnection, NoSubscriberBehavior, StreamType, VoiceConnection } from "@discordjs/voice"
 import { CommandInteraction, Message } from "discord.js"
-import { error, ERRORS } from "../util"
+import { ERRORS } from "../../constants"
+import { error } from "../util"
 import { Command } from "./Commands"
 
 const player: AudioPlayer = createAudioPlayer({behaviors: {noSubscriber: NoSubscriberBehavior.Stop}})

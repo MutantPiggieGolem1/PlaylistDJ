@@ -1,10 +1,10 @@
 import { AudioPlayer, AudioPlayerError, AudioPlayerStatus, createAudioResource, getVoiceConnection, StreamType, VoiceConnection } from "@discordjs/voice"
 import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction, Message } from "discord.js"
 import { createReadStream } from "fs"
+import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
 import nextSong from "../../recommendation/interface"
-import { Playlist } from "../../youtube/playlist"
-import { RatedSong, Song, SongReference } from "../../youtube/util"
-import { error, ERRORS, getPlayer } from "../util"
+import { Playlist } from "../../web/playlist"
+import { error, getPlayer } from "../util"
 import { Command } from "./Commands"
 import { leave } from "./leave"
 import { resetVotes } from "./vote"
@@ -29,9 +29,9 @@ export const Play: Command = {
         const guildid = ctx.guild.id;
         // Playlist Locating
         let pl = Playlist.getPlaylist(ctx.guild.id)
-        if (!pl) return error(ctx,ERRORS.NO_PLAYLIST);
+        if (!pl) return error(ctx, ERRORS.NO_PLAYLIST);
         let playlist: RatedSong[] = pl.getSongs;
-        if (!playlist) return error(ctx,ERRORS.NO_SONG);
+        if (!playlist) return error(ctx, ERRORS.NO_SONG);
         // Argument Processing
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("id",false)?.value?.toString() :

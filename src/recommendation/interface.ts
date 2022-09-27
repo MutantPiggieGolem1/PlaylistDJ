@@ -1,8 +1,8 @@
 import { spawn } from 'child_process'
 import fs from "fs"
-import { ERRORS } from '../discord/util'
-import { Playlist } from '../youtube/playlist'
-import { genreIds, getFullSong, RatedSong, SongReference } from '../youtube/util'
+import { ERRORS, genreIds, RatedSong, SongReference } from "../constants"
+import { Playlist } from '../web/playlist'
+import { getFullSong } from '../web/util'
 
 export default function get(gid: string): Promise<SongReference | null> {
     const playlist: Playlist | null = Playlist.getPlaylist(gid)

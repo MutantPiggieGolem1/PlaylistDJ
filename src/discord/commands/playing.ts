@@ -1,7 +1,7 @@
 import { CommandInteraction, EmbedType, Message } from "discord.js"
+import { ERRORS, Song } from "../../constants"
 import { client } from "../../index"
-import { Song } from "../../youtube/util"
-import { error, ERRORS, getPlayer, getPlaying, reply } from "../util"
+import { error, getPlayer, getPlaying, reply } from "../util"
 import { Command } from "./Commands"
 import { history } from "./play"
 
@@ -14,7 +14,7 @@ export const Playing: Command = {
     run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
         let song: Song | undefined = getPlaying(getPlayer(ctx.guild.id,false))
-        if (!song) return error(ctx,ERRORS.NO_SONG);
+        if (!song) return error(ctx, ERRORS.NO_SONG);
         reply(ctx, {embeds:[{
             type: EmbedType.Rich,
             title: "Now Playing:",

@@ -1,7 +1,7 @@
-import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice"
-import { BaseMessageOptions, ButtonInteraction, CacheType, CommandInteraction, InteractionReplyOptions, InteractionResponse, Message, MessageEditOptions, MessageReplyOptions, ModalSubmitInteraction, WebhookEditMessageOptions } from "discord.js"
-import { WHITELIST } from "../index"
-import { Song } from "../youtube/util"
+import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
+import { BaseMessageOptions, ButtonInteraction, CacheType, CommandInteraction, InteractionReplyOptions, InteractionResponse, Message, MessageReplyOptions, ModalSubmitInteraction } from "discord.js";
+import { ERRORS, Song } from "../constants";
+import { WHITELIST } from "../index";
 
 export const ITEMS_PER_PAGE = 25;
 
@@ -25,16 +25,6 @@ export function getPlaying(player?: AudioPlayer): Song | undefined {
 
 export async function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error): Promise<InteractionResponse | Message> {
     return reply(ctx, error instanceof Error ? "Error: "+error.message : error, true);
-}
-export enum ERRORS {
-    INVALID_ARGUMENTS = 'Invalid Arguments!',
-    TIMEOUT = "Interaction Timed Out!",
-    NO_PERMS = "Insufficent Permissions!",
-    NO_CONNECTION = 'Couldn\'t find voice connection!',
-    NO_USER = 'Couldn\'t find user!',
-    NO_PLAYLIST = 'Couldn\'t find playlist!',
-    NO_SONG = 'Couldn\'t find song!',
-    NO_GUILD = 'Couldn\'t find guild!',
 }
 
 export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean> | InteractionResponse<boolean>>
