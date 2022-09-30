@@ -65,8 +65,8 @@ export const Play: Command = {
         const playlist = Playlist.getPlaylist(ctx.guild.id);
         if (!playlist?.getSongs || playlist.getSongs.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
         const focused = ctx.options.getFocused().toString();
-        if (focused.length <= 0) return []; // too many matches, don't bother
-        return Object.values(playlist.getSongs)
+        if (focused.length <= 0 && playlist.getSongs.length > 25) return []; // too many matches, don't bother
+        return playlist.getSongs
             .map(Playlist.getSong)
             .filter((sr: SongReference | null): sr is SongReference => !!sr)
             .filter((sr: SongReference)=>sr.id.startsWith(focused) || sr.title.toLowerCase().startsWith(focused.toLowerCase()))

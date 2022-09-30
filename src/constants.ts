@@ -24,29 +24,41 @@ export enum Genre {
     Unknown = 'Unknown',
     Pop = 'Pop',
     Meme = 'Meme',
-    Minecraft = 'Minecraft',
-    Electronic = 'Electronic',
+
     Instrumental = 'Instrumental',
     Piano = 'Piano',
     Guitar = 'Guitar',
-    Korean = 'Korean',
-    Japanese = 'Japanese',
+
+    Foriegn = 'Foriegn Language',
     Chinese = 'Chinese',
-    Eurobeat = 'Eurobeat'
+    Japanese = 'Japanese',
+    Korean = 'Korean',
+    
+    Electronic = 'Electronic',
+    Dubstep = 'Dubstep',
+    Electro = 'Electro',
+
+    Minecraft = 'Minecraft',
 } // Philter, TheFatRat
 
-export const genreIds: {[key in Genre as string]: number} = {
+export const genreIds: {[key in Genre]: number} = {
     "Unknown": 0,
+    // Normal Genres
     "Pop": 1,
     "Meme": 2,
-    "Minecraft": 3,
-    "Electronic": 4,
-
-    "Korean": 6,
-    "Japanese": 7,
-    "Eurobeat": 8,
-
+    // Instruments
     "Instrumental": 100,
     "Piano": 101,
     "Guitar": 102,
+    // Languages
+    "Foriegn Language": 200,
+    "Chinese": 201,
+    "Japanese": 202,
+    "Korean": 203,
+    // Electronic
+    "Electronic": 300,
+    "Dubstep": 301,
+    "Electro": 302,
+    // Misc.
+    "Minecraft": 1001,
 };

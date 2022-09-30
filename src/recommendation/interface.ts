@@ -1,8 +1,7 @@
 import { spawn } from 'child_process'
 import fs from "fs"
-import { ERRORS, genreIds, RatedSong, SongReference } from "../constants"
+import { ERRORS, genreIds, RatedSong, Song, SongReference } from "../constants"
 import { Playlist } from '../web/playlist'
-import { getFullSong } from '../web/util'
 
 export default function get(gid: string): Promise<SongReference | null> {
     const playlist: Playlist | null = Playlist.getPlaylist(gid)
@@ -26,10 +25,13 @@ function run(args: {toString:()=>string}[]): Promise<string> {
     })
 }
 
-export function saveAllPlaylists() {
+export async function saveAllPlaylists() {
+    await Playlist.save();
+    await genCsv();
+    
     const pls: Playlist[] = Object.values(Playlist.getPlaylist);
-    pls.forEach(pl=>pl.save())
-    pls.forEach(genCsv);
+    await Promise.all(pls.map(pl=>pl.save()));
+    await Promise.all(pls.map(genCsv));
 }
 
 let csvCache: string[] | null = null;
@@ -48,21 +50,16 @@ export function getCsv(guildid: string): Buffer | null {
     return fs.readFileSync(filepath);
 }
 
-function genCsv(playlist: Playlist): Promise<void> {
-    function hash(str: string): number {
-        let hash = 0, i, chr;
-        if (str.length === 0) return hash;
-        for (i = 0; i < str.length; i++) {
-            chr   = str.charCodeAt(i);
-            hash  = ((hash << 5) - hash) + chr;
-            hash |= 0; // Convert to 32bit integer
-        }
-        return hash;
+function genCsv(playlist: Playlist | void): Promise<void> {
+    if (playlist) {
+        return fs.promises.writeFile("./resources/csv/"+playlist.gid+".csv", 
+            "Song ID, Song Score, Song Tags...\n"+
+            playlist.getSongs.map((rs: RatedSong) => [rs.id, rs.score, ...(rs.tags ?? [])].join(",")).join("\n"),
+        {flag: "w", encoding: 'utf-8'});
+    } else {
+        return fs.promises.writeFile("./resources/csv/music.csv", 
+            "Song ID, Genre ID, Artist, Title, Length (seconds)\n"+
+            Object.values(Playlist.getSong()).map((sr: Song) => [sr.id, genreIds[sr.genre], sr.artist, sr.title, sr.length].join(",")).join("\n"),
+        {flag: "w", encoding: 'utf-8'});
     }
-
-    return fs.promises.writeFile("./resources/csv/"+playlist.gid+".csv", 
-        "Song ID, Song Length, Song Score, Song Genre, Artist Hash, Title Hash\n"+
-            playlist.getSongs.map(getFullSong).filter((sr): sr is SongReference & RatedSong => !!sr).map((r: RatedSong & SongReference) => [r.id, r.length, r.score, genreIds[r.genre], hash(r.artist), hash(r.title), ].join(",")).join("\n"),
-        {flag: "w", encoding: 'utf-8'}
-    )
 }

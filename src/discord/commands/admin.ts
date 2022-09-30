@@ -573,7 +573,8 @@ const Index: SubCommand = {
                     page--;
                     break;
                 default:
-                    interaction.update({components:[]}); return;
+                    interaction.update({components:[]});
+                    return;
             }
             interaction.update(listMessage(items, page))
         }).on('end', (_,reason: string) => {
