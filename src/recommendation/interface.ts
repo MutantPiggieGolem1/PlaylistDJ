@@ -26,6 +26,7 @@ function run(args: {toString:()=>string}[]): Promise<string> {
 }
 
 export async function saveAllPlaylists() {
+    csvCache = null;
     await Playlist.save();
     await genCsv();
     
@@ -35,14 +36,14 @@ export async function saveAllPlaylists() {
 }
 
 let csvCache: string[] | null = null;
-export function getAllCsvs(): string[] | undefined {
+export function getAllCsvs(): string[] {
     if (csvCache === null) csvCache = fetchAllCsvs();
     return csvCache;
 }
 function fetchAllCsvs(): string[] {
     if (!fs.existsSync("./resources/csv/")) return [];
     const dirent: fs.Dirent[] = fs.readdirSync("./resources/csv/", {withFileTypes: true, encoding: 'utf-8'})
-    return dirent.filter(ent=>ent.isFile()).map(ent => ent.name.replace(/\D/g, ""))
+    return dirent.filter(ent=>ent.isFile()).map(ent => ent.name.replace(/\D/g, "")).filter(id=>id!=="0") // exclude index
 }
 export function getCsv(guildid: string): Buffer | null {
     const filepath: string = "./resources/csv/"+guildid+".csv";
@@ -57,7 +58,7 @@ function genCsv(playlist: Playlist | void): Promise<void> {
             playlist.getSongs.map((rs: RatedSong) => [rs.id, rs.score, ...(rs.tags ?? [])].join(",")).join("\n"),
         {flag: "w", encoding: 'utf-8'});
     } else {
-        return fs.promises.writeFile("./resources/csv/music.csv", 
+        return fs.promises.writeFile("./resources/csv/0.csv", 
             "Song ID, Genre ID, Artist, Title, Length (seconds)\n"+
             Object.values(Playlist.getSong()).map((sr: Song) => [sr.id, genreIds[sr.genre], sr.artist, sr.title, sr.length].join(",")).join("\n"),
         {flag: "w", encoding: 'utf-8'});

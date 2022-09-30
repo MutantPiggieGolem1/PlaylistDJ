@@ -1,4 +1,4 @@
-import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, InteractionUpdateOptions, Message, MessageActionRowComponent, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
+import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, Guild, InteractionUpdateOptions, Message, MessageActionRowComponent, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
 import { ERRORS, Genre, Song, SongReference } from "../../constants"
 import { client, WHITELIST } from "../../index"
 import { getAllCsvs, getCsv } from "../../recommendation/interface"
@@ -603,21 +603,22 @@ const GrabCSV: SubCommand = {
     run: (ctx: CommandInteraction | Message) => {
         if (ctx instanceof Message) return error(ctx, new Error("This command has text disabled."));
         const gid: string | undefined = ctx.options.get("id", true).value?.toString();
-        const ephemeral: boolean = !!(ctx.options.get("public", false)?.value ?? true);
+        const ephemeral: boolean = !(ctx.options.get("public", false)?.value ?? false);
         if (!gid) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         const file: Buffer | null = getCsv(gid);
         if (!file) return error(ctx, new Error("Couldn't find data!"));
         ctx.reply({
             content: "-",
-            files: [new AttachmentBuilder(file, {name: gid+".csv",description:`CSV Data for '${client.guilds.cache.get(gid)?.name}'`})],
-            ephemeral
+            files: [new AttachmentBuilder(file, {name: gid+".csv", description:`CSV Data for '${client.guilds.cache.get(gid)?.name}'`})],
+            ephemeral,
         })
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
         const focused = ctx.options.getFocused().toString();
         if (!focused) return [];
-        return getAllCsvs()?.filter(s => s.startsWith(focused)).map(s => {return {name: s, value: s}}) ?? [];
+        return (getAllCsvs()?.filter(s => s.startsWith(focused)).map(s => {return {name: client.guilds.cache.get(s)?.name ?? s, value: s}}) ?? [])
+            .concat([{name: "Index", value: "0"}]);
     }
 }
 
