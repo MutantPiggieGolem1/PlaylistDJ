@@ -46,8 +46,9 @@ client.on("interactionCreate", async (interaction: Interaction): Promise<void> =
     let command: Command | undefined | null = Commands.find(c=>c.name===interaction.commandName);
     if (!command?.ac) return console.error("Autocomplete not recognized.");
     
-    let choices: ApplicationCommandOptionChoiceData[] | Error = await command.ac(interaction);
-    if (choices instanceof Error) return console.error("Autocomplete failed.\n"+choices)
+    let choices: ApplicationCommandOptionChoiceData[] | Error | null = await command.ac(interaction);
+    if (choices === null) return;
+    if (choices instanceof Error) return console.error("Autocomplete failed.\n"+choices);
     interaction.respond(choices.slice(undefined,25));
 })
 

@@ -114,8 +114,10 @@ export class YTPlaylist {
                 if (completion.every(r=>r.status==="rejected")) throw new Error("All downloads failed.");
                 items.forEach(rs=>Playlist.getSong(rs.id) ? null : Playlist.addSong(rs as SongReference))
                 await Playlist.save();
-                Playlist.getPlaylist(guildid)?.addSongs(items.map(sr=>sr.id))
-                return Playlist.getPlaylist(guildid);
+                const playlist = Playlist.getPlaylist(guildid) ?? new Playlist(guildid, []);
+                playlist.addSongs(items.map(sr=>sr.id))
+                await playlist.save()
+                return playlist;
             }).then((playlist: Playlist | null)=>{
                 ee.emit("finish",playlist)
             }).catch((e: Error)=>{

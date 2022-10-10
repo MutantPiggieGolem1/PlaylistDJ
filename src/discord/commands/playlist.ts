@@ -33,11 +33,12 @@ const Create: SubCommand = {
         // Action Execution
         const guildid = ctx.guild.id;
         if (ctx instanceof CommandInteraction) ctx.deferReply({ephemeral: true});
+        else ctx.reply("Working...");
         YTPlaylist.fromUrl(arg1).then((webpl: YTPlaylist) => webpl.getIds()).then(ids => 
             yt.Playlist.create(guildid, ids)
         ).then((playlist: yt.Playlist) => {
             editReply(ctx, `Created a new playlist with ${playlist.getSongs.length} song(s)!`)
-        }).catch((e: Error) => { error(ctx, e) })
+        }).catch((e: Error) => { error(ctx, e, true) })
     }
 }
 const Delete: SubCommand = {
@@ -324,10 +325,10 @@ const Tag: SubCommand = {
         })
     },
 
-    ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] | Error {
-        if (!ctx.guild) return new Error(ERRORS.NO_GUILD);
+    ac(ctx: AutocompleteInteraction) {
+        if (!ctx.guild) return null;
         const playlist = yt.Playlist.getPlaylist(ctx.guild.id);
-        if (!playlist || playlist.getSongs?.length < 1) return new Error(ERRORS.NO_PLAYLIST);
+        if (!playlist || playlist.getSongs?.length < 1) return null;
         const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0) return []; // too many matches, don't bother
         return Object.values(playlist.getSongs)
@@ -360,7 +361,8 @@ export const Playlist: Command = {
         return subcommand.run(ctx);
     },
 
-    ac: (ctx: AutocompleteInteraction) => {
+    ac(ctx: AutocompleteInteraction) {
+        if (!ctx.guild || !yt.Playlist.getPlaylist(ctx.guild.id)) return null; // No Playlist, not an error
         let command: SubCommand | undefined | null = SubCommands.find(c=>c.name===ctx.options.data[0].name);
         if (!command?.ac) return new Error("Autocomplete not recognized.");
     

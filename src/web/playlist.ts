@@ -28,16 +28,16 @@ export class Playlist { // Represents a playlist stored on the filesystem
     private songs: RatedSong[];
     private static fromFile(gid: string): Playlist {
         const file: string = "./resources/playlists/"+gid+".json";
-        return new Playlist(gid, fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, {encoding: "utf8"})) as RatedSong[] : []);
+        return new Playlist(gid, fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, {encoding: "utf-8"})).map((a: any)=>{return {id: a.id, tags: a.tags, score: a.score}}) : []);
     }
-    public constructor(guildid: string, songs: RatedSong[]) { // this should be private.
+    public constructor(guildid: string, songs: RatedSong[] | void) { // this should be private.
         this.guildid = guildid;
         let eids: Set<string> = new Set<string>();
-        this.songs = songs.filter(rs=>{
+        this.songs = songs?.filter(rs=>{
             if (eids.has(rs.id)) return false;
             eids.add(rs.id)
             return true;
-        });
+        }) ?? [];
     }
     public async save() {return fs.promises.writeFile(`./resources/playlists/${this.guildid}.json`,JSON.stringify(this.songs))}
     get getSongs() {return this.songs;}

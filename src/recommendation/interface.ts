@@ -32,7 +32,7 @@ export async function saveAllPlaylists() {
     
     const pls: Playlist[] = Object.values(Playlist.getPlaylist);
     await Promise.all(pls.map(pl=>pl.save()));
-    await Promise.all(pls.map(genCsv));
+    await Promise.all(pls.map(pl=>genCsv(pl))); // verbosity
 }
 
 let csvCache: string[] | null = null;
@@ -55,12 +55,11 @@ function genCsv(playlist: Playlist | void): Promise<void> {
     if (playlist) {
         return fs.promises.writeFile("./resources/csv/"+playlist.gid+".csv", 
             "Song ID, Song Score, Song Tags...\n"+
-            playlist.getSongs.map((rs: RatedSong) => [rs.id, rs.score, ...(rs.tags ?? [])].join(",")).join("\n"),
-        {flag: "w", encoding: 'utf-8'});
-    } else {
-        return fs.promises.writeFile("./resources/csv/0.csv", 
-            "Song ID, Genre ID, Artist, Title, Length (seconds)\n"+
-            Object.values(Playlist.getSong()).map((sr: Song) => [sr.id, genreIds[sr.genre], sr.artist, sr.title, sr.length].join(",")).join("\n"),
-        {flag: "w", encoding: 'utf-8'});
+            playlist.getSongs.map((rs: RatedSong) => [rs.id, rs.score, ...(rs.tags ?? [])].join(",")).join("\n"));
     }
+    return fs.promises.writeFile("./resources/csv/0.csv", 
+        "Song ID, Genre ID, Artist, Title, Length (seconds)\n"+Object.values(Playlist.getSong()).map((sr: Song) => 
+            [sr.id, genreIds[sr.genre], sr.artist.replaceAll(",", "\\,"), sr.title.replace(",", "\\,"), sr.length].join(",")
+        ).join("\n")
+    );
 }

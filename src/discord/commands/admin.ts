@@ -642,7 +642,7 @@ export const Admin: Command = {
         return subcommand.run(ctx);
     },
 
-    ac: (ctx: AutocompleteInteraction) => {
+    ac(ctx: AutocompleteInteraction) {
         let command: SubCommand | SubCommandGroup | undefined | null = SubCommands.find(c=>c.name===ctx.options.data[0].name);
         if (!command?.ac) return new Error("Autocomplete not recognized.");
     

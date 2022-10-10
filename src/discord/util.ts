@@ -23,8 +23,10 @@ export function getPlaying(player?: AudioPlayer): Song | undefined {
     return resource.metadata as Song;
 }
 
-export async function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error): Promise<InteractionResponse | Message> {
-    return reply(ctx, error instanceof Error ? "Error: "+error.message : error, true);
+export async function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error, edit = false): Promise<InteractionResponse | Message> {
+    return edit ?
+        editReply(ctx, error instanceof Error ? "Error: "+error.message : error) :
+        reply(ctx, error instanceof Error ? "Error: "+error.message : error, true);
 }
 
 export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean> | InteractionResponse<boolean>>

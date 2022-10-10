@@ -60,10 +60,10 @@ export const Play: Command = {
         });
     },
     
-    ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] | Error {
-        if (!ctx.guild) return new Error(ERRORS.NO_GUILD);
+    ac(ctx: AutocompleteInteraction) {
+        if (!ctx.guild) return null;
         const playlist = Playlist.getPlaylist(ctx.guild.id);
-        if (!playlist?.getSongs || playlist.getSongs.length <= 0) return new Error(ERRORS.NO_PLAYLIST);
+        if (!playlist?.getSongs || playlist.getSongs.length <= 0) return null;
         const focused = ctx.options.getFocused().toString();
         if (focused.length <= 0 && playlist.getSongs.length > 25) return []; // too many matches, don't bother
         return playlist.getSongs

@@ -24,8 +24,9 @@ export const Vote: Command = {
     public: true,
     
     run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild || !(ctx.member instanceof GuildMember)) return;
-        if (voted[ctx.guild.id]?.has(ctx.member.user.id)) return error(ctx,new Error("You've already voted!"));
+        if (!ctx.guild || !ctx.member || !("voice" in ctx.member)) return;
+        const uid = (ctx instanceof Message ? ctx.author : ctx.user).id;
+        if (voted[ctx.guild.id]?.has(uid)) return error(ctx, new Error("You've already voted!"));
         // Argument Processing
         let arg1: string | undefined = (ctx instanceof CommandInteraction ?
             ctx.options.get("vote",true).value?.toString() :
@@ -40,8 +41,8 @@ export const Vote: Command = {
         if (!song) return error(ctx,ERRORS.NO_SONG);
         // Action Execution
         if (!voted[ctx.guild.id]) voted[ctx.guild.id] = new Set<string>();
-        voted[ctx.guild.id].add(ctx.member.user.id);
-        playlist.vote(song.id,arg1==="up");
+        voted[ctx.guild.id].add(uid);
+        playlist.vote(song.id, arg1==="up");
         reply(ctx,`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.getSongs.find(i=>i.id===song?.id)?.score} score)`)
     }
 }
