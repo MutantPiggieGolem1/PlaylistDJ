@@ -34,7 +34,7 @@ const Create: SubCommand = {
         const guildid = ctx.guild.id;
         if (ctx instanceof CommandInteraction) ctx.deferReply({ephemeral: true});
         else ctx.reply("Working...");
-        YTPlaylist.fromUrl(arg1).then((webpl: YTPlaylist) => webpl.getIds()).then(ids => 
+        YTPlaylist.getIds(arg1).then(ids => 
             yt.Playlist.create(guildid, ids)
         ).then((playlist: yt.Playlist) => {
             editReply(ctx, `Created a new playlist with ${playlist.getSongs.length} song(s)!`)

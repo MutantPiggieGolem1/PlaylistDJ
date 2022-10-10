@@ -11,6 +11,11 @@ export class YTPlaylist {
     private static downloading: boolean = false;
     public ytplaylist: ytpl.Result;
 
+    public static getIds(arg1: string, limit = 200): Promise<Set<string>> {
+        if (!ytpl.validateID(arg1)) return Promise.reject("Invalid URL!");
+        return ytpl(arg1, { limit }).then(r=>new Set(r.items.map(i=>i.id)));
+    }
+
     public static async fromUrl(url: string): Promise<YTPlaylist> {
         if (ytpl.validateID(url)) return new YTPlaylist(await ytpl(url, { limit: Number.POSITIVE_INFINITY }))
         if (ytdl.validateURL(url)) {
@@ -64,10 +69,6 @@ export class YTPlaylist {
             }
         }) // Remove duplicate ids
         this.ytplaylist=r
-    }
-
-    public getIds() {
-        return this.ytplaylist.items.map((i: ytpl.Item) => i.id);
     }
 
     public remove(indices: number[]) {

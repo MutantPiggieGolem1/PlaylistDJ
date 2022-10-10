@@ -39,7 +39,10 @@ export class Playlist { // Represents a playlist stored on the filesystem
             return true;
         }) ?? [];
     }
-    public async save() {return fs.promises.writeFile(`./resources/playlists/${this.guildid}.json`,JSON.stringify(this.songs))}
+    public async save() {
+        if (!Playlist.playlists[this.guildid]) Playlist.playlists[this.guildid] = this;
+        return fs.promises.writeFile(`./resources/playlists/${this.guildid}.json`,JSON.stringify(this.songs))
+    };
     get getSongs() {return this.songs;}
     get gid() {return this.guildid;}
 
@@ -49,8 +52,9 @@ export class Playlist { // Represents a playlist stored on the filesystem
         this.songs[index].score += voteup ? 1 : -1;
     }
 
-    public static async create(guildid: string, ids: string[]): Promise<Playlist> {
+    public static async create(guildid: string, ids: string[] | Set<string>): Promise<Playlist> {
         if (Playlist.playlists[guildid]) return Promise.reject("This guild already has a playlist!")
+        if (ids instanceof Set) ids = [...ids];
         let items: RatedSong[] = ids.filter(id=>{
             const sr: SongReference | null = this.getSong(id);
             return sr && fs.existsSync(sr.file)
