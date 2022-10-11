@@ -49,6 +49,9 @@ const Delete: SubCommand = {
 
     run: async (ctx: CommandInteraction | Message) => {
         if (!ctx.guild) return;
+        // Playlist Locating
+        const playlist = yt.Playlist.getPlaylist(ctx.guild.id)
+        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
         // Message
         const msg = await reply(ctx, {
             content: "_",
@@ -87,12 +90,9 @@ const Delete: SubCommand = {
             time: 5 * 1000, max: 1
         }).once("collect", (interaction: ButtonInteraction): void => {
             if (interaction.customId === 'cancel') {interaction.update({ content: "Cancelled.", components: [], embeds: [] });return;}
-            if (!interaction.guild) { error(ctx, ERRORS.NO_GUILD); return; }
-            let playlist = yt.Playlist.getPlaylist(interaction.guild.id)
-            if (!playlist) { error(ctx, ERRORS.NO_PLAYLIST); return; }
-            playlist.delete().then(_ => {
+            playlist.delete().then(()=>
                 interaction.update({ content: `Deleted your playlist.`, components: [], embeds: [] })
-            }).catch((e: Error) => error(ctx, e))
+            ).catch((e: Error) => error(ctx, e))
         }).on("end", (_, reason: string) => {
             if (reason === "idle" && msg.editable) msg.fetch().then(_=>msg.edit({ content: "Cancelled. (Timed Out)", components:[]})).catch()
         })

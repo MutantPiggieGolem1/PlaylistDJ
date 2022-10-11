@@ -60,8 +60,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
             return sr && fs.existsSync(sr.file)
         }).map(id=>{return {score:0,...Playlist.index[id]}})
         if (items.length <= 0) return Promise.reject("Couldn't find any songs!")
-        Playlist.playlists[guildid] = new Playlist(guildid, items);
-        await Playlist.playlists[guildid].save()
+        await new Playlist(guildid, items).save()
         return Playlist.playlists[guildid];
     }
 
