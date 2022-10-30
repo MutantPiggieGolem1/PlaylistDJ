@@ -5,8 +5,11 @@ import { Playlist } from '../web/playlist'
 
 export default function get(gid: string): Promise<SongReference | null> {
     const playlist: Playlist | null = Playlist.getPlaylist(gid)
-    if (!playlist) throw new Error(ERRORS.NO_PLAYLIST)
-    return run([0,playlist.getSongs.length-1]).then(raw=>playlist.getSongs[Number.parseInt(raw)]).then(Playlist.getSong);
+    if (!playlist) return Promise.reject(ERRORS.NO_PLAYLIST);
+    return run([0,playlist.getSongs.length-1])
+        .then(raw=>playlist.getSongs[Number.parseInt(raw)])
+        .then(Playlist.getSong)
+        .catch((e: Error)=>{console.error(e); return null;});
 };
 
 function run(args: {toString:()=>string}[]): Promise<string> {
