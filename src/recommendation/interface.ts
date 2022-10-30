@@ -8,12 +8,11 @@ export default function get(gid: string): Promise<SongReference | null> {
     if (!playlist) return Promise.reject(ERRORS.NO_PLAYLIST);
     return run([0,playlist.getSongs.length-1])
         .then(raw=>playlist.getSongs[Number.parseInt(raw)])
-        .then(Playlist.getSong)
-        .catch((e: Error)=>{console.error(e); return null;});
+        .then(Playlist.getSong);
 };
 
 function run(args: {toString:()=>string}[]): Promise<string> {
-    return new Promise((resolve, reject) => {
+    return new Promise<string>((resolve, reject) => {
         const process = spawn('python', [__dirname+'/index.py', ...args.map(a=>a.toString())]);
         let errors: string[] = []
 
@@ -23,9 +22,12 @@ function run(args: {toString:()=>string}[]): Promise<string> {
         process.on('exit', (code, _) => {
           if (code === 0) return;
           console.warn(errors.join('\n'));
-          reject();
+          reject(errors.join('\n'));
         });
-    })
+    }).catch(e=>{
+        console.error(e);
+        return Promise.reject();
+    });
 }
 
 export async function saveAllPlaylists() {
