@@ -1,5 +1,6 @@
 import { DiscordGatewayAdapterCreator, joinVoiceChannel } from '@discordjs/voice'
 import { ApplicationCommandOptionType, ChannelType, CommandInteraction, GuildBasedChannel, Message, StageChannel, VoiceChannel } from "discord.js"
+import { ERRORS } from '../../constants';
 import { error, reply } from "../util"
 import { Command } from "./Commands"
 
@@ -20,7 +21,7 @@ export const Join: Command = {
     public: true,
 
     run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild?.available) return;
+        if (!ctx.guild?.available) return Promise.reject(ERRORS.NO_GUILD);
         // Argument Processing
         let voicechannel: GuildBasedChannel | null | undefined = ctx instanceof CommandInteraction ? 
             ctx.options.get("channel",true).channel as GuildBasedChannel : (() => {
@@ -38,7 +39,8 @@ export const Join: Command = {
             selfMute: false,
             selfDeaf: true,
         });
-        if (voicechannel.bitrate < 16000) reply(ctx, {content: `Warning! This channel's bitrate is low; audio quality may be decreased.`, ephemeral: false})
-        else if (ctx instanceof CommandInteraction) ctx.reply({content:"Joined "+voicechannel.toString(), ephemeral: true});
+        return voicechannel.bitrate < 16000 ? reply(ctx, {content: `Warning! This channel's bitrate is low; audio quality may be decreased.`, ephemeral: false})
+        : ctx instanceof CommandInteraction ? ctx.reply({content:"Joined "+voicechannel.toString(), ephemeral: true}).then(()=>{})
+        : Promise.resolve();
     }
 };

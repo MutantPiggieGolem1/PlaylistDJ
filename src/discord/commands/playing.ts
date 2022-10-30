@@ -11,11 +11,11 @@ export const Playing: Command = {
     defaultMemberPermissions: "Speak",
     public: true,
 
-    run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+    run: (ctx: CommandInteraction | Message) => {
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         let song: Song | undefined = getPlaying(getPlayer(ctx.guild.id,false))
         if (!song) return error(ctx, ERRORS.NO_SONG);
-        reply(ctx, {embeds:[{
+        return reply(ctx, {embeds:[{
             type: EmbedType.Rich,
             title: "Now Playing:",
             description: `${song.title} - ${song.artist}\n\`${song.id}\``,
@@ -28,6 +28,6 @@ export const Playing: Command = {
                 text: `PlaylistDJ - Playing Music`,
                 icon_url: client.user?.avatarURL() ?? ""
             }
-        }]})
+        }]});
     }
 }

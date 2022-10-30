@@ -23,7 +23,7 @@ const Create: SubCommand = {
 
     run: (ctx: CommandInteraction | Message) => {
         // Condition Validation
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         if (yt.Playlist.getPlaylist(ctx.guild.id)) return error(ctx, new Error("This guild already has a playlist!"));
         // Argument Processing
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
@@ -34,11 +34,11 @@ const Create: SubCommand = {
         const guildid = ctx.guild.id;
         if (ctx instanceof CommandInteraction) ctx.deferReply({ephemeral: true});
         else ctx.reply("Working...");
-        YTPlaylist.getIds(arg1).then(ids => 
+        return YTPlaylist.getIds(arg1).then(ids => 
             yt.Playlist.create(guildid, ids)
         ).then((playlist: yt.Playlist) => {
             editReply(ctx, `Created a new playlist with ${playlist.getSongs.length} song(s)!`)
-        }).catch((e: Error) => { error(ctx, e, true) })
+        }).then(()=>{}).catch((e: Error) => { error(ctx, e, true) })
     }
 }
 const Delete: SubCommand = {
@@ -48,7 +48,7 @@ const Delete: SubCommand = {
     public: true,
 
     run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Playlist Locating
         const playlist = yt.Playlist.getPlaylist(ctx.guild.id)
         if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
@@ -111,7 +111,7 @@ const Add: SubCommand = {
     public: true,
 
     run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);;
         // Argument Processing
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("ids")?.value?.toString() :
@@ -123,8 +123,8 @@ const Add: SubCommand = {
         // Action Execution
         let added: (SongReference | null)[] = playlist.addSongs(arg1.split(",").map(i => i.trim())).map(yt.Playlist.getSong);
         if (added.length < 1) return error(ctx, new Error("No songs were added!"));
-        reply(ctx, `Added ${added.length} song(s) to the playlist!\n> `+added.filter((sr: SongReference | null): sr is SongReference => !!sr)
-            .map((s: Song) => truncateString(s.title, Math.floor(60/added.length))).join(", "));
+        return reply(ctx, `Added ${added.length} song(s) to the playlist!\n> `+added.filter((sr: SongReference | null): sr is SongReference => !!sr)
+            .map((s: Song) => truncateString(s.title, Math.floor(60/added.length))).join(", ")).then(()=>{});
     }
 }
 const Remove: SubCommand = {
@@ -140,7 +140,7 @@ const Remove: SubCommand = {
     public: true,
 
     run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);;
         // Argument Processing
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("ids")?.value?.toString() :
@@ -152,8 +152,8 @@ const Remove: SubCommand = {
         // Action Execution
         let removed: (SongReference | null)[] = playlist.removeSongs(arg1.split(",").map(i => i.trim())).map(yt.Playlist.getSong)
         if (removed.length < 1) return error(ctx, ERRORS.NO_SONG);
-        reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> `+removed.filter((sr: SongReference | null): sr is SongReference => !!sr)
-            .map((s: Song) => truncateString(s.title, Math.floor(60/removed.length))).join(", "));
+        return reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> `+removed.filter((sr: SongReference | null): sr is SongReference => !!sr)
+            .map((s: Song) => truncateString(s.title, Math.floor(60/removed.length))).join(", ")).then(()=>{});
     }
 }
 const List: SubCommand = {
@@ -181,7 +181,7 @@ const List: SubCommand = {
     public: true,
 
     run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Argument Processing
         let arg1: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("key", false)?.value?.toString() :
@@ -242,7 +242,7 @@ const List: SubCommand = {
         if (!rctx) return;
         if (rmsg?.deletable) await rmsg.delete()
         // Message
-        const msg = await reply(rctx, listMessage(rctx, items, page))
+        const msg = await reply(rctx, listMessage(rctx, items, page), true)
         // Interaction Collection
         msg.createMessageComponentCollector({
             componentType: ComponentType.Button,
@@ -258,7 +258,7 @@ const List: SubCommand = {
                     break;
             }
             interaction.update(listMessage(rctx, items, page))
-        }).on('end', (_,reason: string) => {
+        }).on('end', (_: any, reason: string) => {
             if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
         })
     },
@@ -281,8 +281,8 @@ const Tag: SubCommand = {
     }],
     public: true,
 
-    run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+    run: (ctx: CommandInteraction | Message) => {
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Argument Processing
         let id: string | undefined, arg2: string | undefined;
         if (ctx instanceof CommandInteraction) {
@@ -302,7 +302,7 @@ const Tag: SubCommand = {
         if (!song) return error(ctx, ERRORS.NO_SONG);
         // Action Execution
         song.tags = tags;
-        reply(ctx, {
+        return reply(ctx, {
             content: "_",
             "embeds": [{
                 "title": "Song ID: " + song.id,
@@ -322,7 +322,7 @@ const Tag: SubCommand = {
                     "icon_url": client.user?.avatarURL() ?? ""
                 }
             }]
-        })
+        });
     },
 
     ac(ctx: AutocompleteInteraction) {
@@ -352,7 +352,7 @@ export const Playlist: Command = {
     public: true,
 
     run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);;
         let option: string = ctx instanceof CommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
         let subcommand: SubCommand | undefined = SubCommands.find(sc => sc.name === option)
 

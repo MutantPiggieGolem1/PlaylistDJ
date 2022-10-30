@@ -4,7 +4,7 @@ import { RatedSong, SongReference } from "../constants";
 export class Playlist { // Represents a playlist stored on the filesystem
     private static index: {[key: string]: SongReference};
     private static playlists: {[key: string]: Playlist};
-    public static async init() {
+    public static init() {
         Playlist.index = fs.existsSync('./resources/music.json') ? JSON.parse(fs.readFileSync('./resources/music.json','utf8')) : {};
         Playlist.playlists = Object.fromEntries(
             fs.readdirSync(`./resources/playlists/`,{withFileTypes:true})
@@ -13,7 +13,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
             .map(gid=>[gid, Playlist.fromFile(gid)])
         );
     }
-    public static async save() {return fs.promises.writeFile('./resources/music.json',JSON.stringify(Playlist.index))}
+    public static save() {return fs.promises.writeFile('./resources/music.json',JSON.stringify(Playlist.index))}
     public static getPlaylist(): typeof Playlist.playlists;
     public static getPlaylist(id: string): Playlist | null;
     public static getPlaylist(id: string | void): Playlist | typeof Playlist.playlists | null {return id ? Playlist.playlists[id] : Playlist.playlists}
@@ -39,7 +39,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
             return true;
         }) ?? [];
     }
-    public async save() {
+    public save() {
         if (!Playlist.playlists[this.guildid]) Playlist.playlists[this.guildid] = this;
         return fs.promises.writeFile(`./resources/playlists/${this.guildid}.json`,JSON.stringify(this.songs))
     };
@@ -52,7 +52,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
         this.songs[index].score += voteup ? 1 : -1;
     }
 
-    public static async create(guildid: string, ids: string[] | Set<string>): Promise<Playlist> {
+    public static create(guildid: string, ids: string[] | Set<string>): Promise<Playlist> {
         if (Playlist.playlists[guildid]) return Promise.reject("This guild already has a playlist!")
         if (ids instanceof Set) ids = [...ids];
         let items: RatedSong[] = ids.filter(id=>{
@@ -60,13 +60,12 @@ export class Playlist { // Represents a playlist stored on the filesystem
             return sr && fs.existsSync(sr.file)
         }).map(id=>{return {score:0,...Playlist.index[id]}})
         if (items.length <= 0) return Promise.reject("Couldn't find any songs!")
-        await new Playlist(guildid, items).save()
-        return Playlist.playlists[guildid];
+        return new Playlist(guildid, items).save().then(()=>Playlist.playlists[guildid]);
     }
 
-    public async delete() { // leaves lingering music, clean should be called later
+    public delete() { // leaves lingering music, clean should be called later
         delete Playlist.playlists[this.guildid]
-        return await fs.promises.rm(`./resources/playlists/${this.guildid}.json`)
+        return fs.promises.rm(`./resources/playlists/${this.guildid}.json`)
     }
 
     public addSongs(ids: string[]): RatedSong[] {

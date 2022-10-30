@@ -23,21 +23,23 @@ export function getPlaying(player?: AudioPlayer): Song | undefined {
     return resource.metadata as Song;
 }
 
-export async function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error, edit = false): Promise<InteractionResponse | Message> {
-    return edit ?
+export function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error, edit?: false, fetchMessage?: false): Promise<void>;
+export function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error, edit: true, fetchMessage?: boolean): Promise<Message<boolean> | void>;
+export function error(ctx: CommandInteraction | ButtonInteraction | Message, error: ERRORS | Error, edit = false, fetchMessage = false): Promise<InteractionResponse | Message | void> {
+    const r: Promise<Message<boolean>> = edit ?
         editReply(ctx, error instanceof Error ? "Error: "+error.message : error) :
         reply(ctx, error instanceof Error ? "Error: "+error.message : error, true);
+    return fetchMessage ? r.then(()=>{}) : r;
 }
 
-export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string): Promise<Message<boolean> | InteractionResponse<boolean>>
-export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: false): Promise<Message<boolean> | InteractionResponse<boolean>>
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply?: false): Promise<void>
 export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: true): Promise<Message<boolean>>
-export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: boolean = false): Promise<Message<boolean> | InteractionResponse<boolean>> {
+export function reply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: Omit<MessageReplyOptions, "flags"> | Omit<InteractionReplyOptions, "flags"> | string, fetchReply: boolean = false): Promise<void | Message<boolean>> {
     if (typeof content === "string") content = { content }
     if (!('ephemeral' in content)) content = { ...content, ephemeral: true }
     if (ctx instanceof Message) return ctx.reply(content)
     if (ctx.deferred || ctx.replied) return editReply(ctx, content);
-    return ctx.reply(content).then(async _=>fetchReply ? (await ctx.fetchReply()) : _)
+    return ctx.reply(content).then(()=>{if (fetchReply) return ctx.fetchReply();});
 }
 
 export function editReply(ctx: CommandInteraction | ButtonInteraction | ModalSubmitInteraction | Message, content: BaseMessageOptions | string): Promise<Message<boolean>> {

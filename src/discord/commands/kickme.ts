@@ -15,8 +15,8 @@ export const KickMe: Command = {
     }],
     public: true,
 
-    run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild || !ctx.member) return;
+    run: (ctx: CommandInteraction | Message) => {
+        if (!ctx.guild || !ctx.member) return Promise.reject(ERRORS.NO_GUILD);
         const guild = ctx.guild;
         const member = ctx.member as GuildMember;
         // Argument Processing
@@ -32,11 +32,10 @@ export const KickMe: Command = {
         if (!mystate || mystate.status !== AudioPlayerStatus.Playing) return error(ctx, new Error("No music is currently being played!"));
         // Action Execution
         let timeout = Math.abs(Number.parseInt(arg1));
-        reply(ctx, `Auto-Kicking you in ${arg1} minute${timeout !== 1 ? "s" : ""}!`)
         setTimeout(() => {
-            const channel: VoiceBasedChannel | null = member.voice.channel;
-            if (!channel || channel !== guild.members.me?.voice.channel) return;
+            if (!member.voice.channel) return;
             member.voice.disconnect("Auto-Kick after "+timeout+"m").catch(console.error);
         }, timeout * 60 * 1000);
+        return reply(ctx, `Auto-Kicking you in ${arg1} minute${timeout !== 1 ? "s" : ""}!`);
     }
 }

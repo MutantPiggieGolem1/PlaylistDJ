@@ -13,15 +13,15 @@ export const Rickroll: Command = {
     public: false,
 
     run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild || ctx instanceof Message) return;
+        if (!ctx.guild || ctx instanceof Message) return Promise.reject(ERRORS.NO_GUILD);;
         let conn: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
         if (!conn) return error(ctx, ERRORS.NO_CONNECTION);
 
         try {
             conn.removeAllListeners();
             player.play(createAudioResource("./resources/rr.webm", {inlineVolume: false, inputType: StreamType.WebmOpus}));
-            if (conn.subscribe(player)) return ctx.reply({content:"We participated in a miniscule amount of tomfoolery.",ephemeral: true});
+            if (conn.subscribe(player)) return ctx.reply({content:"We participated in a miniscule amount of tomfoolery.",ephemeral: true}).then(()=>{});
         } catch (e) {console.warn(e)};
-        ctx.reply({content: "Mission Failed, we'll get 'em next time.", ephemeral: true});
+        return ctx.reply({content: "Mission Failed, we'll get 'em next time.", ephemeral: true}).then(()=>{});
     }
 }

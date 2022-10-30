@@ -24,7 +24,8 @@ export const Vote: Command = {
     public: true,
     
     run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild || !ctx.member || !("voice" in ctx.member)) return;
+        if (!ctx.guild || !ctx.member) return Promise.reject(ERRORS.NO_GUILD);
+        if (!("voice" in ctx.member)) return Promise.reject(ERRORS.NO_CONNECTION);
         const uid = (ctx instanceof Message ? ctx.author : ctx.user).id;
         if (voted[ctx.guild.id]?.has(uid)) return error(ctx, new Error("You've already voted!"));
         // Argument Processing
@@ -43,6 +44,6 @@ export const Vote: Command = {
         if (!voted[ctx.guild.id]) voted[ctx.guild.id] = new Set<string>();
         voted[ctx.guild.id].add(uid);
         playlist.vote(song.id, arg1==="up");
-        reply(ctx,`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.getSongs.find(i=>i.id===song?.id)?.score} score)`)
+        return reply(ctx,`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.getSongs.find(i=>i.id===song?.id)?.score} score)`)
     }
 }

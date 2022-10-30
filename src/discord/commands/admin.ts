@@ -23,7 +23,7 @@ const Amend: SubCommand = {
     public: false,
 
     run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Argument Processing
         const id: string | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("id", true).value?.toString() :
@@ -54,10 +54,10 @@ const Amend: SubCommand = {
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx) return;
+        if (!rctx) return Promise.reject(ERRORS.NO_GUILD);
         if (rmsg?.deletable) await rmsg.delete()
         // Action Execution
-        rctx.showModal({
+        return rctx.showModal({
             customId: `c${commandname}amendedit`,
             title: `Song Metadata Editor [${song.id}]`,
             components: [{
@@ -137,7 +137,7 @@ const Amend: SubCommand = {
                     "url": song.url
                 }]
             })
-        }).catch(_ => {
+        }).then(() => {}).catch(_ => {
             return rctx.deleteReply().catch(_=>{})
         })
     },
@@ -188,7 +188,7 @@ const Auth: SubCommandGroup = {
     ],
 
     run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         if (ctx.member?.user.id !== "547624574070816799") return error(ctx,ERRORS.NO_PERMS)
         let user: User | undefined, option: string
         if (ctx instanceof CommandInteraction) {
@@ -205,22 +205,20 @@ const Auth: SubCommandGroup = {
                 if (!user) return error(ctx, ERRORS.NO_USER);
                 if (!WHITELIST.has(user.id)) {
                     WHITELIST.add(user.id)
-                    reply(ctx, `Added ${user.tag} to the whitelist.`)
+                    return reply(ctx, `Added ${user.tag} to the whitelist.`)
                 } else {
-                    error(ctx, new Error(`${user.tag} was already on the whitelist.`))
+                    return error(ctx, new Error(`${user.tag} was already on the whitelist.`))
                 }
-                break;
             case 'remove':
                 if (!user) return error(ctx, ERRORS.NO_USER);
                 if (WHITELIST.has(user.id)) {
                     WHITELIST.delete(user.id)
-                    reply(ctx, `Removed ${user.tag} from the whitelist.`)
+                    return reply(ctx, `Removed ${user.tag} from the whitelist.`)
                 } else {
-                    error(ctx, new Error(`${user.tag} wasn't on the whitelist.`))
+                    return error(ctx, new Error(`${user.tag} wasn't on the whitelist.`))
                 }
-                break
             case 'list':
-                reply(ctx, {
+                return reply(ctx, {
                     "content": `_`,
                     "embeds": [
                         {
@@ -239,10 +237,8 @@ const Auth: SubCommandGroup = {
                         }
                     ]
                 })
-                break;
             default:
-                error(ctx, ERRORS.INVALID_ARGUMENTS);
-                break
+                return error(ctx, ERRORS.INVALID_ARGUMENTS);
         }
     }
 }
@@ -253,10 +249,10 @@ const Clean: SubCommand = {
     public: false,
 
     run: (ctx: CommandInteraction | Message) => {
-        Playlist.clean()
+        return Playlist.clean()
         .then((rmfiles: string[]) =>
             reply(ctx, `Clean Complete! [Deleted ${rmfiles.length} files]`)
-        ).catch((e: Error) => error(ctx, e))
+        ).then(()=>{})
     }
 }
 const Destroy: SubCommand = {
@@ -272,7 +268,7 @@ const Destroy: SubCommand = {
     }],
 
     run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Argument Processing
         let inp: string | undefined = ctx instanceof CommandInteraction
             ? ctx.options.get("id",true).value?.toString()
@@ -283,7 +279,7 @@ const Destroy: SubCommand = {
         // Action Execution
         let removed: string[] = await Playlist.delete(ids);
         if (removed.length < 1) return error(ctx, ERRORS.NO_SONG);
-        await reply(ctx,`Success! Destroyed ${removed.length} song(s).`)
+        return reply(ctx,`Success! Destroyed ${removed.length} song(s).`).then(()=>{});
     }
 }
 const Download: SubCommand = {
@@ -299,7 +295,7 @@ const Download: SubCommand = {
     public: false,
 
     run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Argument Processing
         let arg1: string | null | undefined = ctx instanceof CommandInteraction ?
             ctx.options.get("url", true).value?.toString() :
@@ -328,7 +324,7 @@ const Download: SubCommand = {
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx?.guild) return;
+        if (!rctx?.guild) return Promise.reject(ERRORS.NO_GUILD);
         if (rmsg?.deletable) await rmsg.delete();
         const guildid: string = rctx.guild.id;
         // Playlist Locating
@@ -539,7 +535,7 @@ const Index: SubCommand = {
             filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
             time: 10*1000
         }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx) return;
+        if (!rctx) return Promise.reject(ERRORS.NO_GUILD);
         if (rmsg?.deletable) await rmsg.delete()
         // Action Execution
         let items: Song[] = Object.values(Playlist.getSong())
@@ -607,11 +603,11 @@ const GrabCSV: SubCommand = {
         if (!gid) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         const file: Buffer | null = getCsv(gid);
         if (!file) return error(ctx, new Error("Couldn't find data!"));
-        ctx.reply({
+        return ctx.reply({
             content: "-",
             files: [new AttachmentBuilder(file, {name: gid+".csv", description:`CSV Data for '${client.guilds.cache.get(gid)?.name}'`})],
             ephemeral,
-        })
+        }).then(()=>{});
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
@@ -633,7 +629,7 @@ export const Admin: Command = {
     public: true,
 
     run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         let option: string = ctx instanceof CommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
         let subcommand: SubCommand | SubCommandGroup | undefined = SubCommands.find(sc => sc.name === option)
 

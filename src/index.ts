@@ -13,8 +13,8 @@ client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
-    setActivity();
     await Playlist.init();
+    setActivity();
     console.info(`Bot Ready! [${client.user.tag}]`);
     
     scheduleJob({hour: "00", minute: "00"}, saveAllPlaylists);
@@ -29,7 +29,7 @@ client.on("messageCreate", (msg: Message) => {
     if (!command) {msg.reply("Command not recognized."); return;}
 
     if (!command.public && !isWhitelisted(msg)) {msg.reply("This command requires authorization."); return}    
-    command.run(msg);
+    command.run(msg).catch(console.error);
 })
 
 client.on("interactionCreate", (interaction: Interaction): void => {
@@ -38,18 +38,18 @@ client.on("interactionCreate", (interaction: Interaction): void => {
     if (!command) {interaction.reply({"content":"Command not recognized.","ephemeral":true}); return;}
 
     if (!command.public && !isWhitelisted(interaction)) {interaction.reply({content:"This command requires authorization.",ephemeral:true}); return}
-    command.run(interaction);
+    command.run(interaction).catch(console.error);
 })
 
 client.on("interactionCreate", async (interaction: Interaction): Promise<void> => {
     if (interaction.type !== InteractionType.ApplicationCommandAutocomplete) return;
     let command: Command | undefined | null = Commands.find(c=>c.name===interaction.commandName);
-    if (!command?.ac) return console.error("Autocomplete not recognized.");
+    if (!command?.ac) return console.warn("Autocomplete not recognized.");
     
     let choices: ApplicationCommandOptionChoiceData[] | Error | null = await command.ac(interaction);
     if (choices === null) return;
-    if (choices instanceof Error) return console.error("Autocomplete failed.\n"+choices);
-    interaction.respond(choices.slice(undefined,25));
+    if (choices instanceof Error) return console.warn("Autocomplete failed.\n"+choices);
+    interaction.respond(choices.slice(undefined,25)).catch(console.error);
 })
 
 client.on("error", console.error);

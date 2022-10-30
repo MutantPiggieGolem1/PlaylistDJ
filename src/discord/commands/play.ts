@@ -24,8 +24,8 @@ export const Play: Command = {
     defaultMemberPermissions: "Speak",
     public: true,
 
-    run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
+    run: (ctx: CommandInteraction | Message) => {
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         const guildid = ctx.guild.id;
         // Playlist Locating
         let pl = Playlist.getPlaylist(ctx.guild.id)
@@ -37,26 +37,21 @@ export const Play: Command = {
             ctx.options.get("id",false)?.value?.toString() :
             ctx.content.split(/\s+/g)[2];
         let rs: RatedSong | undefined = playlist.find(s=>s.id===arg1);
-        let start: SongReference | null = rs ? Playlist.getSong(rs) : null;
-        if (!start) {
-            if (arg1) await error(ctx, ERRORS.NO_SONG);
-            start = await nextSong(ctx.guild.id)
-        }
+        let start: SongReferenceResolvable = (rs ? Playlist.getSong(rs) : null) || nextSong(ctx.guild.id);
         // Condition Validation
         let player: AudioPlayer = getPlayer(ctx.guild.id)
         player.removeAllListeners().stop()
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
         if (!connection?.subscribe(player)) return error(ctx, ERRORS.NO_CONNECTION)
         // Action Execution
-        if (ctx instanceof CommandInteraction && !ctx.deferred && !ctx.replied) ctx.reply({content:"Began Playing!",ephemeral:true})
         history[guildid] = [];
-        play(player, start, guildid)
-
-        player.on(AudioPlayerStatus.Idle, async () => {
-            play(player, await nextSong(guildid), guildid);
-            resetVotes(guildid);
+        player.on(AudioPlayerStatus.Idle, () => {
+            play(player, nextSong(guildid), guildid).then(()=>resetVotes(guildid));
         }).on("error", (e: AudioPlayerError) => {
-            console.error(`Audio Player Error: ${e.message}\n  Resource: [${e.resource.metadata ? JSON.stringify(e.resource.metadata) : JSON.stringify(e.resource)}]`);
+            console.warn(`Audio Player Error: ${e.message}\n  Resource: [${e.resource.metadata ? JSON.stringify(e.resource.metadata) : JSON.stringify(e.resource)}]`);
+        });
+        return play(player, start, guildid).then(()=>{
+            if (ctx instanceof CommandInteraction && !ctx.deferred && !ctx.replied) return ctx.reply({content:"Began Playing!",ephemeral:true}).then(()=>{})
         });
     },
     
@@ -76,7 +71,9 @@ export const Play: Command = {
     }
 }
 
-function play(player: AudioPlayer, song: SongReference | null, guildid: string) {
+type SongReferenceResolvable = SongReference | null | Promise<SongReference | null>;
+async function play(player: AudioPlayer, song: SongReferenceResolvable, guildid: string) {
+    if (song instanceof Promise) song = await song;
     if (!song) return leave(guildid);
     if (guildid && history[guildid] !== undefined) history[guildid].unshift(song.id);
     player.play(createAudioResource<Song>(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))

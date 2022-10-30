@@ -10,14 +10,16 @@ export const Leave: Command = {
     defaultMemberPermissions: "ManageChannels",
     public: true,
 
-    run: async (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return;
-        let voicechannel: VoiceBasedChannel | null | undefined = ( ctx.guild.members.me ?? await ctx.guild.members.fetchMe() ).voice.channel
-        if (!voicechannel) return error(ctx, ERRORS.NO_CONNECTION);
+    run: (ctx: CommandInteraction | Message) => {
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         try {
-            leave(ctx)
-            if (ctx instanceof CommandInteraction) ctx.reply({content:"Left "+voicechannel.toString(),ephemeral: true});
-        } catch (e) {error(ctx, e as Error)}
+            return (ctx.guild.members.me ? Promise.resolve(ctx.guild.members.me) : ctx.guild.members.fetchMe() ).then(me => {
+                const voicechannel: VoiceBasedChannel | null | undefined = me.voice.channel
+                if (!voicechannel) return error(ctx, ERRORS.NO_CONNECTION);
+                leave(ctx)
+                if (ctx instanceof CommandInteraction) return ctx.reply({content:"Left "+voicechannel.toString(),ephemeral: true}).then(()=>{});
+            })
+        } catch (e) {return error(ctx, e as Error)}
     }
 }
 

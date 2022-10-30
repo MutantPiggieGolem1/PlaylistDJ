@@ -19,7 +19,7 @@ function run(args: {toString:()=>string}[]): Promise<string> {
 
         process.on('exit', (code, _) => {
           if (code === 0) return;
-          console.error(errors.join('\n'));
+          console.warn(errors.join('\n'));
           reject();
         });
     })

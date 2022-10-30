@@ -11,19 +11,19 @@ import { Vote } from "./vote"
 
 export interface Command extends ChatInputApplicationCommandData {
     public: boolean;
-    run(ctx: CommandInteraction | Message): void;
+    run(ctx: CommandInteraction | Message): Promise<void>;
     ac?: (ctx: AutocompleteInteraction) => ApplicationCommandOptionChoiceData[] | Promise<ApplicationCommandOptionChoiceData[]> | Error | null;
 }
 export interface SubCommand extends ApplicationCommandSubCommandData {
     type: ApplicationCommandOptionType.Subcommand;
     public: boolean;
-    run(ctx: CommandInteraction | Message): void;
+    run(ctx: CommandInteraction | Message): Promise<void>;
     ac?: (ctx: AutocompleteInteraction) => ApplicationCommandOptionChoiceData[] | Promise<ApplicationCommandOptionChoiceData[]> | Error | null;
 }
 export interface SubCommandGroup extends ApplicationCommandSubGroupData {
     type: ApplicationCommandOptionType.SubcommandGroup;
     public: boolean;
-    run(ctx: CommandInteraction | Message): void;
+    run(ctx: CommandInteraction | Message): Promise<void>;
     ac?: (ctx: AutocompleteInteraction) => ApplicationCommandOptionChoiceData[] | Promise<ApplicationCommandOptionChoiceData[]> | Error | null;
 }
 
