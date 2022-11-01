@@ -96,7 +96,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
         return this.delete(
             fs.readdirSync(`./resources/music/`,{withFileTypes:true})
                 .filter(ent=>ent.isFile()) // all files
-                .map(file=>file.name.replace(".json", "")) // all file ids
+                .map(file=>file.name.replace(".webm", "")) // all file ids
                 .filter(sid=>!refs.has(sid)) // all unreferenced file ids
         );
     }
