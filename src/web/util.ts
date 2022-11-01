@@ -10,7 +10,7 @@ export function parseVideo(video: ytpl.Item, videoinfo?: ytdl.videoInfo): Song {
     return {
         id: video.id,
 
-        title: artistindex >= 0 ? titlesegments[(artistindex+1)%2]?.trim() : video.title,
+        title: artistindex >= 0 ? titlesegments[(artistindex+1)%2]?.trim() : videoinfo?.videoDetails.title ?? video.title ?? "<Unknown>",
         artist: video.author.name.endsWith(" - Topic") ? video.author.name.slice(undefined,-8) : titlesegments.length === 2 && artistindex >= 0 ? titlesegments[artistindex] : video.author.name,
         genre: Genre.Unknown,
         length: video.durationSec ?? -1,

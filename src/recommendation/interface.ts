@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+// import { spawn } from 'child_process'
 import fs from "fs"
 import { ERRORS, genreIds, RatedSong, Song, SongReference } from "../constants"
 import { Playlist } from '../web/playlist'
@@ -6,29 +6,27 @@ import { Playlist } from '../web/playlist'
 export default function get(gid: string): Promise<SongReference | null> {
     const playlist: Playlist | null = Playlist.getPlaylist(gid)
     if (!playlist) return Promise.reject(ERRORS.NO_PLAYLIST);
-    return run([0,playlist.getSongs.length-1])
-        .then(raw=>playlist.getSongs[Number.parseInt(raw)])
-        .then(Playlist.getSong);
+    return Promise.resolve(Playlist.getSong(playlist.getSongs[Math.random()*(playlist.getSongs.length-1)])); // TODO: FIX THIS
+    // return run([0,playlist.getSongs.length-1])
+    //     .then(raw=>playlist.getSongs[Number.parseInt(raw)])
+    //     .then(Playlist.getSong);
 };
 
-function run(args: {toString:()=>string}[]): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-        const process = spawn('python', [__dirname+'/index.py', ...args.map(a=>a.toString())]);
-        let errors: string[] = []
+// function run(args: {toString:()=>string}[]): Promise<string> {
+//     return new Promise<string>((resolve, reject) => {
+//         const process = spawn('python', [__dirname+'/index.py', ...args.map(a=>a.toString())]);
+//         let errors: string[] = []
 
-        process.stdout.on('data', resolve)
-        process.stderr.on('data', errors.push);
+//         process.stdout.on('data', resolve)
+//         process.stderr.on('data', errors.push);
 
-        process.on('exit', (code, _) => {
-          if (code === 0) return;
-          console.warn(errors.join('\n'));
-          reject(errors.join('\n'));
-        });
-    }).catch(e=>{
-        console.error(e);
-        return Promise.reject();
-    });
-}
+//         process.on('exit', (code, _) => {
+//             if (code === 0) return;
+//             console.warn(errors.join('\n'));
+//             reject(errors.join('\n'));
+//         });
+//     });
+// }
 
 export async function saveAllPlaylists() {
     csvCache = null;
