@@ -11,7 +11,7 @@
   ],
   "license": "ISC",
   "scripts": {
-    "start": "tsc && node dist/index.js",
+    "start": "tsc && cp ./src/recommendation/index.py ./dist/recommendation && node dist/index.js",
     "jitstart": "ts-node src/index.ts"
   },
   "dependencies": {
