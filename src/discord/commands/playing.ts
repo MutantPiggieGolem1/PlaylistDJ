@@ -28,6 +28,6 @@ export const Playing: Command = {
                 text: `PlaylistDJ - Playing Music`,
                 icon_url: client.user?.avatarURL() ?? ""
             }
-        }]});
+        }], ephemeral: true});
     }
 }

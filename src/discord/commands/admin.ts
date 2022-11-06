@@ -210,7 +210,7 @@ const Clean: SubCommand = {
         Playlist.clean().then((rmfiles: string[]) =>ctx.reply(
             {content:`Clean Complete! [Deleted ${rmfiles.length} files]`,ephemeral:true}
         ))
-}
+} // TODO: Diagnose & Fix
 const Destroy: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "destroy",

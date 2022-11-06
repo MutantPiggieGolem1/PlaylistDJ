@@ -8,18 +8,21 @@ export default function get(gid: string): Promise<SongReference | null> {
     if (!playlist) return Promise.reject(ERRORS.NO_PLAYLIST);
     return run([0,playlist.getSongs.length-1])
         .then(raw=>playlist.getSongs[Number.parseInt(raw)])
-        .then(Playlist.getSong);
+        .then(Playlist.getSong)
 };
 
 function run(args: {toString:()=>string}[]): Promise<string> {
     return new Promise<string>((resolve, reject) => {
-        const process = spawn('python', [__dirname+'/index.py', ...args.map(a=>a.toString())]);
+        const pyscript = spawn('python', [__dirname+'/index.py', ...args.map(a=>a.toString())]);
         let errors: string[] = []
 
-        process.stdout.on('data', resolve)
-        process.stderr.on('data', errors.push);
+        pyscript.stdout.on('data', resolve);
+        
+        pyscript.stderr.pipe(process.stderr)
+        pyscript.stderr.on('data', errors.push);
+        pyscript.on('error', errors.push);
 
-        process.on('exit', code => {
+        pyscript.on('exit', code => {
             if (code === 0) return;
             console.warn(errors.join('\n'));
             reject(errors.join('\n'));
