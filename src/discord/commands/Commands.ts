@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionChoiceData, ApplicationCommandType, ApplicationCommandOptionData, ApplicationCommandOptionType, ApplicationCommandSubCommandData, ApplicationCommandSubGroupData, AutocompleteInteraction, ChatInputApplicationCommandData, CommandInteraction } from "discord.js"
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionData, ApplicationCommandOptionType, ApplicationCommandSubCommandData, ApplicationCommandSubGroupData, AutocompleteInteraction, ChatInputApplicationCommandData, CommandInteraction } from "discord.js"
 import { Admin } from "./admin"
 import { Join } from "./join"
 import { KickMe } from "./kickme"
