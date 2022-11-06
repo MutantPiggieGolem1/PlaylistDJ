@@ -1,10 +1,10 @@
-import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedField, EmbedType, Message, MessageActionRowComponentData } from "discord.js"
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedField, EmbedType } from "discord.js"
 import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
-import { client } from "../../index"
+import { client, getArguments } from "../../index"
 import * as yt from "../../web/playlist"
 import { getFullSong } from "../../web/util"
 import { YTPlaylist } from "../../web/ytplaylist"
-import { editReply, error, isWhitelisted, ITEMS_PER_PAGE, reply, truncateString } from "../util"
+import { isWhitelisted, ITEMS_PER_PAGE, truncateString } from "../util"
 import { Command, SubCommand } from "./Commands"
 
 const commandname = "playlist"
@@ -21,61 +21,51 @@ const Create: SubCommand = {
     }],
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction, {url}: {url: string}) => {
         // Condition Validation
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        if (yt.Playlist.getPlaylist(ctx.guild.id)) return error(ctx, new Error("This guild already has a playlist!"));
-        // Argument Processing
-        let arg1: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("url", true).value?.toString() :
-            ctx.content.split(/\s+/g)[3]
-        if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS)
+        if (yt.Playlist.getPlaylist(ctx.guild.id)) return ctx.reply({content:"This guild already has a playlist!",ephemeral:true});
         // Action Execution
         const guildid = ctx.guild.id;
-        if (ctx instanceof CommandInteraction) ctx.deferReply({ephemeral: true});
-        else ctx.reply("Working...");
-        return YTPlaylist.getIds(arg1).then(ids => 
+        return ctx.deferReply({ephemeral: true}).then(()=>YTPlaylist.getIds(url)).then(ids => 
             yt.Playlist.create(guildid, ids)
         ).then((playlist: yt.Playlist) => {
-            editReply(ctx, `Created a new playlist with ${playlist.getSongs.length} song(s)!`)
-        }).then(()=>{}).catch((e: Error) => { error(ctx, e, true) })
+            ctx.editReply(`Created a new playlist with ${playlist.getSongs.length} song(s)!`)
+        }).catch((e: Error) => ctx.editReply(e.message))
     }
 }
 const Delete: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "delete",
-    description: "Deletes your playlist.",
+    description: "Deletes the server playlist.",
     public: true,
 
-    run: async (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Playlist Locating
         const playlist = yt.Playlist.getPlaylist(ctx.guild.id)
-        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
-        // Message
-        const msg = await reply(ctx, {
+        if (!playlist) return ctx.reply({content:ERRORS.NO_PLAYLIST, ephemeral:true});
+        // Confirmation & Action Execution
+        return ctx.reply({
             content: "_",
             components: [{
                 type: ComponentType.ActionRow,
-                "components": [
-                    {
-                        "style": ButtonStyle.Success,
-                        "label": `Confirm`,
-                        "customId": `cplaylistdeleteconfirm`,
-                        "disabled": false,
-                        "type": ComponentType.Button
-                    },
-                    {
-                        "style": ButtonStyle.Danger,
-                        "label": `Cancel`,
-                        "customId": `cancel`,
-                        "disabled": false,
-                        "type": ComponentType.Button
-                    }
-                ]
+                "components": [{
+                    "style": ButtonStyle.Success,
+                    "label": `Confirm`,
+                    "customId": `cplaylistdeleteconfirm`,
+                    "disabled": false,
+                    "type": ComponentType.Button
+                },{
+                    "style": ButtonStyle.Danger,
+                    "label": `Cancel`,
+                    "customId": `cancel`,
+                    "disabled": false,
+                    "type": ComponentType.Button
+                }]
             }],
             embeds: [{
-                title: "Are you sure you want to delete your playlist?",
+                title: "Are you sure you want to delete this playlist?",
                 description: "This action is permanent and irreversible.",
                 color: 0xFF0000,
                 footer: {
@@ -83,25 +73,23 @@ const Delete: SubCommand = {
                     icon_url: client.user?.avatarURL() ?? ""
                 }
             }]
-        }, true)
-        // Interaction Collection
-        msg.createMessageComponentCollector<ComponentType.Button>({
-            filter: (i: ButtonInteraction) => i.user.id === (ctx instanceof CommandInteraction ? ctx.user : ctx.author).id,
+        }).then(msg=>msg.createMessageComponentCollector<ComponentType.Button>({
+            filter: (i: ButtonInteraction) => i.user.id === ctx.user.id,
             time: 5 * 1000, max: 1
         }).once("collect", (interaction: ButtonInteraction): void => {
             if (interaction.customId === 'cancel') {interaction.update({ content: "Cancelled.", components: [], embeds: [] });return;}
             playlist.delete().then(()=>
-                interaction.update({ content: `Deleted your playlist.`, components: [], embeds: [] })
-            ).catch((e: Error) => error(ctx, e))
+                interaction.update({ content: `Deleted the playlist.`, components: [], embeds: [] })
+            ).catch((e: Error) => ctx.reply({content:e.message, ephemeral:true}))
         }).on("end", (_, reason: string) => {
-            if (reason === "idle" && msg.editable) msg.fetch().then(_=>msg.edit({ content: "Cancelled. (Timed Out)", components:[]})).catch()
-        })
+            if (reason === "idle") ctx.editReply({content: "Cancelled. (Timed Out)", components:[]}).catch()
+        }));
     },
 }
 const Add: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "add",
-    description: "Adds music to your playlist.",
+    description: "Adds music to the server playlist.",
     options: [{
         type: ApplicationCommandOptionType.String,
         name: "ids",
@@ -110,27 +98,25 @@ const Add: SubCommand = {
     }],
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);;
-        // Argument Processing
-        let arg1: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("ids")?.value?.toString() :
-            ctx.content.split(/\s+/g)[3]
-        if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+    run: (ctx: CommandInteraction, {ids}: {ids: string}) => {
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Playlist Locating
         let playlist = yt.Playlist.getPlaylist(ctx.guild.id)
-        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
+        if (!playlist) return ctx.reply({content:ERRORS.NO_PLAYLIST, ephemeral:true});
         // Action Execution
-        let added: (SongReference | null)[] = playlist.addSongs(arg1.split(",").map(i => i.trim())).map(yt.Playlist.getSong);
-        if (added.length < 1) return error(ctx, new Error("No songs were added!"));
-        return reply(ctx, `Added ${added.length} song(s) to the playlist!\n> `+added.filter((sr: SongReference | null): sr is SongReference => !!sr)
-            .map((s: Song) => truncateString(s.title, Math.floor(60/added.length))).join(", ")).then(()=>{});
+        let added: (SongReference | null)[] = playlist.addSongs(ids.split(",").map(i => i.trim())).map(yt.Playlist.getSong);
+        if (added.length < 1) return ctx.reply({content:ERRORS.NO_SONG, ephemeral:true});
+        return ctx.reply({content:`Added ${added.length} song(s) to the playlist!\n> `+added
+                .filter((sr: SongReference | null): sr is SongReference => !!sr)
+                .map((s: Song) => truncateString(s.title, Math.floor(60/added.length))).join(", "),
+            ephemeral:true
+        });
     }
 }
 const Remove: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "remove",
-    description: "Removes music from your playlist.",
+    description: "Removes music from the server playlist.",
     options: [{
         "type": ApplicationCommandOptionType.String,
         "name": "ids",
@@ -139,27 +125,25 @@ const Remove: SubCommand = {
     }],
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);;
-        // Argument Processing
-        let arg1: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("ids")?.value?.toString() :
-            ctx.content.split(/\s+/g)[3]
-        if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+    run: (ctx: CommandInteraction, {ids}: {ids: string}) => {
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         // Playlist Locating
         let playlist = yt.Playlist.getPlaylist(ctx.guild.id)
-        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
+        if (!playlist) return ctx.reply({content:ERRORS.NO_PLAYLIST, ephemeral:true});
         // Action Execution
-        let removed: (SongReference | null)[] = playlist.removeSongs(arg1.split(",").map(i => i.trim())).map(yt.Playlist.getSong)
-        if (removed.length < 1) return error(ctx, ERRORS.NO_SONG);
-        return reply(ctx, `Removed ${removed.length} song(s) from the playlist!\n> `+removed.filter((sr: SongReference | null): sr is SongReference => !!sr)
-            .map((s: Song) => truncateString(s.title, Math.floor(60/removed.length))).join(", ")).then(()=>{});
+        let removed: (SongReference | null)[] = playlist.removeSongs(ids.split(",").map(i => i.trim())).map(yt.Playlist.getSong)
+        if (removed.length < 1) return ctx.reply({content:ERRORS.NO_SONG, ephemeral:true});
+        return ctx.reply({content:`Removed ${removed.length} song(s) from the playlist!\n> `+removed
+                .filter((sr: SongReference | null): sr is SongReference => !!sr)
+                .map((s: Song) => truncateString(s.title, Math.floor(60/removed.length))).join(", "),
+            ephemeral:true,
+        });
     }
 }
 const List: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "list",
-    description: "Lists music on your playlist",
+    description: "Lists music on server playlist",
     options: [{
         "type": ApplicationCommandOptionType.String,
         "name": "key",
@@ -180,24 +164,17 @@ const List: SubCommand = {
     }],
     public: true,
 
-    run: async (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction, {key, term}: {key: "title" | "artist" | "genre" | "tags" | "sort", term: string}) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        // Argument Processing
-        let arg1: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("key", false)?.value?.toString() :
-            ctx.content.split(/\s+/g)[3];
-        let arg2: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("term", false)?.value?.toString() :
-            ctx.content.split(/\s+/g).slice(4).join(" ");
         // Playlist Locating
         let playlist = yt.Playlist.getPlaylist(ctx.guild.id)
-        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
+        if (!playlist) return ctx.reply({content:ERRORS.NO_PLAYLIST, ephemeral:true});
         // Action Execution
         let items: (SongReference & RatedSong)[] = playlist.getSongs.map(getFullSong).filter((r): r is SongReference & RatedSong => !!r)
         let page = 0;
-        if (arg1 && arg2) {
-            let term = arg2.toLowerCase() ?? "";
-            switch (arg1) {
+        if (key && term) {
+            term = term.toLowerCase() ?? "";
+            switch (key) {
                 case 'title':
                     items = items.filter((i: Song) => i.title.toLowerCase().includes(term));
                     break;
@@ -217,36 +194,10 @@ const List: SubCommand = {
                     break;
             }
         }
-        // Interaction Standardization
-        let rmsg: Message | undefined;
-        if (ctx instanceof Message) {
-            rmsg = await reply(ctx, {
-                "content": "Click this button to continue:",
-                "components": [{
-                    type: ComponentType.ActionRow,
-                    components: [{
-                        "style": ButtonStyle.Success,
-                        "label": `Continue`,
-                        "customId": `continue`,
-                        "disabled": false,
-                        "type": ComponentType.Button,
-                    } as MessageActionRowComponentData]
-                }]
-            }, true)
-        }
-        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
+        // Reply & Interaction Collection
+        return ctx.reply(listMessage(ctx, items, page)).then(msg=>msg.createMessageComponentCollector({
             componentType: ComponentType.Button,
-            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
-            time: 10*1000
-        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx) return;
-        if (rmsg?.deletable) await rmsg.delete()
-        // Message
-        const msg = await reply(rctx, listMessage(rctx, items, page), true)
-        // Interaction Collection
-        msg.createMessageComponentCollector({
-            componentType: ComponentType.Button,
-            filter: (i: ButtonInteraction) => i.user.id === rctx.user.id,
+            filter: (i: ButtonInteraction) => i.user.id === ctx.user.id,
             idle: 20 * 1000
         }).on('collect', (interaction: ButtonInteraction) => {
             switch (interaction.customId) {
@@ -257,11 +208,47 @@ const List: SubCommand = {
                     page--;
                     break;
             }
-            interaction.update(listMessage(rctx, items, page))
+            interaction.update(listMessage(ctx, items, page))
         }).on('end', (_: any, reason: string) => {
-            if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
-        })
-    },
+            if (reason==="idle") ctx.fetchReply().then(_=>ctx.editReply({components:[]})).catch()
+        }))
+    }
+}
+const Info: SubCommand = {
+    type: ApplicationCommandOptionType.Subcommand,
+    name: "info",
+    description: "Grabs playlist statistics",
+    public: true,
+
+    run: (ctx: CommandInteraction) => {
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
+        const guildid = ctx.guild.id;
+        const pl = yt.Playlist.getPlaylist(guildid);
+        if (!pl) return ctx.reply({content:ERRORS.NO_PLAYLIST,ephemeral:true});
+        return ctx.deferReply({ephemeral:true}).then(()=>{
+            const srs = pl.getSongs.map(yt.Playlist.getSong).filter((s: any): s is SongReference => !!s);
+            let runtime = 0;
+            for (const n of srs) {
+                runtime += n.length; // expand later
+            }
+            return {size: srs.length, runtime};
+        }).then(({size, runtime}) => ctx.editReply({
+            embeds: [{
+                title: `Information`,
+                description: `Server Playlist`,
+                fields: [
+                    {name: "# Of Songs", value: ""+size, inline: true},
+                    {name: "Total Song Runtime:", value: Math.round(runtime/60)+"m", inline: true},
+                    {name: "Average Song Length:", value: Math.round(runtime/size)+"s", inline: true}
+                ],
+                footer: {
+                    text: `PlaylistDJ - Server Playlist Info`,
+                    icon_url: client.user?.avatarURL() ?? ""
+                },
+                color: 0xff0000
+            }]
+        }))
+    }
 }
 const Tag: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
@@ -281,29 +268,17 @@ const Tag: SubCommand = {
     }],
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction, {id, tags}: {id: string, tags: string}) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        // Argument Processing
-        let id: string | undefined, arg2: string | undefined;
-        if (ctx instanceof CommandInteraction) {
-            id = ctx.options.get("id", true).value?.toString();
-            arg2 = ctx.options.get("tags", true).value?.toString();
-        } else {
-            let args = ctx.content.split(/\s+/g).slice(3)
-            id = args[0];
-            arg2 = args.slice(1).join(" ");
-        }
-        if (!id || !arg2) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-        const tags = arg2.split(",").map(s=>s.trim());
+        const t = tags.split(",").map(s=>s.trim());
         // Playlist Locating
         const playlist = yt.Playlist.getPlaylist(ctx.guild.id)
-        if (!playlist) return error(ctx, ERRORS.NO_PLAYLIST);
+        if (!playlist) return ctx.reply({content:ERRORS.NO_PLAYLIST, ephemeral:true});
         const song: RatedSong | undefined = playlist.getSongs.find(rs => rs.id === id)
-        if (!song) return error(ctx, ERRORS.NO_SONG);
+        if (!song) return ctx.reply({content:ERRORS.NO_SONG, ephemeral:true});
         // Action Execution
-        song.tags = tags;
-        return reply(ctx, {
-            content: "_",
+        song.tags = t;
+        return ctx.reply({
             "embeds": [{
                 "title": "Song ID: " + song.id,
                 "description": "Local Song Metadata",
@@ -342,23 +317,22 @@ const Tag: SubCommand = {
 }
 
 const SubCommands: SubCommand[] = [
-    Create, Delete, Add, Remove, List, Tag
+    Create, Delete, Add, Remove, List, Info, Tag
 ]
 export const Playlist: Command = {
     name: commandname,
-    description: "Manage your server playlist.",
+    description: "Manage the server playlist.",
     options: SubCommands,
     defaultMemberPermissions: "ManageGuild",
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
-        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);;
-        let option: string = ctx instanceof CommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
-        let subcommand: SubCommand | undefined = SubCommands.find(sc => sc.name === option)
+    run: (ctx: CommandInteraction) => {
+        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
+        let subcommand: SubCommand | undefined = SubCommands.find(sc => sc.name === ctx.options.data[0].name)
 
-        if (!subcommand) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-        if (!subcommand.public && !isWhitelisted(ctx)) return error(ctx, ERRORS.NO_PERMS);
-        return subcommand.run(ctx);
+        if (!subcommand) return ctx.reply({content: ERRORS.INVALID_ARGUMENTS, ephemeral: true});
+        if (!subcommand.public && !isWhitelisted(ctx)) return ctx.reply({content: ERRORS.NO_PERMS, ephemeral: true});
+        return subcommand.run(ctx, getArguments(ctx, subcommand.options));
     },
 
     ac(ctx: AutocompleteInteraction) {

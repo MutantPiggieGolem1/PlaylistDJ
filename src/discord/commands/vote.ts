@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message } from "discord.js"
 import { ERRORS, Song } from "../../constants"
 import { Playlist } from "../../web/playlist"
-import { error, getPlayer, getPlaying, reply, truncateString } from "../util"
+import { getPlayer, getPlaying, truncateString } from "../util"
 import { Command } from "./Commands"
 
 const voted: {[key:string]: Set<String>} = {};
@@ -13,37 +13,35 @@ export const Vote: Command = {
     options: [{
         name: "vote",
         description: "Upvote or downvote?",
-        type: ApplicationCommandOptionType.String,
+        type: ApplicationCommandOptionType.Boolean,
         required: true,
         choices: [
-            {name:"Up",value:"up"},
+            {name:"Up",  value:  "up"},
             {name:"Down",value:"down"}
         ]
     }],
     defaultMemberPermissions: "PrioritySpeaker",
     public: true,
     
-    run: async (ctx: CommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction, {vote}: {vote: "up" | "down"}) => {
         if (!ctx.guild || !ctx.member) return Promise.reject(ERRORS.NO_GUILD);
         if (!("voice" in ctx.member)) return Promise.reject(ERRORS.NO_CONNECTION);
-        const uid = (ctx instanceof Message ? ctx.author : ctx.user).id;
-        if (voted[ctx.guild.id]?.has(uid)) return error(ctx, new Error("You've already voted!"));
+        const uid = ctx.user.id;
+        if (voted[ctx.guild.id]?.has(uid)) return ctx.reply({content: "You've already voted!",ephemeral:true});
         // Argument Processing
-        let arg1: string | undefined = (ctx instanceof CommandInteraction ?
-            ctx.options.get("vote",true).value?.toString() :
-            ctx.content.split(/\s+/g)[2])?.toLowerCase()
-        if (!arg1 || !["up","down"].includes(arg1)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         const me: GuildMember = await ctx.guild.members.fetchMe();
-        if (!ctx.member.voice || ctx.member.voice.channelId !== me.voice.channelId || ctx.member.voice.deaf || me.voice.serverMute) return error(ctx,new Error("You aren't even listening to the music!"))
+        if (!ctx.member.voice || ctx.member.voice.channelId !== me.voice.channelId || ctx.member.voice.deaf || me.voice.serverMute) return ctx.reply({content:"You aren't even listening to the music!", ephemeral: true});
         // Playlist Locating
         let playlist = Playlist.getPlaylist(ctx.guild.id)
-        if (!playlist) return error(ctx,ERRORS.NO_PLAYLIST);
+        if (!playlist) return ctx.reply({content:ERRORS.NO_PLAYLIST,ephemeral:true});
         let song: Song | undefined = getPlaying(getPlayer(ctx.guild.id,false))
-        if (!song) return error(ctx,ERRORS.NO_SONG);
+        if (!song) return ctx.reply({content:ERRORS.NO_SONG,ephemeral:true});
         // Action Execution
         if (!voted[ctx.guild.id]) voted[ctx.guild.id] = new Set<string>();
         voted[ctx.guild.id].add(uid);
-        playlist.vote(song.id, arg1==="up");
-        return reply(ctx,`${arg1[0].toUpperCase()+arg1.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.getSongs.find(i=>i.id===song?.id)?.score} score)`)
+        playlist.vote(song.id, vote==="up");
+        return ctx.reply({ ephemeral: true,
+            content: `${vote[0].toUpperCase()+vote.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.getSongs.find(i=>i.id===song?.id)?.score} score)`
+        });
     }
 }

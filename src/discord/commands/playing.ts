@@ -1,7 +1,7 @@
-import { CommandInteraction, EmbedType, Message } from "discord.js"
+import { CommandInteraction, EmbedType } from "discord.js"
 import { ERRORS, Song } from "../../constants"
 import { client } from "../../index"
-import { error, getPlayer, getPlaying, reply } from "../util"
+import { getPlayer, getPlaying } from "../util"
 import { Command } from "./Commands"
 import { history } from "./play"
 
@@ -11,11 +11,11 @@ export const Playing: Command = {
     defaultMemberPermissions: "Speak",
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         let song: Song | undefined = getPlaying(getPlayer(ctx.guild.id,false))
-        if (!song) return error(ctx, ERRORS.NO_SONG);
-        return reply(ctx, {embeds:[{
+        if (!song) return ctx.reply({content: ERRORS.NO_SONG, ephemeral: true});
+        return ctx.reply({embeds:[{
             type: EmbedType.Rich,
             title: "Now Playing:",
             description: `${song.title} - ${song.artist}\n\`${song.id}\``,

@@ -4,7 +4,7 @@ import { createReadStream } from "fs"
 import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
 import nextSong from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
-import { error, getPlayer } from "../util"
+import { getPlayer } from "../util"
 import { Command } from "./Commands"
 import { leave } from "./leave"
 import { resetVotes } from "./vote"
@@ -24,25 +24,22 @@ export const Play: Command = {
     defaultMemberPermissions: "Speak",
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction, {id}: {id: string}) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         const guildid = ctx.guild.id;
         // Playlist Locating
         let pl = Playlist.getPlaylist(ctx.guild.id)
-        if (!pl) return error(ctx, ERRORS.NO_PLAYLIST);
+        if (!pl) return ctx.reply({content: ERRORS.NO_PLAYLIST, ephemeral: true});
         let playlist: RatedSong[] = pl.getSongs;
-        if (!playlist) return error(ctx, ERRORS.NO_SONG);
+        if (!playlist) return ctx.reply({content: ERRORS.NO_SONG, ephemeral: true});
         // Argument Processing
-        let arg1: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("id",false)?.value?.toString() :
-            ctx.content.split(/\s+/g)[2];
-        let rs: RatedSong | undefined = playlist.find(s=>s.id===arg1);
+        let rs: RatedSong | undefined = playlist.find(s=>s.id===id);
         let start: SongReferenceResolvable = (rs ? Playlist.getSong(rs) : null) || nextSong(ctx.guild.id);
         // Condition Validation
         let player: AudioPlayer = getPlayer(ctx.guild.id)
         player.removeAllListeners().stop()
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
-        if (!connection?.subscribe(player)) return error(ctx, ERRORS.NO_CONNECTION)
+        if (!connection?.subscribe(player)) return ctx.reply({content: ERRORS.NO_CONNECTION, ephemeral: true})
         // Action Execution
         history[guildid] = [];
         player.on(AudioPlayerStatus.Idle, () => {
@@ -51,7 +48,7 @@ export const Play: Command = {
             console.warn(`Audio Player Error: ${e.message}\n  Resource: [${e.resource.metadata ? JSON.stringify(e.resource.metadata) : JSON.stringify(e.resource)}]`);
         });
         return play(player, start, guildid).then(()=>{
-            if (ctx instanceof CommandInteraction && !ctx.deferred && !ctx.replied) return ctx.reply({content:"Began Playing!",ephemeral:true}).then(()=>{})
+            if (ctx instanceof CommandInteraction && !ctx.deferred && !ctx.replied) return ctx.reply({content:"Began Playing!",ephemeral:true});
         });
     },
     

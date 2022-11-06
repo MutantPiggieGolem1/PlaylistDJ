@@ -1,7 +1,7 @@
 import { AudioPlayerState, AudioPlayerStatus } from "@discordjs/voice"
-import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message, VoiceBasedChannel } from "discord.js"
+import { ApplicationCommandOptionType, CommandInteraction, GuildMember, VoiceBasedChannel } from "discord.js"
 import { ERRORS } from "../../constants"
-import { error, getPlayer, reply } from "../util"
+import { getPlayer } from "../util"
 import { Command } from "./Commands"
 
 export const KickMe: Command = {
@@ -15,27 +15,22 @@ export const KickMe: Command = {
     }],
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction, {timeout}: {timeout: number}) => {
         if (!ctx.guild || !ctx.member) return Promise.reject(ERRORS.NO_GUILD);
         const guild = ctx.guild;
         const member = ctx.member as GuildMember;
-        // Argument Processing
-        let arg1: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("timeout",true).value?.toString().trim() :
-            ctx.content.split(/\s+/g)[2].trim();
-        if (!arg1 || Number.isNaN(arg1)) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Condition Validation
         const channel: VoiceBasedChannel | null = member.voice.channel;
-        if (!channel) return error(ctx, new Error("You aren't in a voice channel!"))
-        if (channel !== guild.members.me?.voice.channel) return error(ctx, new Error("You aren't in the same channel!"))
+        if (!channel) return ctx.reply({content:"You aren't in a voice channel!",ephemeral:true});
+        if (channel !== guild.members.me?.voice.channel) return ctx.reply({content:"You aren't in the same channel!",ephemeral:true});
         const mystate: AudioPlayerState | undefined = getPlayer(guild.id, false)?.state;
-        if (!mystate || mystate.status !== AudioPlayerStatus.Playing) return error(ctx, new Error("No music is currently being played!"));
+        if (!mystate || mystate.status !== AudioPlayerStatus.Playing) return ctx.reply({content:"No music is currently being played!",ephemeral:true});
         // Action Execution
-        let timeout = Math.abs(Number.parseInt(arg1));
+        timeout = Math.abs(timeout);
         setTimeout(() => {
             if (!member.voice.channel) return;
-            member.voice.disconnect("Auto-Kick after "+timeout+"m").catch(console.error);
+            member.voice.disconnect("Auto-Kick after "+timeout+"m").catch(console.warn);
         }, timeout * 60 * 1000);
-        return reply(ctx, `Auto-Kicking you in ${arg1} minute${timeout !== 1 ? "s" : ""}!`);
+        return ctx.reply({content:`Auto-Kicking you in ${timeout} minute${timeout !== 1 ? "s" : ""}!`, ephemeral:true});
     }
 }

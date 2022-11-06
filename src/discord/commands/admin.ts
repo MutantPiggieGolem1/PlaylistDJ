@@ -1,10 +1,10 @@
-import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, Guild, InteractionUpdateOptions, Message, MessageActionRowComponent, ModalActionRowComponent, ModalActionRowComponentData, ModalComponentData, ModalSubmitInteraction, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
+import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, InteractionUpdateOptions, ModalActionRowComponent, ModalActionRowComponentData, ModalSubmitInteraction, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
 import { ERRORS, Genre, Song, SongReference } from "../../constants"
-import { client, WHITELIST } from "../../index"
+import { client, getArguments, WHITELIST } from "../../index"
 import { getAllCsvs, getCsv } from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
 import { YTPlaylist } from "../../web/ytplaylist"
-import { editReply, error, isWhitelisted, ITEMS_PER_PAGE, reply } from "../util"
+import { isWhitelisted, ITEMS_PER_PAGE } from "../util"
 import { Command, SubCommand, SubCommandGroup } from "./Commands"
 
 const commandname = "admin"
@@ -22,42 +22,13 @@ const Amend: SubCommand = {
     }],
     public: false,
 
-    run: async (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction, {id}: {id: string}) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        // Argument Processing
-        const id: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("id", true).value?.toString() :
-            ctx.content.split(/\s+/g)[3]
-        if (!id) return error(ctx, ERRORS.INVALID_ARGUMENTS);
         // Playlist Locating (ish)
         const song: SongReference | null = Playlist.getSong(id);
-        if (!song) return error(ctx, ERRORS.NO_SONG);
-        // Interaction Standardization
-        let rmsg: Message | undefined;
-        if (ctx instanceof Message) {
-            rmsg = await reply(ctx, {
-                "content": "Click this button to continue:",
-                "components": [{
-                    type: ComponentType.ActionRow,
-                    components: [{
-                        "style": ButtonStyle.Success,
-                        "label": `Continue`,
-                        "customId": `continue`,
-                        "disabled": false,
-                        "type": ComponentType.Button,
-                    }]
-                }]
-            }, true)
-        }
-        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: ComponentType.Button,
-            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
-            time: 10*1000
-        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx) return Promise.reject(ERRORS.NO_GUILD);
-        if (rmsg?.deletable) await rmsg.delete()
+        if (!song) return ctx.reply({content:ERRORS.NO_SONG,ephemeral:true});
         // Action Execution
-        return rctx.showModal({
+        return ctx.showModal({
             customId: `c${commandname}amendedit`,
             title: `Song Metadata Editor [${song.id}]`,
             components: [{
@@ -94,10 +65,7 @@ const Amend: SubCommand = {
                     type: ComponentType.TextInput
                 } as ModalActionRowComponentData]
             } as ActionRow<ModalActionRowComponent>]
-        } as ModalComponentData).then(async _=> {
-            if (ctx instanceof Message && await rctx.fetchReply()) await rctx.deleteReply()
-            return rctx.awaitModalSubmit({time:5*60*1000})
-        }).then(async (interaction: ModalSubmitInteraction) => {
+        }).then(() => ctx.awaitModalSubmit({time:5*60*1000})).then(async (interaction: ModalSubmitInteraction) => {
             let content: string = "_";
             song.title = interaction.fields.getTextInputValue(`mamendedittitle`) || song.title
             song.artist= interaction.fields.getTextInputValue(`mamendeditartist`)|| song.artist
@@ -138,7 +106,7 @@ const Amend: SubCommand = {
                 }]
             })
         }).then(() => {}).catch(_ => {
-            return rctx.deleteReply().catch(_=>{})
+            return ctx.deleteReply().catch(_=>{})
         })
     },
 
@@ -187,73 +155,61 @@ const Auth: SubCommandGroup = {
         }
     ],
 
-    run: (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        if (ctx.member?.user.id !== "547624574070816799") return error(ctx,ERRORS.NO_PERMS)
-        let user: User | undefined, option: string
-        if (ctx instanceof CommandInteraction) {
-            option = ctx.options.data[0]?.options ? ctx.options.data[0]?.options[0].name : ""
-            user = ctx.options.get("user", false)?.user
-        } else {
-            let u: string;
-            [option, u] = ctx.content.split(/\s+/g).slice(3)
-            if (u) user = ctx.guild.members.resolve(u.replaceAll(/\D/g, ""))?.user ?? ctx.guild.members.cache.find(m => m.displayName === u)?.user
-        }
-
+        if (ctx.member?.user.id !== "547624574070816799") return ctx.reply({content:ERRORS.NO_PERMS,ephemeral:true})
+        const user: User | undefined = ctx.options.get("user", false)?.user
+        const option = ctx.options.data[0]?.options ? ctx.options.data[0]?.options[0].name : ""
         switch (option) {
             case 'add':
-                if (!user) return error(ctx, ERRORS.NO_USER);
+                if (!user) return ctx.reply({content: ERRORS.NO_USER, ephemeral: true});
                 if (!WHITELIST.has(user.id)) {
                     WHITELIST.add(user.id)
-                    return reply(ctx, `Added ${user.tag} to the whitelist.`)
+                    return ctx.reply({content:`Added ${user.tag} to the whitelist.`,ephemeral:true});
                 } else {
-                    return error(ctx, new Error(`${user.tag} was already on the whitelist.`))
+                    return ctx.reply({content:`${user.tag} was already on the whitelist.`,ephemeral:true});
                 }
             case 'remove':
-                if (!user) return error(ctx, ERRORS.NO_USER);
+                if (!user) return ctx.reply({content: ERRORS.NO_USER, ephemeral: true});
                 if (WHITELIST.has(user.id)) {
                     WHITELIST.delete(user.id)
-                    return reply(ctx, `Removed ${user.tag} from the whitelist.`)
+                    return ctx.reply({content:`Removed ${user.tag} from the whitelist.`,ephemeral:true});
                 } else {
-                    return error(ctx, new Error(`${user.tag} wasn't on the whitelist.`))
+                    return ctx.reply({content:`${user.tag} wasn't on the whitelist.`,ephemeral:true});
                 }
             case 'list':
-                return reply(ctx, {
+                return ctx.reply({
                     "content": `_`,
-                    "embeds": [
-                        {
-                            "type": EmbedType.Rich,
-                            "title": `Bot Administrators`,
-                            "description": "",
-                            "color": 0x123456,
-                            "fields": [...WHITELIST.keys()].map(id => {return {
-                                "name": client.users.resolve(id)?.tag ?? id,
-                                "value": id
-                            }}),
-                            "footer": {
-                                "text": "PlaylistDJ - Auth List",
-                                "icon_url": client.user?.avatarURL() ?? ""
-                            }
+                    "embeds": [{
+                        "type": EmbedType.Rich,
+                        "title": `Bot Administrators`,
+                        "description": "",
+                        "color": 0x123456,
+                        "fields": [...WHITELIST.keys()].map(id => {return {
+                            "name": client.users.resolve(id)?.tag ?? id,
+                            "value": id
+                        }}),
+                        "footer": {
+                            "text": "PlaylistDJ - Auth List",
+                            "icon_url": client.user?.avatarURL() ?? ""
                         }
-                    ]
+                    }]
                 })
             default:
-                return error(ctx, ERRORS.INVALID_ARGUMENTS);
+                return ctx.reply({content: ERRORS.INVALID_ARGUMENTS, ephemeral: true});
         }
     }
-}
+} // TODO: Fix
 const Clean: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "clean",
     description: "Deletes unreferenced files globally.",
     public: false,
 
-    run: (ctx: CommandInteraction | Message) => {
-        return Playlist.clean()
-        .then((rmfiles: string[]) =>
-            reply(ctx, `Clean Complete! [Deleted ${rmfiles.length} files]`)
-        ).then(()=>{})
-    }
+    run: (ctx: CommandInteraction) =>
+        Playlist.clean().then((rmfiles: string[]) =>ctx.reply(
+            {content:`Clean Complete! [Deleted ${rmfiles.length} files]`,ephemeral:true}
+        ))
 }
 const Destroy: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
@@ -267,19 +223,12 @@ const Destroy: SubCommand = {
         required: true,
     }],
 
-    run: async (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction, {ids}: {ids: string}) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        // Argument Processing
-        let inp: string | undefined = ctx instanceof CommandInteraction
-            ? ctx.options.get("id",true).value?.toString()
-            : ctx.content.split(/\s+/g)[3]
-        if (!inp) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-        let ids: string[] = inp.split(",").slice(undefined,10).map(id=>id.trim())
-        if (ids.length <= 0) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-        // Action Execution
-        let removed: string[] = await Playlist.delete(ids);
-        if (removed.length < 1) return error(ctx, ERRORS.NO_SONG);
-        return reply(ctx,`Success! Destroyed ${removed.length} song(s).`).then(()=>{});
+        return Playlist.delete(ids.split(",").map(id=>id.trim())).then((removed) => removed.length < 1
+            ? ctx.reply({content: ERRORS.NO_SONG, ephemeral: true})
+            : ctx.reply({content:`Success! Destroyed ${removed.length} song(s).`, ephemeral:true})
+        )
     }
 }
 const Download: SubCommand = {
@@ -287,54 +236,24 @@ const Download: SubCommand = {
     name: "download",
     description: "Downloads music from youtube.",
     options: [{
-        "type": ApplicationCommandOptionType.String,
+        type: ApplicationCommandOptionType.String,
         name: "url",
         description: "Youtube URL to Download From",
         required: true,
     }],
     public: false,
 
-    run: async (ctx: CommandInteraction | Message) => {
+    run: async (ctx: CommandInteraction, {url}: {url: string}) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        // Argument Processing
-        let arg1: string | null | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("url", true).value?.toString() :
-            ctx.content.split(/\s+/g)[3]
-        if (!arg1) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-        // Interaction Standardization
-        let rmsg: Message | undefined;
-        if (ctx instanceof Message) {
-            rmsg = await ctx.reply({
-                "content": "Click this button to continue:",
-                "components": [{
-                    type: ComponentType.ActionRow,
-                    components: [{
-                        "style": ButtonStyle.Success,
-                        "label": `Continue`,
-                        "customId": `continue`,
-                        "disabled": false,
-                        "type": ComponentType.Button,
-                    } as MessageActionRowComponent]
-                }],
-                failIfNotExists: false
-            })
-        }
-        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: ComponentType.Button,
-            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
-            time: 10*1000
-        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx?.guild) return Promise.reject(ERRORS.NO_GUILD);
-        if (rmsg?.deletable) await rmsg.delete();
-        const guildid: string = rctx.guild.id;
+        const guildid = ctx.guild.id;
         // Playlist Locating
-        await rctx.reply({content: "Searching for Playlist...", ephemeral: true})
+        await ctx.reply({content: "Searching for Playlist...",ephemeral:true});
         try {
-            var webpl: YTPlaylist = await YTPlaylist.fromUrl(arg1);
-        } catch (e) { return error(rctx, e as Error) }
+            var webpl = await YTPlaylist.fromUrl(url);
+        } catch (e) { return ctx.reply({content:(e as Error).message,ephemeral:true}) }
         // Action Execution
         const idata: {index: number, exclusions: number[]} = { index: 0, exclusions: [] };
-        rctx.editReply({
+        return ctx.editReply({
             "content": "Found!",
             "components": [
                 {
@@ -382,7 +301,7 @@ const Download: SubCommand = {
             ]
         } as WebhookEditMessageOptions).then(msg => {
             msg.createMessageComponentCollector<ComponentType.Button>({
-                filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
+                filter: (i: ButtonInteraction) => i.user.id===ctx.user.id,
                 idle: 20*1000
             }).on('collect', async (interaction: ButtonInteraction) => {
                 switch (interaction.customId) {
@@ -465,28 +384,27 @@ const Download: SubCommand = {
                         if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: [], content: "Downloading..."});
                         webpl.download(guildid)
                         .on('progress', (cur: number, total: number, id: string) => {
-                            editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
+                            interaction.editReply(`Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
                         }).on('warn', (cur: number, total: number, id: string, error: Error) => {
-                            editReply(interaction, `Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
+                            interaction.editReply(`Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
                         }).on('finish', (pl: Playlist | null | undefined) => {
-                            editReply(interaction, `Success! Your playlist now has ${pl ? pl.getSongs.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
-                        }).on('error', (e: Error) => {
-                            editReply(interaction, "Error: " + e.message);
-                        })
+                            interaction.editReply(`Success! Your playlist now has ${pl ? pl.getSongs.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
+                        }).on('error', (e: Error) => interaction.editReply("Error: " + e.message))
                         break;
                     default:
                         interaction.update({components:[]}); return;
                 }
             }).on('end', (_,reason: string) => {
-                if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
+                if (reason==="idle") ctx.editReply({components:[]}).catch()
             })
-        }).catch((e: Error) => error(rctx, e as Error));
+        }).catch((e: Error) => {ctx.reply({content:e.message,ephemeral:true})});
     }
 }
 const Index: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "index",
     description: "Lists music in the music database",
+    public: true,
     options: [{
         "type": ApplicationCommandOptionType.String,
         "name": "key",
@@ -503,85 +421,85 @@ const Index: SubCommand = {
         "description": "Search term",
         "required": false
     }],
-    public: true,
 
-    run: async (ctx: CommandInteraction | Message) => {
-        // Argument Processing
-        let arg1: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("key", false)?.value?.toString() :
-            ctx.content.split(/\s+/g)[3];
-        let arg2: string | undefined = ctx instanceof CommandInteraction ?
-            ctx.options.get("term", false)?.value?.toString() :
-            ctx.content.split(/\s+/g).slice(4).join(" ");
-        // Interaction Standardization
-        let rmsg: Message | undefined;
-        if (ctx instanceof Message) {
-            rmsg = await reply(ctx, {
-                "content": "Click this button to continue:",
-                "components": [{
-                    type: ComponentType.ActionRow,
-                    components: [{
-                        "style": ButtonStyle.Success,
-                        "label": `Continue`,
-                        "customId": `continue`,
-                        "disabled": false,
-                        "type": ComponentType.Button,
-                    } as MessageActionRowComponent]
-                }]
-            }, true)
-        }
-        const rctx: ButtonInteraction | CommandInteraction | void = ctx instanceof Message ? (await rmsg?.awaitMessageComponent({
-            componentType: ComponentType.Button,
-            filter: (i: ButtonInteraction) => i.user.id===ctx.author.id,
-            time: 10*1000
-        }).catch(_=>{if (rmsg?.deletable) rmsg.delete()})) : ctx
-        if (!rctx) return Promise.reject(ERRORS.NO_GUILD);
-        if (rmsg?.deletable) await rmsg.delete()
+    run: (ctx: CommandInteraction, {key, term}: {key?: "title" | "artist" | "genre", term?: string}) => {
         // Action Execution
         let items: Song[] = Object.values(Playlist.getSong())
         let page = 0;
-        if (arg1 && arg2) {
-            const term = arg2.toLowerCase() ?? "";
-            switch (arg1) {
+        if (key && term) {
+            const t = term.toLowerCase();
+            switch (key) {
                 case 'title':
-                    items = items.filter((i: Song) => i.title.toLowerCase().includes(term));
+                    items = items.filter((i: Song) => i.title.toLowerCase().includes(t));
                     break;
                 case 'artist':
-                    items = items.filter((i: Song) => i.artist.toLowerCase().includes(term));
+                    items = items.filter((i: Song) => i.artist.toLowerCase().includes(t));
                     break;
                 case 'genre':
                     items = items.filter((i: Song) => i.genre.toString().toLowerCase() === term);
                     break;
             }
         }
-        
-        const msg = await rctx.reply({...listMessage(items, page), ephemeral: true});
-        // Interaction Collection
-        msg.createMessageComponentCollector<ComponentType.Button>({
-            filter: (i: ButtonInteraction) => i.user.id===rctx.user.id,
-            idle: 20*1000
+        // Reply & Interaction Collection
+        return ctx.reply(listMessage(items, page))
+            .then(msg=>msg.createMessageComponentCollector<ComponentType.Button>({
+                filter: (i: ButtonInteraction) => i.user.id===ctx.user.id,
+                idle: 20*1000
+            }).on('collect', (interaction: ButtonInteraction): void => { 
         }).on('collect', (interaction: ButtonInteraction): void => { 
-            switch (interaction.customId) {
-                case `c${commandname}indexpageup`:
-                    page++;
-                    break;
-                case `c${commandname}indexpagedown`:
-                    page--;
-                    break;
-                default:
-                    interaction.update({components:[]});
-                    return;
-            }
-            interaction.update(listMessage(items, page))
-        }).on('end', (_,reason: string) => {
-            if (reason==="idle") rctx.fetchReply().then(_=>rctx.editReply({components:[]})).catch()
-        })
+            }).on('collect', (interaction: ButtonInteraction): void => { 
+                switch (interaction.customId) {
+                    case `c${commandname}indexpageup`:
+                        page++;
+                        break;
+                    case `c${commandname}indexpagedown`:
+                        page--;
+                        break;
+                    default:
+                        interaction.update({components:[]});
+                        return;
+                }
+                interaction.update(listMessage(items, page))
+            }).on('end', (_,reason: string) => {
+                if (reason==="idle") ctx.editReply({components:[]}).catch()
+            }));
     }
+}
+const Info: SubCommand = {
+    type: ApplicationCommandOptionType.Subcommand,
+    name: "info",
+    description: "Grabs database statistics",
+    public: true,
+
+    run: (ctx: CommandInteraction) => 
+        ctx.deferReply({ephemeral:true}).then(()=>{
+            let runtime = 0;
+            for (const n of Object.values(Playlist.getSong())) {
+                runtime += n.length; // expand later
+            }
+            return {size: Object.keys(Playlist.getSong()).length, runtime};
+        }).then(({size, runtime}) => ctx.editReply({
+            embeds: [{
+                title: `Information`,
+                description: `Global Music Index`,
+                fields: [
+                    {name: "# Of Songs", value: ""+size, inline: true},
+                    {name: "Total Song Runtime:", value: Math.round(runtime/60)+"m", inline: true},
+                    {name: "Average Song Length:", value: Math.round(runtime/size)+"s", inline: true}
+                ],
+                footer: {
+                    text: `PlaylistDJ - Song Index Info`,
+                    icon_url: client.user?.avatarURL() ?? ""
+                },
+                color: 0xff0000
+            }]
+        }))
 }
 const GrabCSV: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "grabcsv",
     description: "Gets the most recent CSV data of a guild.",
+    public: false,
     options: [{
         type: ApplicationCommandOptionType.String,
         name: "id",
@@ -594,15 +512,13 @@ const GrabCSV: SubCommand = {
         description: "Allow anyone to download this file?",
         required: false
     }],
-    public: false,
 
-    run: (ctx: CommandInteraction | Message) => {
-        if (ctx instanceof Message) return error(ctx, new Error("This command has text disabled."));
+    run: (ctx: CommandInteraction) => {
         const gid: string | undefined = ctx.options.get("id", true).value?.toString();
         const ephemeral: boolean = !(ctx.options.get("public", false)?.value ?? false);
-        if (!gid) return error(ctx, ERRORS.INVALID_ARGUMENTS);
+        if (!gid) return ctx.reply({content: ERRORS.INVALID_ARGUMENTS, ephemeral: true});
         const file: Buffer | null = getCsv(gid);
-        if (!file) return error(ctx, new Error("Couldn't find data!"));
+        if (!file) return ctx.reply({content:"Couldn't find data!",ephemeral:true});
         return ctx.reply({
             content: "-",
             files: [new AttachmentBuilder(file, {name: gid+".csv", description:`CSV Data for '${client.guilds.cache.get(gid)?.name}'`})],
@@ -618,8 +534,8 @@ const GrabCSV: SubCommand = {
     }
 }
 
-const SubCommands: (SubCommand|SubCommandGroup)[] = [
-    Amend, Auth, Clean, Destroy, Download, Index, GrabCSV
+const SubCommands: SubCommand[] = [
+    Amend, Clean, Destroy, Download, Index, Info, GrabCSV
 ]
 export const Admin: Command = {
     name: commandname,
@@ -628,18 +544,18 @@ export const Admin: Command = {
     defaultMemberPermissions: "Administrator",
     public: true,
 
-    run: (ctx: CommandInteraction | Message) => {
+    run: (ctx: CommandInteraction) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        let option: string = ctx instanceof CommandInteraction ? ctx.options.data[0].name : ctx.content.split(/\s+/g)[2]
-        let subcommand: SubCommand | SubCommandGroup | undefined = SubCommands.find(sc => sc.name === option)
+        if (ctx.options.data[0].name === "auth") return Auth.run(ctx);
+        let subcommand: SubCommand | undefined = SubCommands.find(sc => sc.name === ctx.options.data[0].name)
 
-        if (!subcommand) return error(ctx, ERRORS.INVALID_ARGUMENTS);
-        if (!subcommand.public && !isWhitelisted(ctx)) return error(ctx, ERRORS.NO_PERMS);
-        return subcommand.run(ctx);
+        if (!subcommand) return ctx.reply({content: ERRORS.INVALID_ARGUMENTS, ephemeral: true});
+        if (!subcommand.public && !isWhitelisted(ctx)) return ctx.reply({content: ERRORS.NO_PERMS, ephemeral: true});
+        return subcommand.run(ctx, getArguments(ctx, subcommand.options));
     },
 
     ac(ctx: AutocompleteInteraction) {
-        let command: SubCommand | SubCommandGroup | undefined | null = SubCommands.find(c=>c.name===ctx.options.data[0].name);
+        let command: SubCommand | SubCommandGroup | undefined = SubCommands.find(c=>c.name===ctx.options.data[0].name);
         if (!command?.ac) return new Error("Autocomplete not recognized.");
     
         return command.ac(ctx);
@@ -648,7 +564,6 @@ export const Admin: Command = {
 
 function listMessage(items: Song[], page: number) {
     return {
-        "content": "_",
         "components": [{
             type: ComponentType.ActionRow,
             components: [{
@@ -681,6 +596,7 @@ function listMessage(items: Song[], page: number) {
                 "text": `PlaylistDJ - Song Index - Page ${page + 1}/${Math.ceil(items.length / ITEMS_PER_PAGE)}`,
                 "icon_url": client.user?.avatarURL() ?? ""
             }
-        }]
+        }],
+        ephemeral: true
     }
 }

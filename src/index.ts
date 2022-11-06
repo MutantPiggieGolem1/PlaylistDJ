@@ -1,21 +1,45 @@
-import { ActivityType, ApplicationCommandOptionChoiceData, Client, GatewayIntentBits, Interaction, InteractionType, Message } from "discord.js"
+import { ActivityType, ApplicationCommandOptionChoiceData, ApplicationCommandOptionData, ApplicationCommandOptionType, Client, CommandInteraction, GatewayIntentBits, GuildBasedChannel, Interaction, InteractionType } from "discord.js"
 import { scheduleJob } from "node-schedule"
+import { ERRORS } from "./constants"
 import { Command, Commands } from "./discord/commands/Commands"
-import { isWhitelisted } from "./discord/util"
+import { ApplicationCommandArgumentOptionData, isWhitelisted } from "./discord/util"
 import { saveAllPlaylists } from "./recommendation/interface"
 import { Playlist } from "./web/playlist"
 export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
 function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!`})}
-
+export function getArguments(interaction: CommandInteraction, opts?: ApplicationCommandOptionData[]) {
+    if (!opts) return {};
+    const options = opts.filter((opt): opt is ApplicationCommandArgumentOptionData => opt.type !== ApplicationCommandOptionType.Subcommand && opt.type !== ApplicationCommandOptionType.SubcommandGroup)
+    return Object.fromEntries(options.map(opt=>{
+        const option = interaction.options.get(opt.name, opt.required);
+        if (!option) {
+            if (opt.required) {console.warn("No command was found for "+opt.name)}
+            return;
+        }
+        if (!option.value && opt.required) return console.warn(ERRORS.INVALID_ARGUMENTS);
+        switch (opt.type) {
+            case ApplicationCommandOptionType.String:
+                return [option.name, option.value?.toString()];
+            case ApplicationCommandOptionType.Number:
+                return [option.name, option.value ? Number.parseInt(option.value.toString()) : 0]; // int not float
+            case ApplicationCommandOptionType.Boolean:
+                return [option.name, !!option.value];
+            case ApplicationCommandOptionType.Channel:
+                return [option.name, option.channel as GuildBasedChannel];
+            default:
+                console.warn("No argument processing exists for "+opt.type);
+        }
+    }).filter((n: any): n is any => !!n && n[1] !== null));
+}
 client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
-    await Playlist.init();
+    Playlist.init();
     setActivity();
-    console.info(`Bot Ready! [${client.user.tag}]`);
+    console.info(`Bot Ready! [${client.user.tag}] <@${client.user.id}>`);
     
     scheduleJob({hour: "00", minute: "00"}, saveAllPlaylists);
 })
@@ -23,22 +47,16 @@ client.on("ready", async () => {
 client.on("guildCreate", setActivity)
 client.on("guildDelete", setActivity)
 
-client.on("messageCreate", (msg: Message) => {
-    if (msg.author.id === client.user?.id || !msg.content.startsWith("dj")) return;
-    let command: Command | null | undefined = Commands.find(c=>c.name===msg.content.split(" ")[1]);
-    if (!command) {msg.reply("Command not recognized."); return;}
-
-    if (!command.public && !isWhitelisted(msg)) {msg.reply("This command requires authorization."); return}    
-    command.run(msg).catch(console.error);
-})
-
 client.on("interactionCreate", (interaction: Interaction): void => {
     if (interaction.type !== InteractionType.ApplicationCommand) return;
     let command: Command | undefined | null = Commands.find(c=>c.name===interaction.commandName);
     if (!command) {interaction.reply({"content":"Command not recognized.","ephemeral":true}); return;}
 
     if (!command.public && !isWhitelisted(interaction)) {interaction.reply({content:"This command requires authorization.",ephemeral:true}); return}
-    command.run(interaction).catch(console.error);
+    
+    command.run(interaction, getArguments(interaction, 
+        command.options?.filter((opt): opt is ApplicationCommandArgumentOptionData => opt.type !== ApplicationCommandOptionType.Subcommand && opt.type !== ApplicationCommandOptionType.SubcommandGroup)
+    )).catch(console.warn);
 })
 
 client.on("interactionCreate", async (interaction: Interaction): Promise<void> => {
@@ -49,7 +67,7 @@ client.on("interactionCreate", async (interaction: Interaction): Promise<void> =
     let choices: ApplicationCommandOptionChoiceData[] | Error | null = await command.ac(interaction);
     if (choices === null) return;
     if (choices instanceof Error) return console.warn("Autocomplete failed.\n"+choices);
-    interaction.respond(choices.slice(undefined,25)).catch(console.error);
+    interaction.respond(choices.slice(undefined,25)).catch(console.warn);
 })
 
 client.on("error", console.error);
