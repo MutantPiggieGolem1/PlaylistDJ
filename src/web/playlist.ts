@@ -1,11 +1,16 @@
 import fs from "fs";
-import { RatedSong, SongReference } from "../constants";
+import { RatedSong, SongReference, Genre } from "../constants";
 
 export class Playlist { // Represents a playlist stored on the filesystem
     private static index: {[key: string]: SongReference};
     private static playlists: {[key: string]: Playlist};
     public static init() {
-        Playlist.index = fs.existsSync('./resources/music.json') ? JSON.parse(fs.readFileSync('./resources/music.json','utf8')) : {};
+        Playlist.index = !fs.existsSync('./resources/music.json') ? {} :
+            Object.fromEntries(Object.entries(JSON.parse(fs.readFileSync('./resources/music.json','utf8'))).map(([k, v]: [string, any]) => [k, {...v,
+                title: v.title ?? "Unknown",
+                artist:v.artist?? "Unknown Artist",
+                genre: v.genre ?? Genre.Unknown
+            }])); // DFU
         Playlist.playlists = Object.fromEntries(
             fs.readdirSync(`./resources/playlists/`,{withFileTypes:true})
             .filter(ent=>ent.isFile())
