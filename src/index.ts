@@ -50,7 +50,7 @@ client.on("guildDelete", setActivity)
 client.on("interactionCreate", (interaction: Interaction): void => {
     if (interaction.type !== InteractionType.ApplicationCommand) return;
     let command: Command | undefined | null = Commands.find(c=>c.name===interaction.commandName);
-    if (!command) {interaction.reply({"content":"Command not recognized.","ephemeral":true}); return;}
+    if (!command) return console.warn("Command not recognized: "+interaction.commandName);
 
     if (!command.public && !isWhitelisted(interaction)) {interaction.reply({content:"This command requires authorization.",ephemeral:true}); return}
     

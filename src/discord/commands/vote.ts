@@ -13,7 +13,7 @@ export const Vote: Command = {
     options: [{
         name: "vote",
         description: "Upvote or downvote?",
-        type: ApplicationCommandOptionType.Boolean,
+        type: ApplicationCommandOptionType.String,
         required: true,
         choices: [
             {name:"Up",  value:  "up"},

@@ -1,7 +1,7 @@
 import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, InteractionUpdateOptions, ModalActionRowComponent, ModalActionRowComponentData, ModalSubmitInteraction, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
 import { ERRORS, Genre, Song, SongReference } from "../../constants"
 import { client, getArguments, WHITELIST } from "../../index"
-import { getAllCsvs, getCsv } from "../../recommendation/interface"
+import { getAllCsvs, getCsv, getFileSizeMiB } from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
 import { YTPlaylist } from "../../web/ytplaylist"
 import { isWhitelisted, ITEMS_PER_PAGE } from "../util"
@@ -472,20 +472,22 @@ const Info: SubCommand = {
     public: true,
 
     run: (ctx: CommandInteraction) => 
-        ctx.deferReply({ephemeral:true}).then(()=>{
-            let runtime = 0;
+        ctx.deferReply({ephemeral:true}).then(async ()=>{
+            let runtime = 0, size = 0;
             for (const n of Object.values(Playlist.getSong())) {
                 runtime += n.length; // expand later
+                size += await getFileSizeMiB(n.file);
             }
-            return {size: Object.keys(Playlist.getSong()).length, runtime};
-        }).then(({size, runtime}) => ctx.editReply({
+            return {length: Object.keys(Playlist.getSong()).length, runtime, size};
+        }).then(({length, runtime, size}) => ctx.editReply({
             embeds: [{
                 title: `Information`,
                 description: `Global Music Index`,
                 fields: [
-                    {name: "# Of Songs", value: ""+size, inline: true},
+                    {name: "# Of Songs", value: ""+length, inline: true},
                     {name: "Total Song Runtime:", value: Math.round(runtime/60)+"m", inline: true},
-                    {name: "Average Song Length:", value: Math.round(runtime/size)+"s", inline: true}
+                    {name: "Average Song Length:", value: Math.round(runtime/length)+"s", inline: true},
+                    {name: "Total Size:", value: Math.round(size)+"MiB", inline: false}
                 ],
                 footer: {
                     text: `PlaylistDJ - Song Index Info`,

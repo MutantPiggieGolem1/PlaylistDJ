@@ -11,6 +11,10 @@ export default function get(gid: string): Promise<SongReference | null> {
         .then(Playlist.getSong)
 };
 
+export async function getFileSizeMiB(path: string): Promise<number> {
+    return fs.promises.stat(path).then(s=>s.size / (1024*1024));
+}
+
 function run(args: {toString:()=>string}[]): Promise<string> {
     return new Promise<string>((resolve, reject) => {
         const pyscript = spawn('python', [__dirname+'/index.py', ...args.map(a=>a.toString())]);
