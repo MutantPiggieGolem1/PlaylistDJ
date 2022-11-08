@@ -379,6 +379,7 @@ function listMessage(ctx: BaseInteraction, items: Song[], page: number) {
                 "text": `PlaylistDJ - Song List - Page ${page + 1}/${Math.ceil(items.length / ITEMS_PER_PAGE)}`,
                 "icon_url": client.user?.avatarURL() ?? ""
             }
-        }]
+        }],
+        ephemeral: true
     }
 }
