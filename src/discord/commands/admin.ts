@@ -105,9 +105,7 @@ const Amend: SubCommand = {
                     "url": song.url
                 }]
             })
-        }).then(() => {}).catch(_ => {
-            return ctx.deleteReply().catch(_=>{})
-        })
+        }).finally(() => ctx.deleteReply().catch(_=>{}))
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
@@ -543,7 +541,6 @@ export const Admin: Command = {
     name: commandname,
     description: "Manage global bot data.",
     options: SubCommands,
-    defaultMemberPermissions: "Administrator",
     public: true,
 
     run: (ctx: CommandInteraction) => {

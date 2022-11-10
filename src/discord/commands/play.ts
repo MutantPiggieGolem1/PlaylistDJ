@@ -21,7 +21,7 @@ export const Play: Command = {
         required: false,
         autocomplete: true,
     }],
-    defaultMemberPermissions: "Speak",
+    defaultMemberPermissions: "ManageChannels",
     public: true,
 
     run: (ctx: CommandInteraction, {id}: {id: string}) => {
