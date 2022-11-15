@@ -77,9 +77,10 @@ const Amend: SubCommand = {
                     content = `Couldn't identify genre '${genre}'!`
                 }
             }
-            return Playlist.save().then(()=>interaction.reply({content, ephemeral: true}));
-        }).then(()=>ctx.reply({
+            return Playlist.save().then(()=>content);
+        }).then(content=>ctx.reply({
             ephemeral: true,
+            content,
             "embeds": [{
                 "title": "Song ID: " + song.id,
                 "description": "Song Metadata",
