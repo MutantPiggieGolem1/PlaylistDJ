@@ -66,7 +66,7 @@ const Amend: SubCommand = {
                 } as ModalActionRowComponentData]
             } as ActionRow<ModalActionRowComponent>]
         }).then(() => ctx.awaitModalSubmit({time:5*60*1000})).then((interaction: ModalSubmitInteraction) => {
-            let content: string | undefined = undefined;
+            let content = "Updated!";
             song.title = interaction.fields.getTextInputValue(`mamendedittitle`) || song.title
             song.artist= interaction.fields.getTextInputValue(`mamendeditartist`)|| song.artist
             let genre = interaction.fields.getTextInputValue(`mamendeditgenre`)
@@ -77,9 +77,7 @@ const Amend: SubCommand = {
                     content = `Couldn't identify genre '${genre}'!`
                 }
             }
-            return Playlist.save().then(()=>{
-                if (content) return interaction.reply({content, ephemeral: true});
-            });
+            return Playlist.save().then(()=>interaction.reply({content, ephemeral: true}));
         }).then(()=>ctx.reply({
             ephemeral: true,
             "embeds": [{
