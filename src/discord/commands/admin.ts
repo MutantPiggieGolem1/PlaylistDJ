@@ -77,33 +77,33 @@ const Amend: SubCommand = {
                     content = `Couldn't identify genre '${genre}'!`
                 }
             }
-            return Playlist.save().then(()=>content);
-        }).then(content=>ctx.editReply({
-            content,
-            "embeds": [{
-                "title": "Song ID: " + song.id,
-                "description": "Song Metadata",
-                "color": 0xff0000,
-                "fields": [{
-                    "name": `Title:`,
-                    "value": song.title,
-                    "inline": true
-                }, {
-                    "name": `Artist:`,
-                    "value": song.artist,
-                    "inline": true
-                }, {
-                    "name": `Genre:`,
-                    "value": song.genre.toString(),
-                    "inline": true
-                }],
-                "footer": {
-                    "text": `PlaylistDJ - Global Metadata Viewer`,
-                    "icon_url": client.user?.avatarURL() ?? ""
-                },
-                "url": song.url
-            }]
-        }));
+            return Playlist.save().then(()=>interaction.reply({
+                ephemeral: true, content,
+                "embeds": [{
+                    "title": "Song ID: " + song.id,
+                    "description": "Song Metadata",
+                    "color": 0xff0000,
+                    "fields": [{
+                        "name": `Title:`,
+                        "value": song.title,
+                        "inline": true
+                    }, {
+                        "name": `Artist:`,
+                        "value": song.artist,
+                        "inline": true
+                    }, {
+                        "name": `Genre:`,
+                        "value": song.genre.toString(),
+                        "inline": true
+                    }],
+                    "footer": {
+                        "text": `PlaylistDJ - Global Metadata Viewer`,
+                        "icon_url": client.user?.avatarURL() ?? ""
+                    },
+                    "url": song.url
+                }]
+            }));
+        });
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
