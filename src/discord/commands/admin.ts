@@ -65,8 +65,8 @@ const Amend: SubCommand = {
                     type: ComponentType.TextInput
                 } as ModalActionRowComponentData]
             } as ActionRow<ModalActionRowComponent>]
-        }).then(() => ctx.awaitModalSubmit({time:5*60*1000})).then(async (interaction: ModalSubmitInteraction) => {
-            let content: string = "_";
+        }).then(() => ctx.awaitModalSubmit({time:5*60*1000})).then((interaction: ModalSubmitInteraction) => {
+            let content: string | undefined = undefined;
             song.title = interaction.fields.getTextInputValue(`mamendedittitle`) || song.title
             song.artist= interaction.fields.getTextInputValue(`mamendeditartist`)|| song.artist
             let genre = interaction.fields.getTextInputValue(`mamendeditgenre`)
@@ -77,35 +77,35 @@ const Amend: SubCommand = {
                     content = `Couldn't identify genre '${genre}'!`
                 }
             }
-            await Playlist.save()
-            return interaction.reply({
-                ephemeral: true,
-                content,
-                "embeds": [{
-                    "title": "Song ID: " + song.id,
-                    "description": "Song Metadata",
-                    "color": 0xff0000,
-                    "fields": [{
-                        "name": `Title:`,
-                        "value": song.title,
-                        "inline": true
-                    }, {
-                        "name": `Artist:`,
-                        "value": song.artist,
-                        "inline": true
-                    }, {
-                        "name": `Genre:`,
-                        "value": song.genre.toString(),
-                        "inline": true
-                    }],
-                    "footer": {
-                        "text": `PlaylistDJ - Global Metadata Viewer`,
-                        "icon_url": client.user?.avatarURL() ?? ""
-                    },
-                    "url": song.url
-                }]
-            })
-        }).finally(() => ctx.deleteReply().catch(_=>{}))
+            return Playlist.save().then(()=>{
+                if (content) return interaction.reply({content, ephemeral: true});
+            });
+        }).then(()=>ctx.reply({
+            ephemeral: true,
+            "embeds": [{
+                "title": "Song ID: " + song.id,
+                "description": "Song Metadata",
+                "color": 0xff0000,
+                "fields": [{
+                    "name": `Title:`,
+                    "value": song.title,
+                    "inline": true
+                }, {
+                    "name": `Artist:`,
+                    "value": song.artist,
+                    "inline": true
+                }, {
+                    "name": `Genre:`,
+                    "value": song.genre.toString(),
+                    "inline": true
+                }],
+                "footer": {
+                    "text": `PlaylistDJ - Global Metadata Viewer`,
+                    "icon_url": client.user?.avatarURL() ?? ""
+                },
+                "url": song.url
+            }]
+        }));
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
@@ -215,7 +215,7 @@ const Destroy: SubCommand = {
     description: "Deletes music from the filesystem.",
     public: false,
     options: [{
-        name: "id",
+        name: "ids",
         description: "Song ID(s) to delete",
         type: ApplicationCommandOptionType.String,
         required: true,
