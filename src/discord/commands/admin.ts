@@ -42,7 +42,7 @@ const Amend: SubCommand = {
                     style: TextInputStyle.Short,
                     type: ComponentType.TextInput
                 } as ModalActionRowComponentData]
-            } as ActionRow<ModalActionRowComponent>,{
+            },{
                 type: ComponentType.ActionRow,
                 components: [{
                     customId: `mamendeditartist`,
@@ -53,7 +53,7 @@ const Amend: SubCommand = {
                     style: TextInputStyle.Short,
                     type: ComponentType.TextInput
                 } as ModalActionRowComponentData]
-            } as ActionRow<ModalActionRowComponent>,{
+            },{
                 type: ComponentType.ActionRow,
                 components: [{
                     customId: `mamendeditgenre`,
@@ -64,7 +64,7 @@ const Amend: SubCommand = {
                     style: TextInputStyle.Short,
                     type: ComponentType.TextInput
                 } as ModalActionRowComponentData]
-            } as ActionRow<ModalActionRowComponent>]
+            }]
         }).then(() => ctx.awaitModalSubmit({time:5*60*1000})).then((interaction: ModalSubmitInteraction) => {
             let content = "Updated!";
             song.title = interaction.fields.getTextInputValue(`mamendedittitle`) || song.title
@@ -78,8 +78,7 @@ const Amend: SubCommand = {
                 }
             }
             return Playlist.save().then(()=>content);
-        }).then(content=>ctx.reply({
-            ephemeral: true,
+        }).then(content=>ctx.editReply({
             content,
             "embeds": [{
                 "title": "Song ID: " + song.id,
@@ -522,14 +521,13 @@ const GrabCSV: SubCommand = {
             content: "-",
             files: [new AttachmentBuilder(file, {name: gid+".csv", description:`CSV Data for '${client.guilds.cache.get(gid)?.name}'`})],
             ephemeral,
-        }).then(()=>{});
+        });
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
         const focused = ctx.options.getFocused().toString();
         if (!focused) return [];
-        return (getAllCsvs()?.filter(s => s.startsWith(focused)).map(s => {return {name: client.guilds.cache.get(s)?.name ?? s, value: s}}) ?? [])
-            .concat([{name: "Index", value: "0"}]);
+        return getAllCsvs()?.filter(s => s.startsWith(focused)).map(s => {return {name: client.guilds.cache.get(s)?.name ?? s, value: s}}) || [{name: "Index", value: "0"}];
     }
 }
 
