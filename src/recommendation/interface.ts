@@ -61,13 +61,14 @@ export function getCsv(guildid: string): Buffer | null {
 }
 
 function genCsv(playlist: Playlist | void): Promise<void> {
+    if (!fs.existsSync("./resources/csv/")) fs.mkdirSync(`./resources/csv`);
     if (playlist) {
         return fs.promises.writeFile("./resources/csv/"+playlist.gid+".csv", 
-            "Song ID, Song Score, Song Tags...\n"+
+            "Song ID,Score,Tags\n"+
             playlist.getSongs.map((rs: RatedSong) => [rs.id, rs.score, rs.tags ? `"${rs.tags.join(",")}"` : "None"].join(",")).join("\n"));
     }
     return fs.promises.writeFile("./resources/csv/0.csv", 
-        "Song ID, Genre ID, Artist, Title, Length (seconds)\n"+Object.values(Playlist.getSong()).map((sr: Song) => 
+        "Song ID,Genre ID,Artist,Title,Length\n"+Object.values(Playlist.getSong()).map((sr: Song) => 
             [sr.id, genreIds[sr.genre], `"${sr.artist.replaceAll('"', '""')}"`, `"${sr.title.replaceAll('"', '""')}"`, sr.length].join(",")
         ).join("\n")
     );

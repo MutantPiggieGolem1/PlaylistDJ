@@ -11,6 +11,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
                 artist:v.artist?? "Unknown Artist",
                 genre: v.genre ?? Genre.Unknown
             }])); // DFU
+        if (!fs.existsSync('./resources/playlists/')) fs.mkdirSync(`./resources/playlists/`);
         Playlist.playlists = Object.fromEntries(
             fs.readdirSync(`./resources/playlists/`,{withFileTypes:true})
             .filter(ent=>ent.isFile())
