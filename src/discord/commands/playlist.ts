@@ -296,7 +296,8 @@ const Tag: SubCommand = {
                     "text": `PlaylistDJ - Local Metadata Viewer`,
                     "icon_url": client.user?.avatarURL() ?? ""
                 }
-            }]
+            }],
+            ephemeral: true
         });
     },
 
