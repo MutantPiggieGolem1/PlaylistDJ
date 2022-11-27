@@ -41,7 +41,7 @@ client.on("ready", async () => {
     setActivity();
     console.info(`Bot Ready! [${client.user.tag}] <@${client.user.id}>`);
     
-    scheduleJob({hour: "01", minute: "30"}, saveAllPlaylists);
+    scheduleJob({hour: "00", minute: "00"}, saveAllPlaylists);
 })
 
 client.on("guildCreate", setActivity)

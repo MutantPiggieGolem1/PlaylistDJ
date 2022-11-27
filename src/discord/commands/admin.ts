@@ -36,7 +36,7 @@ const Amend: SubCommand = {
                 components: [{
                     customId: `mamendedittitle`,
                     label: "Song Title:",
-                    maxLength: 64,
+                    maxLength: 128,
                     placeholder: song.title,
                     required: false,
                     style: TextInputStyle.Short,
@@ -47,7 +47,7 @@ const Amend: SubCommand = {
                 components: [{
                     customId: `mamendeditartist`,
                     label: "Song Artist:",
-                    maxLength: 32,
+                    maxLength: 64,
                     placeholder: song.artist,
                     required: false,
                     style: TextInputStyle.Short,
