@@ -391,7 +391,7 @@ const Download: SubCommand = {
                         interaction.update({components:[]}); return;
                 }
             }).on('end', (_,reason: string) => {
-                if (reason==="idle") ctx.editReply({components:[]}).catch()
+                if (reason==="idle"||reason==="time") ctx.editReply({components:[]}).catch()
             })
         }).catch((e: Error) => {ctx.reply({content:e.message,ephemeral:true})});
     }
@@ -442,8 +442,6 @@ const Index: SubCommand = {
                 filter: (i: ButtonInteraction) => i.user.id===ctx.user.id,
                 idle: 20*1000
             }).on('collect', (interaction: ButtonInteraction): void => { 
-        }).on('collect', (interaction: ButtonInteraction): void => { 
-            }).on('collect', (interaction: ButtonInteraction): void => { 
                 switch (interaction.customId) {
                     case `c${commandname}indexpageup`:
                         page++;
@@ -457,7 +455,7 @@ const Index: SubCommand = {
                 }
                 interaction.update(listMessage(items, page))
             }).on('end', (_,reason: string) => {
-                if (reason==="idle") ctx.editReply({components:[]}).catch()
+                if (reason==="idle"||reason==="time") ctx.editReply({components:[]}).catch()
             }));
     }
 }

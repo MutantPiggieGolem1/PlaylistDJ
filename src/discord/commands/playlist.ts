@@ -82,7 +82,7 @@ const Delete: SubCommand = {
                 interaction.update({ content: `Deleted the playlist.`, components: [], embeds: [] })
             ).catch((e: Error) => ctx.reply({content:e.message, ephemeral:true}))
         }).on("end", (_, reason: string) => {
-            if (reason === "idle") ctx.editReply({content: "Cancelled. (Timed Out)", components:[]}).catch()
+            if (reason === "idle"||reason==="time") ctx.deleteReply().catch();
         }));
     },
 }
@@ -210,7 +210,7 @@ const List: SubCommand = {
             }
             interaction.update(listMessage(ctx, items, page))
         }).on('end', (_: any, reason: string) => {
-            if (reason==="idle") ctx.fetchReply().then(_=>ctx.editReply({components:[]})).catch()
+            if (reason==="idle"||reason==="time") ctx.fetchReply().then(_=>ctx.editReply({components:[]})).catch()
         }))
     }
 }
