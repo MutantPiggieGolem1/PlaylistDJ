@@ -1,5 +1,5 @@
 import { AudioPlayer, getVoiceConnection, VoiceConnection } from "@discordjs/voice"
-import { CommandInteraction, Message, VoiceBasedChannel } from "discord.js"
+import { CommandInteraction, VoiceBasedChannel } from "discord.js"
 import { ERRORS } from "../../constants"
 import { getPlayer } from "../util"
 import { Command } from "./Commands"
@@ -12,23 +12,21 @@ export const Leave: Command = {
 
     run: (ctx: CommandInteraction) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
+        const guildid = ctx.guild.id;
         try {
             return (ctx.guild.members.me ? Promise.resolve(ctx.guild.members.me) : ctx.guild.members.fetchMe() ).then(me => {
                 const voicechannel: VoiceBasedChannel | null | undefined = me.voice.channel
                 if (!voicechannel) return ctx.reply({content:ERRORS.NO_CONNECTION,ephemeral:true});
-                leave(ctx);
+                leave(guildid);
                 if (ctx instanceof CommandInteraction) return ctx.reply({content:"Left "+voicechannel.toString(),ephemeral:true});
             })
         } catch (e) {return ctx.reply({content:(e as Error).message,ephemeral:true})}
     }
 }
 
-export function leave(ctx: CommandInteraction | Message | string) {
-    const gid = typeof ctx === "string" ? ctx : ctx.guild?.id;
-    if (!gid) return;
-    
-    let player: AudioPlayer | undefined = getPlayer(gid, false);
+export function leave(guildid: string) {
+    let player: AudioPlayer | undefined = getPlayer(guildid, false);
     player?.removeAllListeners().stop();
-    let voiceconnection: VoiceConnection | undefined = getVoiceConnection(gid)
+    let voiceconnection: VoiceConnection | undefined = getVoiceConnection(guildid)
     if (!voiceconnection?.disconnect()) throw new Error("Failed to leave voice channel.");
 }

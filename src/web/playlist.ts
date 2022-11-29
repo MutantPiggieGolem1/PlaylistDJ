@@ -1,5 +1,6 @@
 import fs from "fs";
 import { RatedSong, SongReference, Genre } from "../constants";
+import { AUDIOFORMAT } from "./util";
 
 export class Playlist { // Represents a playlist stored on the filesystem
     private static index: {[key: string]: SongReference};
@@ -102,7 +103,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
         return this.delete(
             fs.readdirSync(`./resources/music/`,{withFileTypes:true})
                 .filter(ent=>ent.isFile()) // all files
-                .map(file=>file.name.replace(".webm", "")) // all file ids
+                .map(file=>file.name.replace(AUDIOFORMAT, "")) // all file ids
                 .filter(sid=>!refs.has(sid)) // all unreferenced file ids
         );
     } // TODO: Diagnose & Fix
