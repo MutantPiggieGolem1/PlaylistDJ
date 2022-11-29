@@ -1,5 +1,5 @@
 import { DiscordGatewayAdapterCreator, joinVoiceChannel } from '@discordjs/voice'
-import { ApplicationCommandOptionType, ChannelType, CommandInteraction, GuildBasedChannel, Message, StageChannel, VoiceChannel } from "discord.js"
+import { ApplicationCommandOptionType, ChannelType, CommandInteraction, GuildBasedChannel } from "discord.js"
 import { ERRORS } from '../../constants';
 import { Command } from "./Commands";
 

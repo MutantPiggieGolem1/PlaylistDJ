@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message } from "discord.js"
+import { ApplicationCommandOptionType, CommandInteraction, GuildMember } from "discord.js"
 import { ERRORS, Song } from "../../constants"
 import { Playlist } from "../../web/playlist"
 import { getPlayer, getPlaying, truncateString } from "../util"

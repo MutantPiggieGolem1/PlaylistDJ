@@ -1,5 +1,5 @@
 import { AudioPlayer, AudioPlayerError, AudioPlayerStatus, createAudioResource, getVoiceConnection, StreamType, VoiceConnection } from "@discordjs/voice"
-import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction, Message } from "discord.js"
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction } from "discord.js"
 import { createReadStream } from "fs"
 import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
 import nextSong from "../../recommendation/interface"
