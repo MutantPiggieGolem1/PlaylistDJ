@@ -91,10 +91,13 @@ export class YTPlaylist {
                 const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
                 if (fs.existsSync(file)) {
                     if (!items.some(i=>i.id===playlistitem.id)) {
-                        items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem) });
+                        return ytdl.getInfo(playlistitem.url).then((videoinfo: ytdl.videoInfo) =>
+                            items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo)})
+                        ).then(()=>{done++});
+                    } else {
+                        done++;
+                        return Promise.resolve();
                     }
-                    done++;
-                    return Promise.resolve();
                 }
                 return ytdl.getInfo(playlistitem.url).then((videoinfo: ytdl.videoInfo) => new Promise<void>((resolve) => {
                     ytdsc.downloadFromInfo(videoinfo, { quality: "highestaudio", filter: "audioonly"})
@@ -119,7 +122,7 @@ export class YTPlaylist {
                 playlist.addSongs(items.map(sr=>sr.id))
                 await playlist.save()
                 return playlist;
-            }).then((playlist: Playlist | null)=>{
+            }).then((playlist: Playlist)=>{
                 ee.emit("finish",playlist)
             }).catch((e: Error)=>{
                 ee.emit("error",e)

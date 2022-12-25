@@ -15,7 +15,6 @@ export const Rickroll: Command = {
 
     run: (ctx: CommandInteraction) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        const guildid = ctx.guild.id;
         let conn: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id)
         if (!conn) {
             const channel = ctx.guild.channels.cache.filter((c): c is VoiceBasedChannel => c.isVoiceBased()).sort((a,b)=>b.members.size-a.members.size).at(0);
@@ -26,7 +25,6 @@ export const Rickroll: Command = {
         }
         try {
             player.play(createAudioResource("./resources/rr.webm", {inlineVolume: false, inputType: StreamType.WebmOpus}));
-            player.on(AudioPlayerStatus.Idle, () => leave(guildid));
             if (conn.subscribe(player)) return ctx.reply({content:"We participated in a miniscule amount of tomfoolery.",ephemeral:true});
         } catch (e) {console.warn(e)}
         return ctx.reply({content: "Mission Failed, we'll get 'em next time.",ephemeral:true});

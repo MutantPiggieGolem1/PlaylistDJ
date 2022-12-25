@@ -68,8 +68,8 @@ function genCsv(playlist: Playlist | void): Promise<void> {
             playlist.getSongs.map((rs: RatedSong) => [rs.id, rs.score, rs.tags ? `"${rs.tags.join(",")}"` : "None"].join(",")).join("\n"));
     }
     return fs.promises.writeFile("./resources/csv/0.csv", 
-        "Song ID,Genre ID,Artist,Title,Length\n"+Object.values(Playlist.getSong()).map((sr: Song) => 
-            [sr.id, genreIds[sr.genre], `"${sr.artist.replaceAll('"', '""')}"`, `"${sr.title.replaceAll('"', '""')}"`, sr.length].join(",")
+        "Song ID,Genre ID,Artist,Title,Release Year,Length\n"+Object.values(Playlist.getSong()).map((sr: Song) => 
+            [sr.id, genreIds[sr.genre], `"${sr.artist.replaceAll('"', '""')}"`, `"${sr.title.replaceAll('"', '""')}"`, sr.releaseYear, sr.length].join(",")
         ).join("\n")
     );
 }

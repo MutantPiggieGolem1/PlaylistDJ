@@ -16,6 +16,7 @@ export type Song = {
 
     title: string;
     artist: string;
+    releaseYear: number;
     genre: Genre;
     length: number; // Song Duration (Seconds)
 };

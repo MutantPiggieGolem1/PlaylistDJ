@@ -312,7 +312,7 @@ const Tag: SubCommand = {
         .filter((sr: SongReference | null): sr is SongReference => !!sr)
         .filter((sr: SongReference)=>sr.id.startsWith(focused) || sr.title.toLowerCase().startsWith(focused.toLowerCase()))
         .map((s: Song) => {
-            return {name:s.title,value:s.id} as ApplicationCommandOptionChoiceData
+            return {name:s.title,value:s.id}
         })
     }
 }

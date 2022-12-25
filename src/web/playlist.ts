@@ -10,6 +10,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
             Object.fromEntries(Object.entries(JSON.parse(fs.readFileSync('./resources/music.json','utf8'))).map(([k, v]: [string, any]) => [k, {...v,
                 title: v.title ?? "Unknown",
                 artist:v.artist?? "Unknown Artist",
+                releaseYear: v.releaseYear?? -1,
                 genre: v.genre ?? Genre.Unknown
             }])); // DFU
         if (!fs.existsSync('./resources/playlists/')) fs.mkdirSync(`./resources/playlists/`);
@@ -99,7 +100,9 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
 
     public static clean(): Promise<string[]> {        
-        const refs = new Set<string>(Object.values(Playlist.getPlaylist()).flatMap(pl=>pl.songs).map(s=>s.id));
+        const refs = new Set<String>(
+            [...new Set<RatedSong>(Object.values(Playlist.getPlaylist()).flatMap(pl=>pl.songs))]
+            .map(s=>Playlist.getSong(s)).filter((s): s is SongReference => !!s).map(s=>s.file));
         return this.delete(
             fs.readdirSync(`./resources/music/`,{withFileTypes:true})
                 .filter(ent=>ent.isFile()) // all files

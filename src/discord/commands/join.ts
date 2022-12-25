@@ -1,6 +1,7 @@
-import { DiscordGatewayAdapterCreator, joinVoiceChannel } from '@discordjs/voice'
+import { joinVoiceChannel, VoiceConnection } from '@discordjs/voice'
 import { ApplicationCommandOptionType, ChannelType, CommandInteraction, GuildBasedChannel, VoiceBasedChannel } from "discord.js"
 import { ERRORS } from '../../constants';
+import { onJoin } from '../voicecmds/voicecmds';
 import { Command } from "./Commands";
 
 export const Join: Command = {
@@ -30,12 +31,12 @@ export const Join: Command = {
     }
 };
 
-export function join(channel: VoiceBasedChannel) {
-    return joinVoiceChannel({
+export function join(channel: VoiceBasedChannel): VoiceConnection {
+    return onJoin(channel, joinVoiceChannel({
         channelId: channel.id,
         guildId: channel.guild.id,
-        adapterCreator: channel.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
+        adapterCreator: channel.guild.voiceAdapterCreator,
         selfMute: false,
         selfDeaf: true,
-    });
+    }));
 }

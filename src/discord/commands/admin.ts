@@ -1,11 +1,11 @@
-import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, InteractionUpdateOptions, ModalActionRowComponentData, ModalSubmitInteraction, TextInputStyle, User, WebhookEditMessageOptions } from "discord.js"
+import { ActionRow, ActionRowComponent, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, InteractionUpdateOptions, ModalActionRowComponentData, ModalSubmitInteraction, TextInputStyle, WebhookEditMessageOptions } from "discord.js"
 import { ERRORS, Genre, Song, SongReference } from "../../constants"
-import { client, getArguments, WHITELIST } from "../../index"
+import { client, getArguments } from "../../index"
 import { getAllCsvs, getCsv, getFileSizeMiB } from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
 import { YTPlaylist } from "../../web/ytplaylist"
 import { isWhitelisted, ITEMS_PER_PAGE } from "../util"
-import { Command, SubCommand, SubCommandGroup } from "./Commands"
+import { Command, SubCommand } from "./Commands"
 
 const commandname = "admin"
 
@@ -41,7 +41,7 @@ const Amend: SubCommand = {
                     required: false,
                     style: TextInputStyle.Short,
                     type: ComponentType.TextInput
-                } as ModalActionRowComponentData]
+                }]
             },{
                 type: ComponentType.ActionRow,
                 components: [{
@@ -52,7 +52,18 @@ const Amend: SubCommand = {
                     required: false,
                     style: TextInputStyle.Short,
                     type: ComponentType.TextInput
-                } as ModalActionRowComponentData]
+                }]
+            },{
+                type: ComponentType.ActionRow,
+                components: [{
+                    customId: `mamendeditreleaseYear`,
+                    label: "Release Year:",
+                    maxLength: 4,
+                    placeholder: song.releaseYear.toString(),
+                    required: false,
+                    style: TextInputStyle.Short,
+                    type: ComponentType.TextInput
+                }]
             },{
                 type: ComponentType.ActionRow,
                 components: [{
@@ -63,18 +74,26 @@ const Amend: SubCommand = {
                     required: false,
                     style: TextInputStyle.Short,
                     type: ComponentType.TextInput
-                } as ModalActionRowComponentData]
+                }]
             }]
         }).then(() => ctx.awaitModalSubmit({time:5*60*1000})).then((interaction: ModalSubmitInteraction) => {
             let content = "Updated!";
             song.title = interaction.fields.getTextInputValue(`mamendedittitle`) || song.title
             song.artist= interaction.fields.getTextInputValue(`mamendeditartist`)|| song.artist
+            let yr = interaction.fields.getTextInputValue(`mamendeditreleaseYear`);
+            if (yr) {
+                if (Number(yr) > 0) {
+                    song.releaseYear = Number(yr);
+                } else {
+                    content += ` Couldn't parse year '${yr}'!`
+                }
+            }
             let genre = interaction.fields.getTextInputValue(`mamendeditgenre`)
             if (genre) {
                 if (Object.keys(Genre).includes(genre)) {
                     song.genre = <Genre>(<any>Genre)[genre];
                 } else {
-                    content = `Couldn't identify genre '${genre}'!`
+                    content += ` Couldn't identify genre '${genre}'!`
                 }
             }
             return Playlist.save().then(()=>interaction.reply({
@@ -91,6 +110,10 @@ const Amend: SubCommand = {
                         "name": `Artist:`,
                         "value": song.artist,
                         "inline": true
+                    }, {
+                        name: `Release Year:`,
+                        value: song.releaseYear.toString(),
+                        inline: true
                     }, {
                         "name": `Genre:`,
                         "value": song.genre.toString(),
@@ -114,88 +137,6 @@ const Amend: SubCommand = {
             .map(o=>{return {name:o.title,value:o.id}})
     }
 }
-const Auth: SubCommandGroup = {
-    name: "auth",
-    description: "Modifies users with administrator privileges.",
-    type: ApplicationCommandOptionType.SubcommandGroup,
-    public: false,
-    options: [
-        {
-            "type": ApplicationCommandOptionType.Subcommand,
-            "name": "add",
-            "description": "Authorizes a user",
-            "options": [
-                {
-                    "type": ApplicationCommandOptionType.User,
-                    "name": "user",
-                    "description": "User to authorize",
-                    "required": true
-                }
-            ]
-        },
-        {
-            "type": ApplicationCommandOptionType.Subcommand,
-            "name": "remove",
-            "description": "Deauthorizes a user",
-            "options": [{
-                "type": ApplicationCommandOptionType.User,
-                "name": "user",
-                "description": "User to deauthorize",
-                "required": true,
-            }],
-        },
-        {
-            "type": ApplicationCommandOptionType.Subcommand,
-            "name": "list",
-            "description": "List authorized users"
-        }
-    ],
-
-    run: (ctx: CommandInteraction) => {
-        if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        if (ctx.member?.user.id !== "547624574070816799") return ctx.reply({content:ERRORS.NO_PERMS,ephemeral:true})
-        const user: User | undefined = ctx.options.get("user", false)?.user
-        const option = ctx.options.data[0]?.options ? ctx.options.data[0]?.options[0].name : ""
-        switch (option) {
-            case 'add':
-                if (!user) return ctx.reply({content: ERRORS.NO_USER, ephemeral: true});
-                if (!WHITELIST.has(user.id)) {
-                    WHITELIST.add(user.id)
-                    return ctx.reply({content:`Added ${user.tag} to the whitelist.`,ephemeral:true});
-                } else {
-                    return ctx.reply({content:`${user.tag} was already on the whitelist.`,ephemeral:true});
-                }
-            case 'remove':
-                if (!user) return ctx.reply({content: ERRORS.NO_USER, ephemeral: true});
-                if (WHITELIST.has(user.id)) {
-                    WHITELIST.delete(user.id)
-                    return ctx.reply({content:`Removed ${user.tag} from the whitelist.`,ephemeral:true});
-                } else {
-                    return ctx.reply({content:`${user.tag} wasn't on the whitelist.`,ephemeral:true});
-                }
-            case 'list':
-                return ctx.reply({
-                    "content": `_`,
-                    "embeds": [{
-                        "type": EmbedType.Rich,
-                        "title": `Bot Administrators`,
-                        "description": "",
-                        "color": 0x123456,
-                        "fields": [...WHITELIST.keys()].map(id => {return {
-                            "name": client.users.resolve(id)?.tag ?? id,
-                            "value": id
-                        }}),
-                        "footer": {
-                            "text": "PlaylistDJ - Auth List",
-                            "icon_url": client.user?.avatarURL() ?? ""
-                        }
-                    }]
-                })
-            default:
-                return ctx.reply({content: ERRORS.INVALID_ARGUMENTS, ephemeral: true});
-        }
-    }
-} // TODO: Fix
 const Clean: SubCommand = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "clean",
@@ -261,22 +202,22 @@ const Download: SubCommand = {
                             "customId": `c${commandname}downloadcustom`,
                             "disabled": webpl.ytplaylist.items.length <= 1,
                             "type": ComponentType.Button,
-                        } as ActionRowComponent,
+                        },
                         {
                             "style": ButtonStyle.Success,
                             "label": `Download All`,
                             "customId": `c${commandname}downloadall`,
                             "disabled": false,
                             "type": ComponentType.Button,
-                        } as ActionRowComponent,
+                        },
                     ]
-                } as ActionRow<ActionRowComponent>
+                }
             ],
             "embeds": [
                 {
                     type: EmbedType.Rich,
                     title: `${webpl.ytplaylist.title} - ${webpl.ytplaylist.estimatedItemCount} Items`,
-                    description: webpl.ytplaylist.description,
+                    description: webpl.ytplaylist.description ?? undefined,
                     color: 0xFF0000,
                     "image": {
                         "url": webpl.ytplaylist.bestThumbnail.url ?? "",
@@ -285,7 +226,7 @@ const Download: SubCommand = {
                     },
                     "author": webpl.ytplaylist.author ? {
                         "name": webpl.ytplaylist.author.name,
-                        "icon_url": webpl.ytplaylist.author.bestAvatar.url,
+                        "icon_url": webpl.ytplaylist.author.bestAvatar.url ?? undefined,
                         "url": webpl.ytplaylist.author.url
                     } : { "name": "Unknown Author" },
                     "footer": {
@@ -295,7 +236,7 @@ const Download: SubCommand = {
                     "url": webpl.ytplaylist.url,
                 }
             ]
-        } as WebhookEditMessageOptions).then(msg => {
+        }).then(msg => {
             msg.createMessageComponentCollector<ComponentType.Button>({
                 filter: (i: ButtonInteraction) => i.user.id===ctx.user.id,
                 idle: 20*1000
@@ -320,30 +261,30 @@ const Download: SubCommand = {
                                                 "customId": `c${commandname}downloadcustomall`,
                                                 "disabled": false,
                                                 "type": ComponentType.Button,
-                                            } as ActionRowComponent,
+                                            },
                                             {
                                                 "style": ButtonStyle.Success,
                                                 "label": `Keep`,
                                                 "customId": `c${commandname}downloadcustomkeep`,
                                                 "disabled": false,
                                                 "type": ComponentType.Button
-                                            } as ActionRowComponent,
+                                            },
                                             {
                                                 "style": ButtonStyle.Danger,
                                                 "label": `Skip`,
                                                 "customId": `c${commandname}downloadcustomskip`,
                                                 "disabled": false,
                                                 "type": ComponentType.Button
-                                            } as ActionRowComponent,
+                                            },
                                             {
                                                 "style": ButtonStyle.Secondary,
                                                 "label": `Skip Remaining`,
                                                 "customId": `c${commandname}downloadcustomnone`,
                                                 "disabled": false,
                                                 "type": ComponentType.Button,
-                                            } as ActionRowComponent,
+                                            },
                                         ]
-                                    } as ActionRow<ActionRowComponent>
+                                    }
                                 ],
                                 "embeds": [
                                     {
@@ -367,7 +308,7 @@ const Download: SubCommand = {
                                         "url": video.url,
                                     }
                                 ]
-                            } as InteractionUpdateOptions)
+                            })
                             break;
                         }
                     case `c${commandname}downloadcustomnone`:
@@ -378,13 +319,16 @@ const Download: SubCommand = {
                         if (idata?.exclusions) { webpl.remove(idata.exclusions) }
                     case `c${commandname}downloadall`:                    
                         if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: [], content: "Downloading..."});
+                        let startingLength: number = 0;
                         webpl.download(guildid)
-                        .on('progress', (cur: number, total: number, id: string) => {
+                        .on('start', (songs: SongReference[]) => {
+                            startingLength = songs.length;
+                        }).on('progress', (cur: number, total: number, id: string) => {
                             interaction.editReply(`Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
                         }).on('warn', (cur: number, total: number, id: string, error: Error) => {
                             interaction.editReply(`Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (Non-Fatal: ${error.message})`)
-                        }).on('finish', (pl: Playlist | null | undefined) => {
-                            interaction.editReply(`Success! Your playlist now has ${pl ? pl.getSongs.length : 0} songs downloaded (${pl ? 'total' : 'non-fatal fail'})!`);
+                        }).on('finish', (pl: Playlist) => {
+                            interaction.editReply(`Success! Downloaded ${pl.getSongs.length-startingLength} songs!`);
                         }).on('error', (e: Error) => interaction.editReply("Error: " + e.message))
                         break;
                     default:
@@ -540,7 +484,6 @@ export const Admin: Command = {
 
     run: (ctx: CommandInteraction) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
-        if (ctx.options.data[0].name === "auth") return Auth.run(ctx);
         let subcommand: SubCommand | undefined = SubCommands.find(sc => sc.name === ctx.options.data[0].name)
 
         if (!subcommand) return ctx.reply({content: ERRORS.INVALID_ARGUMENTS, ephemeral: true});
@@ -549,7 +492,7 @@ export const Admin: Command = {
     },
 
     ac(ctx: AutocompleteInteraction) {
-        let command: SubCommand | SubCommandGroup | undefined = SubCommands.find(c=>c.name===ctx.options.data[0].name);
+        let command: SubCommand | undefined = SubCommands.find(c=>c.name===ctx.options.data[0].name);
         if (!command?.ac) return new Error("Autocomplete not recognized.");
     
         return command.ac(ctx);

@@ -4,7 +4,7 @@ import { createReadStream } from "fs"
 import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
 import nextSong from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
-import { getPlayer } from "../util"
+import { getPlayer, truncateString } from "../util"
 import { Command } from "./Commands"
 import { leave } from "./leave"
 import { resetVotes } from "./vote"
@@ -41,7 +41,7 @@ export const Play: Command = {
         let connection: VoiceConnection | undefined = getVoiceConnection(ctx.guild.id);
         if (!connection?.subscribe(player)) return ctx.reply({content: ERRORS.NO_CONNECTION, ephemeral: true})
         // Action Execution
-        history[guildid] = [];
+        history[guildid] ??= [];
         player.on(AudioPlayerStatus.Idle, () => {
             play(player, nextSong(guildid), guildid).then(()=>resetVotes(guildid));
         }).on("error", (e: AudioPlayerError) => {
@@ -63,7 +63,7 @@ export const Play: Command = {
             .filter((sr: SongReference | null): sr is SongReference => !!sr)
             .filter((sr: SongReference)=>sr.id.startsWith(focused) || sr.title.toLowerCase().startsWith(focused.toLowerCase()))
             .map((s: Song) => {
-                return {name:s.title,value:s.id} as ApplicationCommandOptionChoiceData
+                return {name: truncateString(s.artist+' - '+s.title, 25),value:s.id}
             })
     }
 }

@@ -8,7 +8,7 @@ import { Playlist } from "./web/playlist"
 export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
-function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music in ${client.guilds.cache.size} servers!`})}
+function setActivity() {client.user?.setActivity({type: ActivityType.Listening, name: `music for ${client.guilds.cache.size} servers!`})}
 export function getArguments(interaction: CommandInteraction, opts?: ApplicationCommandOptionData[]) {
     if (!opts) return {};
     const options = opts.filter((opt): opt is ApplicationCommandArgumentOptionData => opt.type !== ApplicationCommandOptionType.Subcommand && opt.type !== ApplicationCommandOptionType.SubcommandGroup)
