@@ -100,9 +100,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
     }
 
     public static clean(): Promise<string[]> {        
-        const refs = new Set<String>(
-            [...new Set<RatedSong>(Object.values(Playlist.getPlaylist()).flatMap(pl=>pl.songs))]
-            .map(s=>Playlist.getSong(s)).filter((s): s is SongReference => !!s).map(s=>s.file));
+        const refs = new Set<string>(Object.values(Playlist.getPlaylist()).flatMap(pl=>pl.songs).map(s=>s.id));
         return this.delete(
             fs.readdirSync(`./resources/music/`,{withFileTypes:true})
                 .filter(ent=>ent.isFile()) // all files
