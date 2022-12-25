@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, CommandInteraction, User, EmbedType, ApplicationCommandType } from "discord.js";
+import { ApplicationCommandOptionType, CommandInteraction, User, EmbedType } from "discord.js";
 import { WHITELIST, client } from "../../index";
 import { ERRORS } from "../../constants";
 import { Command } from "./Commands";
@@ -6,21 +6,18 @@ import { Command } from "./Commands";
 export const Auth: Command = {
     name: "auth",
     description: "Modifies users with administrator privileges.",
-    type: ApplicationCommandType.ChatInput,
     public: false,
     options: [
         {
             "type": ApplicationCommandOptionType.Subcommand,
             "name": "add",
             "description": "Authorizes a user",
-            "options": [
-                {
-                    "type": ApplicationCommandOptionType.User,
-                    "name": "user",
-                    "description": "User to authorize",
-                    "required": true
-                }
-            ]
+            "options": [{
+                "type": ApplicationCommandOptionType.User,
+                "name": "user",
+                "description": "User to authorize",
+                "required": true
+            }]
         },
         {
             "type": ApplicationCommandOptionType.Subcommand,

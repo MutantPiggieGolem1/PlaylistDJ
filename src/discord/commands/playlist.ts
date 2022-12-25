@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedField, EmbedType } from "discord.js"
+import { ApplicationCommandOptionType, AutocompleteInteraction, BaseInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedField, EmbedType } from "discord.js"
 import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
 import { client, getArguments } from "../../index"
 import * as yt from "../../web/playlist"

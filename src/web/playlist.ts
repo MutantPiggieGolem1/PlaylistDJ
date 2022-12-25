@@ -107,7 +107,7 @@ export class Playlist { // Represents a playlist stored on the filesystem
                 .map(file=>file.name.replace(AUDIOFORMAT, "")) // all file ids
                 .filter(sid=>!refs.has(sid)) // all unreferenced file ids
         );
-    } // TODO: Diagnose & Fix
+    }
 
     public static delete(ids: string[]): Promise<string[]> { // destroy files from the filesystem
         const files = ids.filter(id=>id in Playlist.index).map(id=>Playlist.index[id].file);
