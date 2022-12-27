@@ -209,7 +209,7 @@ const List: SubCommand = {
                     break;
             }
             interaction.update(listMessage(ctx, items, page))
-        }).on('end', (_: any, reason: string) => {
+        }).on('end', (_, reason: string) => {
             if (reason==="idle"||reason==="time") ctx.fetchReply().then(_=>ctx.editReply({components:[]})).catch()
         }))
     }

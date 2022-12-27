@@ -126,7 +126,7 @@ const Amend: SubCommand = {
                     "url": song.url
                 }]
             }));
-        });
+        }).catch(() => {}); // ignore unsubmitted modals
     },
 
     ac(ctx: AutocompleteInteraction): ApplicationCommandOptionChoiceData[] {
@@ -381,8 +381,8 @@ const Index: SubCommand = {
             }
         }
         // Reply & Interaction Collection
-        return ctx.reply(listMessage(items, page))
-            .then(msg=>msg.createMessageComponentCollector<ComponentType.Button>({
+        return ctx.reply(listMessage(items, page)).then(msg=>
+            msg.createMessageComponentCollector<ComponentType.Button>({
                 filter: (i: ButtonInteraction) => i.user.id===ctx.user.id,
                 idle: 20*1000
             }).on('collect', (interaction: ButtonInteraction): void => { 
@@ -400,7 +400,8 @@ const Index: SubCommand = {
                 interaction.update(listMessage(items, page))
             }).on('end', (_,reason: string) => {
                 if (reason==="idle"||reason==="time") ctx.editReply({components:[]}).catch()
-            }));
+            })
+        );
     }
 }
 const Info: SubCommand = {
