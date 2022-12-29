@@ -3,7 +3,7 @@
   "displayName": "PlaylistDJ",
   "description": "A discord bot to play playlists with custom music selection",
   "author": "Pew",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "keywords": [
     "bot",
     "discord",
@@ -16,7 +16,9 @@
     "jitstart": "ts-node src/index.ts"
   },
   "dependencies": {
+    "@discordjs/opus": "^0.8.0",
     "@discordjs/voice": "*",
+    "@picovoice/rhino-node": "^2.1.10",
     "discord.js": "^14.7.0",
     "libsodium-wrappers": "*",
     "node": "^18.12.0",

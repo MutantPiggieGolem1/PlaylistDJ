@@ -24,7 +24,7 @@ export const Play: Command = {
     defaultMemberPermissions: "ManageChannels",
     public: true,
 
-    run: (ctx: CommandInteraction, {id}: {id: string}) => {
+    run: (ctx: CommandInteraction, {id}: {id?: string}) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         const guildid = ctx.guild.id;
         // Playlist Locating
@@ -33,7 +33,7 @@ export const Play: Command = {
         let playlist: RatedSong[] = pl.getSongs;
         if (!playlist) return ctx.reply({content: ERRORS.NO_SONG, ephemeral: true});
         // Argument Processing
-        let rs: RatedSong | undefined = playlist.find(s=>s.id===id);
+        let rs: RatedSong | undefined = id ? playlist.find(s=>s.id===id): undefined;
         let start: SongReferenceResolvable = (rs ? Playlist.getSong(rs) : null) || nextSong(ctx.guild.id);
         // Condition Validation
         let player: AudioPlayer = getPlayer(ctx.guild.id)
@@ -43,11 +43,11 @@ export const Play: Command = {
         // Action Execution
         history[guildid] ??= [];
         player.on(AudioPlayerStatus.Idle, () => {
-            play(player, nextSong(guildid), guildid).then(()=>resetVotes(guildid));
+            _play(player, nextSong(guildid), guildid).then(()=>resetVotes(guildid));
         }).on("error", (e: AudioPlayerError) => {
             console.warn(`Audio Player Error: ${e.message}\n  Resource: [${e.resource.metadata ? JSON.stringify(e.resource.metadata) : JSON.stringify(e.resource)}]`);
         });
-        return play(player, start, guildid).then(()=>{
+        return _play(player, start, guildid).then(()=>{
             if (ctx instanceof CommandInteraction && !ctx.deferred && !ctx.replied) return ctx.reply({content:"Began Playing!",ephemeral:true});
         });
     },
@@ -68,10 +68,18 @@ export const Play: Command = {
     }
 }
 
+export function play(gid: string): boolean {
+    const connection = getVoiceConnection(gid);
+    const player = getPlayer(gid).removeAllListeners();
+    if (!connection?.subscribe(player)) return false;
+    _play(player, nextSong(gid), gid);
+    return true;
+}
 type SongReferenceResolvable = SongReference | null | Promise<SongReference | null>;
-async function play(player: AudioPlayer, song: SongReferenceResolvable, guildid: string) {
+async function _play(player: AudioPlayer, song: SongReferenceResolvable, guildid: string) {
     if (song instanceof Promise) song = await song;
     if (!song) return leave(guildid);
-    if (guildid && history[guildid] !== undefined) history[guildid].unshift(song.id);
+    if (history[guildid] !== undefined) history[guildid].unshift(song.id);
+    player.stop();
     player.play(createAudioResource<Song>(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))
 }

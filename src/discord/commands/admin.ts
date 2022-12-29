@@ -417,8 +417,8 @@ const Info: SubCommand = {
                 runtime += n.length; // expand later
                 size += await getFileSizeMiB(n.file);
             }
-            return {length: Object.keys(Playlist.getSong()).length, runtime, size};
-        }).then(({length, runtime, size}) => ctx.editReply({
+            return {length: Object.keys(Playlist.getSong()).length, runtime, size, version: require("../../../package.json")["version"]};
+        }).then(({length, runtime, size, version}) => ctx.editReply({
             embeds: [{
                 title: `Information`,
                 description: `Global Music Index`,
@@ -429,7 +429,7 @@ const Info: SubCommand = {
                     {name: "Total Size:", value: Math.round(size)+"MiB", inline: false}
                 ],
                 footer: {
-                    text: `PlaylistDJ - Song Index Info`,
+                    text: `PlaylistDJ v${version} - Song Index Info`,
                     icon_url: client.user?.avatarURL() ?? ""
                 },
                 color: 0xff0000

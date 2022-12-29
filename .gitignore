@@ -3,6 +3,7 @@ dist
 
 # Token
 resources/token.txt
+resources/picotoken.txt
 
 # Resources
 resources/csv/*
