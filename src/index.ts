@@ -28,6 +28,8 @@ export function getArguments(interaction: CommandInteraction, opts?: Application
                 return [option.name, !!option.value];
             case ApplicationCommandOptionType.Channel:
                 return [option.name, option.channel as GuildBasedChannel];
+            case ApplicationCommandOptionType.User:
+                return [option.name, option.user];
             default:
                 console.warn("No argument processing exists for "+opt.type);
         }

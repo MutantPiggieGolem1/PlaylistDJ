@@ -56,10 +56,10 @@ export const Auth: Command = {
             case 'list':
                 return ctx.reply({
                     "content": `_`,
-                    "embeds": [{
+                    ephemeral: true,
+                    embeds: [{
                         "type": EmbedType.Rich,
                         "title": `Bot Administrators`,
-                        "description": "",
                         "color": 0x123456,
                         "fields": [...WHITELIST.keys()].map(id => {return {
                             "name": client.users.resolve(id)?.tag ?? id,
