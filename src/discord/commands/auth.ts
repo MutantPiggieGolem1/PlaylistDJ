@@ -7,42 +7,36 @@ export const Auth: Command = {
     name: "auth",
     description: "Modifies users with administrator privileges.",
     public: false,
-    options: [
-        {
-            "type": ApplicationCommandOptionType.Subcommand,
-            "name": "add",
-            "description": "Authorizes a user",
-            "options": [{
-                "type": ApplicationCommandOptionType.User,
-                "name": "user",
-                "description": "User to authorize",
-                "required": true
-            }]
-        },
-        {
-            "type": ApplicationCommandOptionType.Subcommand,
-            "name": "remove",
-            "description": "Deauthorizes a user",
-            "options": [{
-                "type": ApplicationCommandOptionType.User,
-                "name": "user",
-                "description": "User to deauthorize",
-                "required": true,
-            }],
-        },
-        {
-            "type": ApplicationCommandOptionType.Subcommand,
-            "name": "list",
-            "description": "List authorized users"
-        }
-    ],
+    options: [{
+        type: ApplicationCommandOptionType.Subcommand,
+        "name": "add",
+        "description": "Authorizes a user",
+        "options": [{
+            "type": ApplicationCommandOptionType.User,
+            "name": "user",
+            "description": "User to authorize",
+            "required": true
+        }]
+    },{
+        "type": ApplicationCommandOptionType.Subcommand,
+        "name": "remove",
+        "description": "Deauthorizes a user",
+        "options": [{
+            "type": ApplicationCommandOptionType.User,
+            "name": "user",
+            "description": "User to deauthorize",
+            "required": true,
+        }],
+    },{
+        "type": ApplicationCommandOptionType.Subcommand,
+        "name": "list",
+        "description": "List authorized users"
+    }],
 
-    run: (ctx: CommandInteraction) => {
+    run: (ctx: CommandInteraction, {user}: {user?: User}) => {
         if (!ctx.guild) return Promise.reject(ERRORS.NO_GUILD);
         if (ctx.member?.user.id !== "547624574070816799") return ctx.reply({content:ERRORS.NO_PERMS,ephemeral:true})
-        const user: User | undefined = ctx.options.get("user", false)?.user
-        const option = ctx.options.data[0]?.options ? ctx.options.data[0]?.options[0].name : ""
-        switch (option) {
+        switch (ctx.options.data[0].name) {
             case 'add':
                 if (!user) return ctx.reply({content: ERRORS.NO_USER, ephemeral: true});
                 if (!WHITELIST.has(user.id)) {
