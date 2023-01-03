@@ -33,7 +33,7 @@ export function getArguments(interaction: CommandInteraction, opts?: Application
             default:
                 console.warn("No argument processing exists for "+opt.type);
         }
-    }).filter((n: any): n is any => !!n && n[1] !== null));
+    }).filter((n: any): n is any => !!n && n[1] !== undefined));
 }
 client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
@@ -56,9 +56,7 @@ client.on("interactionCreate", (interaction: Interaction): void => {
 
     if (!command.public && !isWhitelisted(interaction)) {interaction.reply({content:"This command requires authorization.",ephemeral:true}); return}
     
-    command.run(interaction, getArguments(interaction, 
-        command.options?.filter((opt): opt is ApplicationCommandArgumentOptionData => opt.type !== ApplicationCommandOptionType.Subcommand && opt.type !== ApplicationCommandOptionType.SubcommandGroup)
-    )).catch(console.warn);
+    command.run(interaction, getArguments(interaction, command.options)).catch(console.warn);
 })
 
 client.on("interactionCreate", async (interaction: Interaction): Promise<void> => {
