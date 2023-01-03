@@ -3,7 +3,7 @@ dist
 
 # Token
 resources/token.txt
-resources/picotoken.txt
+resources/picovoice/token.txt
 
 # Resources
 resources/csv/*

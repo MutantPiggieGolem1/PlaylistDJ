@@ -23,6 +23,8 @@
     "libsodium-wrappers": "*",
     "node": "^18.12.0",
     "node-schedule": "*",
+    "opusscript": "^0.0.8",
+    "prism-media": "^1.3.4",
     "ytdl-core": "^4.11.2",
     "ytdl-core-discord": "^1.3.1",
     "ytpl": "^2.3.0"

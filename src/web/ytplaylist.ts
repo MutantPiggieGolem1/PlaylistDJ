@@ -1,6 +1,6 @@
 import EventEmitter from "events"
 import fs from "fs"
-import ytdl from "ytdl-core"
+import ytdl from "ytdl-core" // TODO: Switch to https://www.npmjs.com/package/play-dl & use ffmpeg to pre-transcode everything into the right format
 import ytdsc from "ytdl-core-discord"
 import ytpl from "ytpl"
 import { Playlist } from "./playlist"

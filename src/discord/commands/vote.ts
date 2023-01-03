@@ -41,7 +41,7 @@ export const Vote: Command = {
         voted[ctx.guild.id].add(uid);
         playlist.vote(song.id, vote==="up");
         return ctx.reply({ ephemeral: true,
-            content: `${vote[0].toUpperCase()+vote.slice(1)}voted '${truncateString(song.title,17)}' [\`${song.id}\`] (${playlist.getSongs.find(i=>i.id===song?.id)?.score} score)`
+            content: `${vote[0].toUpperCase()+vote.slice(1)}voted '${truncateString(song.title,20)}' [\`${song.id}\`] (${playlist.getSongs.find(i=>i.id===song?.id)?.score} score)`
         });
     }
 }

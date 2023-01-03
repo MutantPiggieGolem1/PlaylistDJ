@@ -1,10 +1,10 @@
 import { AudioPlayer, AudioPlayerError, AudioPlayerStatus, createAudioResource, getVoiceConnection, StreamType, VoiceConnection } from "@discordjs/voice"
-import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction } from "discord.js"
+import { ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction } from "discord.js"
 import { createReadStream } from "fs"
 import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
 import nextSong from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
-import { getPlayer, truncateString } from "../util"
+import { getPlayer } from "../util"
 import { Command } from "./Commands"
 import { leave } from "./leave"
 import { resetVotes } from "./vote"
@@ -63,7 +63,7 @@ export const Play: Command = {
             .filter((sr: SongReference | null): sr is SongReference => !!sr)
             .filter((sr: SongReference)=>sr.id.startsWith(focused) || sr.title.toLowerCase().startsWith(focused.toLowerCase()))
             .map((s: Song) => {
-                return {name: truncateString(s.artist+' - '+s.title, 25),value:s.id}
+                return {name: s.artist+' - '+s.title, value:s.id}
             })
     }
 }
