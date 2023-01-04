@@ -25,12 +25,11 @@ export const KickMe: Command = {
         if (channel !== guild.members.me?.voice.channel) return ctx.reply({content:"You aren't in the same channel!",ephemeral:true});
         const mystate: AudioPlayerState | undefined = getPlayer(guild.id, false)?.state;
         if (!mystate || mystate.status !== AudioPlayerStatus.Playing) return ctx.reply({content:"No music is currently being played!",ephemeral:true});
-        if (ctx.guild.members.me?.permissions.has(BigInt(1 << 24))) return ctx.reply({content:"I don't have the permissions to kick you!",ephemeral:true})
         // Action Execution
         timeout = Math.abs(timeout);
         setTimeout(() => {
             if (!member.voice.channel) return;
-            member.voice.disconnect("Auto-Kick after "+timeout+"m").catch(console.warn);
+            member.voice.disconnect("Auto-Kick after "+timeout+"m").catch(()=>{});
         }, timeout * 60 * 1000);
         return ctx.reply({content:`Auto-Kicking you in ${timeout} minute${timeout !== 1 ? "s" : ""}!`, ephemeral:true});
     }
