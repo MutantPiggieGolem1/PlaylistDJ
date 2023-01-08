@@ -1,6 +1,6 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
 import { ApplicationCommandAutocompleteNumericOptionData, ApplicationCommandAutocompleteStringOptionData, ApplicationCommandBooleanOptionData, ApplicationCommandChannelOptionData, ApplicationCommandMentionableOptionData, ApplicationCommandNumericOptionData, ApplicationCommandRoleOptionData, ApplicationCommandStringOptionData, ApplicationCommandUserOptionData, ButtonInteraction, CacheType, CommandInteraction, Message } from "discord.js";
-import { isSong } from "src/web/util";
+import { isSong } from "../web/util";
 import { Song } from "../constants";
 import { WHITELIST } from "../index";
 
