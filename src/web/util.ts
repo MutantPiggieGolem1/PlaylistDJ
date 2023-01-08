@@ -22,3 +22,12 @@ export function getFullSong(rs: RatedSong): (RatedSong & SongReference) | null {
     const sr = Playlist.getSong(rs);
     return sr ? {...rs, ...sr} : null;
 }
+
+export function isSong(x: any): x is Song {
+    return typeof x.id === "string" &&
+        typeof x.title === "string" && x.title.length <= 128 &&
+        typeof x.artist=== "string" && x.artist.length<=64 &&
+        typeof x.releaseYear === "number" && x.releaseYear>=-1 &&
+        Object.keys(Genre).includes(x.genre) && 
+        typeof x.length === "number";
+}

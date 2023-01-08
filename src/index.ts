@@ -70,6 +70,7 @@ client.on("interactionCreate", async (interaction: Interaction): Promise<void> =
     interaction.respond(choices.slice(undefined,25)).catch(console.warn);
 })
 
+// TODO: Better song selectors: id=,artist=,title=,year=n>n,genre=,tags=
 client.on("error", console.error);
 
 import { readFileSync } from "fs"

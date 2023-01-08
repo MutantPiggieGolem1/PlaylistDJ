@@ -35,13 +35,17 @@ function run(args: {toString:()=>string}[]): Promise<string> {
 }
 
 export async function saveAllPlaylists() {
-    csvCache = null;
-    await Playlist.save();
-    await genCsv();
-    
-    const pls: Playlist[] = Object.values(Playlist.getPlaylist());
-    await Promise.all(pls.map(pl=>pl.save()));
-    await Promise.all(pls.map(genCsv));
+    try {
+        csvCache = null;
+        await Playlist.save();
+        await genCsv();
+        
+        const pls: Playlist[] = Object.values(Playlist.getPlaylist());
+        await Promise.all(pls.map(pl=>pl.save()));
+        await Promise.all(pls.map(genCsv));
+    } catch (e) {
+        console.warn("CSV Export Error: "+e);
+    }
 }
 
 let csvCache: string[] | null = null;
