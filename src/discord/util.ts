@@ -1,5 +1,6 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
 import { ApplicationCommandAutocompleteNumericOptionData, ApplicationCommandAutocompleteStringOptionData, ApplicationCommandBooleanOptionData, ApplicationCommandChannelOptionData, ApplicationCommandMentionableOptionData, ApplicationCommandNumericOptionData, ApplicationCommandRoleOptionData, ApplicationCommandStringOptionData, ApplicationCommandUserOptionData, ButtonInteraction, CacheType, CommandInteraction, Message } from "discord.js";
+import { isSong } from "../web/util";
 import { Song } from "../constants";
 import { WHITELIST } from "../index";
 
@@ -29,14 +30,14 @@ export function getPlayer(guildid: string, create: boolean = true) {
 export function getPlaying(player?: AudioPlayer): Song | undefined {
     if (!player || !('resource' in player.state)) return;
     const resource: AudioResource = player.state.resource;
-    if (!resource?.metadata) return;
-    return resource.metadata as Song;
+    if (!resource?.metadata || !isSong(resource.metadata)) return;
+    return resource.metadata;
 }
 
 export function truncateString(str: string, len: number): string {
     return (str.length > len) ? str.slice(0, len-2)+".." : str;
 }
 
-export function isWhitelisted(ctx: CommandInteraction<CacheType> | ButtonInteraction<CacheType> | Message<boolean>) {
-    return (ctx instanceof Message ? ctx.author : ctx.user).id === '547624574070816799' || WHITELIST.has((ctx instanceof Message ? ctx.author : ctx.user).id)
+export function isWhitelisted(ctx: CommandInteraction<CacheType> | ButtonInteraction<CacheType>) {
+    return ctx.user.id === '547624574070816799' || WHITELIST.has(ctx.user.id)
 }

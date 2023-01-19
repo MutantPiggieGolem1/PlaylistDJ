@@ -7,6 +7,7 @@ export const AUDIOFORMAT: string = ".webm"
 export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
     let titlesegments = video.title.split(" - ").slice(0,2)
     let artistindex = titlesegments.findIndex(segment => segment.includes(video.author.name) || video.author.name.toLowerCase().includes(segment.replaceAll(/\s/g,"").toLowerCase()))
+    console.log(videoinfo.videoDetails.uploadDate)
     return {
         id: video.id,
 
@@ -21,4 +22,13 @@ export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
 export function getFullSong(rs: RatedSong): (RatedSong & SongReference) | null {
     const sr = Playlist.getSong(rs);
     return sr ? {...rs, ...sr} : null;
+}
+
+export function isSong(x: any): x is Song {
+    return typeof x.id === "string" &&
+        typeof x.title === "string" && x.title.length <= 128 &&
+        typeof x.artist=== "string" && x.artist.length<=64 &&
+        typeof x.releaseYear === "number" && x.releaseYear>=-1 &&
+        Object.keys(Genre).includes(x.genre) && 
+        typeof x.length === "number";
 }

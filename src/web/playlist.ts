@@ -1,13 +1,13 @@
 import fs from "fs";
 import { RatedSong, SongReference, Genre } from "../constants";
-import { AUDIOFORMAT } from "./util";
+import { AUDIOFORMAT, isSong } from "./util";
 
 export class Playlist { // Represents a playlist stored on the filesystem
     private static index: {[key: string]: SongReference};
     private static playlists: {[key: string]: Playlist};
     public static init() {
         Playlist.index = !fs.existsSync('./resources/music.json') ? {} :
-            Object.fromEntries(Object.entries(JSON.parse(fs.readFileSync('./resources/music.json','utf8'))).map(([k, v]: [string, any]) => [k, {...v,
+            Object.fromEntries(Object.entries(JSON.parse(fs.readFileSync('./resources/music.json','utf8'))).map(([k, v]: [string, any]) => [k, isSong(v) ? v : {...v,
                 title: v.title ?? "Unknown",
                 artist:v.artist?? "Unknown Artist",
                 releaseYear: v.releaseYear?? -1,

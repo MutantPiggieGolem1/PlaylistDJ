@@ -1,12 +1,12 @@
 import { VoiceConnection } from "@discordjs/voice";
 import { Rhino } from "@picovoice/rhino-node";
 import { VoiceBasedChannel } from "discord.js";
-import fs from "fs";
-import prism from "prism-media";
-import { WHITELIST } from "../../index";
 import { join } from "../commands/join";
 import { leave } from "../commands/leave";
 import { play } from "../commands/play";
+import prism from "prism-media";
+import fs from "fs";
+import { WHITELIST } from "../../index";
 const models: any = {
     "win32": "dj_en_windows_v2_1_0.rhn"
 }

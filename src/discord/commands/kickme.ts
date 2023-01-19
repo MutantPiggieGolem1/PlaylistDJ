@@ -29,7 +29,7 @@ export const KickMe: Command = {
         timeout = Math.abs(timeout);
         setTimeout(() => {
             if (!member.voice.channel) return;
-            member.voice.disconnect("Auto-Kick after "+timeout+"m").catch(console.warn);
+            member.voice.disconnect("Auto-Kick after "+timeout+"m").catch(()=>{});
         }, timeout * 60 * 1000);
         return ctx.reply({content:`Auto-Kicking you in ${timeout} minute${timeout !== 1 ? "s" : ""}!`, ephemeral:true});
     }
