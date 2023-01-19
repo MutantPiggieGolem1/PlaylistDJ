@@ -7,6 +7,7 @@ export const AUDIOFORMAT: string = ".webm"
 export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
     let titlesegments = video.title.split(" - ").slice(0,2)
     let artistindex = titlesegments.findIndex(segment => segment.includes(video.author.name) || video.author.name.toLowerCase().includes(segment.replaceAll(/\s/g,"").toLowerCase()))
+    console.log(videoinfo.videoDetails.uploadDate)
     return {
         id: video.id,
 
