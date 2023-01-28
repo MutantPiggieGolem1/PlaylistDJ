@@ -4,7 +4,7 @@ import { createReadStream } from "fs"
 import { ERRORS, RatedSong, Song, SongReference } from "../../constants"
 import nextSong from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
-import { getPlayer } from "../util"
+import { getPlayer, truncateString } from "../util"
 import { Command } from "./Commands"
 import { leave } from "./leave"
 import { resetVotes } from "./vote"
@@ -63,7 +63,7 @@ export const Play: Command = {
             .filter((sr: SongReference | null): sr is SongReference => !!sr)
             .filter((sr: SongReference)=>sr.id.startsWith(focused) || sr.title.toLowerCase().startsWith(focused.toLowerCase()))
             .map((s: Song) => {
-                return {name: s.artist+' - '+s.title,value:s.id}
+                return {name: s.artist+' - '+truncateString(s.title, Math.max(97-s.artist.length, 0)),value:s.id}
             })
     }
 }

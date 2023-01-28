@@ -9,6 +9,12 @@ export enum ERRORS {
     NO_GUILD = 'Couldn\'t find guild!',
 }
 
+export const maxLengths = {
+    "title": 128,
+    "artist": 64,
+    
+}
+
 export type RatedSong = { id: string; tags?: string[]; score: number; };
 export type SongReference = Song & { file: string; url: string; };
 export type Song = {

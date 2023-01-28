@@ -1,5 +1,6 @@
 import fs from "fs";
-import { RatedSong, SongReference, Genre } from "../constants";
+import { truncateString } from "../discord/util";
+import { RatedSong, SongReference, Genre, maxLengths } from "../constants";
 import { AUDIOFORMAT, isSong } from "./util";
 
 export class Playlist { // Represents a playlist stored on the filesystem
@@ -8,8 +9,8 @@ export class Playlist { // Represents a playlist stored on the filesystem
     public static init() {
         Playlist.index = !fs.existsSync('./resources/music.json') ? {} :
             Object.fromEntries(Object.entries(JSON.parse(fs.readFileSync('./resources/music.json','utf8'))).map(([k, v]: [string, any]) => [k, isSong(v) ? v : {...v,
-                title: v.title ?? "Unknown",
-                artist:v.artist?? "Unknown Artist",
+                title: truncateString(v.title ?? "Unknown", maxLengths.title),
+                artist:truncateString(v.artist?? "Unknown Artist", maxLengths.artist),
                 releaseYear: v.releaseYear?? -1,
                 genre: v.genre ?? Genre.Unknown
             }])); // DFU

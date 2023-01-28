@@ -3,5 +3,7 @@ import { VoiceBasedChannel } from "discord.js";
 import { join } from "../commands/join";
 
 export function onJoin(channel: VoiceBasedChannel): VoiceConnection {
-    return join(channel);
+    const connection = join(channel);
+    connection.on("error", console.warn)
+    return connection;
 }
