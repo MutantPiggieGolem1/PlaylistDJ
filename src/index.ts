@@ -5,6 +5,7 @@ import { Command, Commands } from "./discord/commands/Commands"
 import { ApplicationCommandArgumentOptionData, isWhitelisted } from "./discord/util"
 import { saveAllPlaylists } from "./recommendation/interface"
 import { Playlist } from "./web/playlist"
+import fixData from "./datafixer"
 export const client: Client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]});
 export const WHITELIST: Set<string> = new Set(["547624574070816799"]) // Me only at first
 
@@ -39,6 +40,7 @@ client.on("ready", async () => {
     if (!client.user) throw new Error("Couldn't obtain a user for the client.");
     if (!client?.application?.commands) throw new Error("Could not register commands to client.");
     await client.application.commands.set(Commands);
+    await fixData();
     Playlist.init();
     setActivity();
     console.info(`Bot Ready! [${client.user.tag}] <@${client.user.id}>`);

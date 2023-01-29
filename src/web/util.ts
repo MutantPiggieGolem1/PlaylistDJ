@@ -1,7 +1,7 @@
 import { Playlist } from "./playlist"
 import ytdl from "ytdl-core"
 import ytpl from "ytpl"
-import { Song, Genre, RatedSong, SongReference } from "../constants"
+import { Song, Genre, RatedSong, SongReference, maxLengths } from "../constants"
 export const AUDIOFORMAT: string = ".webm"
 
 export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {
@@ -31,9 +31,15 @@ export function getFullSong(rs: RatedSong): (RatedSong & SongReference) | null {
 
 export function isSong(x: any): x is Song {
     return typeof x.id === "string" &&
-        typeof x.title === "string" && x.title.length <= 128 &&
-        typeof x.artist=== "string" && x.artist.length<=64 &&
+        typeof x.title === "string" && x.title.length > 0 && x.title.length <= maxLengths.title &&
+        typeof x.artist=== "string" && x.artist.length> 0 && x.artist.length<= maxLengths.artist&&
         typeof x.releaseYear === "number" && x.releaseYear>=-1 &&
         Object.keys(Genre).includes(x.genre) && 
         typeof x.length === "number";
+}
+
+export function isRatedSong(x: any): x is RatedSong {
+    return typeof x.id === "string" &&
+        typeof x.score === "number" &&
+        !("tags" in x) || Array.isArray(x.tags);
 }
