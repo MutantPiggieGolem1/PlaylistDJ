@@ -16,14 +16,17 @@ export default async () => {
             }])
         )
     await fs.promises.writeFile(indexFile, JSON.stringify(index))
-
-    if (!fs.existsSync('./resources/playlists/')) await fs.promises.mkdir(`./resources/playlists/`);
-    await Promise.all((await fs.promises.readdir(`./resources/playlists/`,{withFileTypes:true}))
+    console.info("[DataFixer] Index Done!")
+    
+    const playlistDir = './resources/playlists/';
+    if (!fs.existsSync(playlistDir)) await fs.promises.mkdir(playlistDir);
+    await Promise.all((await fs.promises.readdir(playlistDir,{withFileTypes:true}))
         .filter(ent=>ent.isFile())
+        .map(file=>playlistDir+file.name)
         .map(async file=>{
             const songs: Set<string> = new Set();
-            return fs.promises.writeFile(file.name, JSON.stringify(
-                JSON.parse(await fs.promises.readFile(file.name, 'utf8'))
+            return fs.promises.writeFile(file, JSON.stringify(
+                JSON.parse(await fs.promises.readFile(file, 'utf8'))
                 .filter((v: any) => {
                     if (v.id in index && !songs.has(v.id)) {
                         songs.add(v.id);
@@ -39,4 +42,5 @@ export default async () => {
             ))
         })
     )
+    console.info("[DataFixer] Playlists Done!")
 }
