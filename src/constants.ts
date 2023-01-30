@@ -12,7 +12,6 @@ export enum ERRORS {
 export const maxLengths = {
     "title": 128,
     "artist": 64,
-    
 }
 
 export type RatedSong = { id: string; tags?: string[]; score: number; };

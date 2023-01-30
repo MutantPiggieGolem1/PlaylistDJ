@@ -90,11 +90,11 @@ export class YTPlaylist {
             Promise.allSettled(this.ytplaylist.items.map((playlistitem: ytpl.Item): Promise<void> => {
                 const file = `./resources/music/${playlistitem.id}${AUDIOFORMAT}`
                 if (fs.existsSync(file)) {
-                    if (!items.some(i=>i.id===playlistitem.id)) {
+                    if (!items.some(i=>i.id===playlistitem.id)) { // Already downloaded & not in playlist
                         return ytdl.getInfo(playlistitem.url).then((videoinfo: ytdl.videoInfo) =>
                             items.push({ file, url: playlistitem.url , ...parseVideo(playlistitem, videoinfo)})
                         ).then(()=>{done++});
-                    } else {
+                    } else { // Already downloaded & in playlist
                         done++;
                         return Promise.resolve();
                     }
@@ -116,7 +116,7 @@ export class YTPlaylist {
                 })
             })).then(async (completion: Array<PromiseSettledResult<void>>) => {
                 if (completion.every(r=>r.status==="rejected")) throw new Error("All downloads failed.");
-                items.forEach(rs=>Playlist.getSong(rs.id) ? null : Playlist.addSong(rs as SongReference))
+                items.forEach(rs=>Playlist.getSong(rs.id) ? null : Playlist.addSong(rs as SongReference)) // add all new songs to indesx
                 await Playlist.save();
                 const playlist = Playlist.getPlaylist(guildid) ?? new Playlist(guildid, []);
                 playlist.addSongs(items.map(sr=>sr.id))
