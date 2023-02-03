@@ -1,10 +1,10 @@
 import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, ModalSubmitInteraction, TextInputStyle } from "discord.js"
-import { ERRORS, Genre, Song, SongReference } from "../../constants"
+import { ERRORS, Genre, maxLengths, Song, SongReference } from "../../constants"
 import { client, getArguments } from "../../index"
 import { getAllCsvs, getCsv, getFileSizeMiB } from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
 import { YTPlaylist } from "../../web/ytplaylist"
-import { isWhitelisted, ITEMS_PER_PAGE } from "../util"
+import { isWhitelisted, ITEMS_PER_PAGE, longestGenre } from "../util"
 import { Command, SubCommand } from "./Commands"
 
 const commandname = "admin"
@@ -36,7 +36,7 @@ const Amend: SubCommand = {
                 components: [{
                     customId: `mamendedittitle`,
                     label: "Song Title:",
-                    maxLength: 100,
+                    maxLength: maxLengths.title,
                     placeholder: song.title,
                     required: false,
                     style: TextInputStyle.Short,
@@ -47,7 +47,7 @@ const Amend: SubCommand = {
                 components: [{
                     customId: `mamendeditartist`,
                     label: "Song Artist:",
-                    maxLength: 64,
+                    maxLength: maxLengths.artist,
                     placeholder: song.artist,
                     required: false,
                     style: TextInputStyle.Short,
@@ -69,7 +69,7 @@ const Amend: SubCommand = {
                 components: [{
                     customId: `mamendeditgenre`,
                     label: "Song Genre:",
-                    maxLength: 16,
+                    maxLength: longestGenre,
                     placeholder: song.genre.toString(),
                     required: false,
                     style: TextInputStyle.Short,

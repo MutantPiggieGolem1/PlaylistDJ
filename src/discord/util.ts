@@ -1,10 +1,11 @@
 import { AudioPlayer, AudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, VoiceConnection } from "@discordjs/voice";
 import { ApplicationCommandAutocompleteNumericOptionData, ApplicationCommandAutocompleteStringOptionData, ApplicationCommandBooleanOptionData, ApplicationCommandChannelOptionData, ApplicationCommandMentionableOptionData, ApplicationCommandNumericOptionData, ApplicationCommandRoleOptionData, ApplicationCommandStringOptionData, ApplicationCommandUserOptionData, ButtonInteraction, CacheType, CommandInteraction, Message } from "discord.js";
 import { isSong } from "../web/util";
-import { Song } from "../constants";
+import { Genre, Song } from "../constants";
 import { WHITELIST } from "../index";
 
 export const ITEMS_PER_PAGE = 25;
+export const longestGenre = Object.keys(Genre).reduce((p, c) => p.length > c.length ? p : c, "Unknown").length;
 export type ApplicationCommandArgumentOptionData =
   | ApplicationCommandChannelOptionData
   | ApplicationCommandAutocompleteNumericOptionData

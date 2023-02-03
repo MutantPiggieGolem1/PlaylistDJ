@@ -1,19 +1,13 @@
 import fs from "fs";
-import { RatedSong, SongReference, Genre } from "../constants";
+import { truncateString } from "../discord/util";
+import { RatedSong, SongReference, Genre, maxLengths } from "../constants";
 import { AUDIOFORMAT, isSong } from "./util";
 
 export class Playlist { // Represents a playlist stored on the filesystem
     private static index: {[key: string]: SongReference};
     private static playlists: {[key: string]: Playlist};
     public static init() {
-        Playlist.index = !fs.existsSync('./resources/music.json') ? {} :
-            Object.fromEntries(Object.entries(JSON.parse(fs.readFileSync('./resources/music.json','utf8'))).map(([k, v]: [string, any]) => [k, isSong(v) ? v : {...v,
-                title: v.title ?? "Unknown",
-                artist:v.artist?? "Unknown Artist",
-                releaseYear: v.releaseYear?? -1,
-                genre: v.genre ?? Genre.Unknown
-            }])); // DFU
-        if (!fs.existsSync('./resources/playlists/')) fs.mkdirSync(`./resources/playlists/`);
+        Playlist.index = JSON.parse(fs.readFileSync('./resources/music.json','utf8'));
         Playlist.playlists = Object.fromEntries(
             fs.readdirSync(`./resources/playlists/`,{withFileTypes:true})
             .filter(ent=>ent.isFile())
@@ -35,17 +29,11 @@ export class Playlist { // Represents a playlist stored on the filesystem
     private guildid: string;
     private songs: RatedSong[];
     private static fromFile(gid: string): Playlist {
-        const file: string = "./resources/playlists/"+gid+".json";
-        return new Playlist(gid, fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, {encoding: "utf-8"})).map((a: any)=>{return {id: a.id, tags: a.tags, score: a.score}}) : []);
+        return new Playlist(gid, JSON.parse(fs.readFileSync("./resources/playlists/"+gid+".json", {encoding: "utf-8"})));
     }
-    public constructor(guildid: string, songs: RatedSong[] | void) { // this should be private.
+    public constructor(guildid: string, songs: RatedSong[]) { // this should be private.
         this.guildid = guildid;
-        let eids: Set<string> = new Set<string>();
-        this.songs = songs?.filter(rs=>{
-            if (eids.has(rs.id)) return false;
-            eids.add(rs.id)
-            return true;
-        }) ?? [];
+        this.songs = songs;
     }
     public save() {
         if (!Playlist.playlists[this.guildid]) Playlist.playlists[this.guildid] = this;
