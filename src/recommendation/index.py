@@ -1,5 +1,5 @@
 import sys
+import os
 from random import randint, seed
-from time import time
-seed(time())
+seed(os.urandom(sys.argv[2]/2))
 print(randint(*[int(i) for i in sys.argv[1:3]]))
