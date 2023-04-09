@@ -18,7 +18,7 @@
   "dependencies": {
     "@discordjs/opus": "^0.8.0",
     "@discordjs/voice": "*",
-    "@picovoice/rhino-node": "^2.1.10",
+    "@picovoice/porcupine-node": "^2.1.7",
     "discord.js": "^14.7.0",
     "libsodium-wrappers": "*",
     "node": "^18.12.0",

@@ -1,16 +1,18 @@
 import { VoiceConnection } from "@discordjs/voice";
-import { Rhino } from "@picovoice/rhino-node";
+import { BuiltinKeyword, Porcupine } from "@picovoice/porcupine-node";
 import { VoiceBasedChannel } from "discord.js";
 import fs from "fs";
 import prism from "prism-media";
 import { WHITELIST } from "../../index";
 import { join } from "../commands/join";
-import { leave } from "../commands/leave";
 import { play } from "../commands/play";
 const models: any = {
-    "win32": "dj_en_windows_v2_1_0.rhn"
+    "win32": "dj-play_en_windows_v2_1_0.ppn"
 }
-const rhino = new Rhino(fs.readFileSync("./resources/picovoice/token.txt", {encoding:"utf8"}), "./resources/picovoice/"+models[process.platform]);
+const handle = new Porcupine(
+    fs.readFileSync("./resources/picovoice/token.txt", {encoding:"utf8"}),
+    ["./resources/picovoice/"+models[process.platform], BuiltinKeyword.JARVIS],
+    [0.6, 0.999]);
 
 export function onJoin(channel: VoiceBasedChannel): VoiceConnection {
     const m = channel.members.find(m=>WHITELIST.has(m.id));
@@ -25,7 +27,7 @@ export function onJoin(channel: VoiceBasedChannel): VoiceConnection {
         '-hide_banner',
         '-f', 's16le',
         '-c:a', 'pcm_s16le',
-        '-ar', rhino.sampleRate.toString(),
+        '-ar', handle.sampleRate.toString(),
         '-ac', '1',
     ]});
     ffmpegInst.process.stderr?.on("data", a => console.error(a.toString()))
@@ -36,27 +38,11 @@ export function onJoin(channel: VoiceBasedChannel): VoiceConnection {
     let chunks: Uint16Array;
     pipe.on("data", (chunk: Buffer) => {
         chunks = new Uint16Array([...(chunks??[]), ...new Uint16Array(chunk.buffer)]);
-        while (chunks.length > rhino.frameLength) {
-            onData(new Int16Array(chunks.slice(0, rhino.frameLength)), channel.guild.id)
-            chunks = chunks.slice(rhino.frameLength)
+        while (chunks.length >= handle.frameLength) {
+            const res = handle.process(new Int16Array(chunks.slice(0, handle.frameLength)));
+            if (res >= 0) play(channel.guild.id)
+            chunks = chunks.slice(handle.frameLength)
         }
     })
     return connection;
-}
-
-function onData(arr: Int16Array, guildID: string) {
-    if (rhino.process(arr)) {
-        const inf = rhino.getInference();
-        if (!inf.isUnderstood) return console.error("Voice Command Error: Misunderstood "+inf.intent);
-        switch (inf.intent) {
-            case "play":
-                if (!play(guildID)) console.warn("Voice Command Error: Failed to play.")
-            break;
-            case "leave":
-                leave(guildID);
-            break;
-            default:
-                console.error(`Voice Command Error: Unrecognized Intent [${inf.intent}]`)
-        }
-    };
 }
