@@ -1,4 +1,4 @@
-import { VoiceConnection } from "@discordjs/voice";
+import { EndBehavior, VoiceConnection } from "@discordjs/voice";
 import { Rhino } from "@picovoice/rhino-node";
 import { VoiceBasedChannel } from "discord.js";
 import fs from "fs";
@@ -7,6 +7,7 @@ import { WHITELIST } from "../../index";
 import { join } from "../commands/join";
 import { leave } from "../commands/leave";
 import { play } from "../commands/play";
+import { EndBehaviorType } from "@discordjs/voice";
 const models: any = {
     "win32": "dj_en_windows_v2_1_0.rhn"
 }
@@ -17,16 +18,26 @@ export function onJoin(channel: VoiceBasedChannel): VoiceConnection {
     if (!m) return join(channel);
     const connection = join(channel, false);
     
-    const pipe = connection.receiver.subscribe(m.id)
-    .pipe(new prism.opus.Decoder({frameSize: 960, channels: 2, rate: 48000}))
-    .pipe(new prism.FFmpeg({args: [//"-analyzeduration", "0", "-loglevel", "0",
+    const ffmpegInst = new prism.FFmpeg({args: [
+        '-f', 'opus',
+        '-i', '-',
+        '-analyzeduration', '0',
+        '-loglevel', '40',
+        '-hide_banner',
         '-f', 's16le',
+        '-c:a', 'pcm_s16le',
         '-ar', rhino.sampleRate.toString(),
+        '-frame_size', rhino.frameLength.toString(),
         '-ac', '1',
-    ]})); // FIXME: This is bad
+    ]});
+    ffmpegInst.process.stdout?.on("data", a => console.log(a.toString()))
+    ffmpegInst.process.stderr?.on("data", a => console.error(a.toString()));
+    const pipe = connection.receiver.subscribe(m.id, {"autoDestroy": true, "end": {behavior: EndBehaviorType.AfterSilence, duration: 2}})
+    .pipe(new prism.opus.Decoder({frameSize: 960, channels: 2, rate: 48000}))
+    .pipe(ffmpegInst);
     pipe.on("error", console.error)
     pipe.on("data", (buf: Buffer) => {
-        console.info("Audio Packet 2")
+        if (buf.buffer.byteLength !== rhino.frameLength) return console.warn(`Buffer Mis-Sized! ${buf.buffer.byteLength} != ${rhino.frameLength}`)
         if (rhino.process(new Int16Array(buf.buffer))) {
             const inf = rhino.getInference();
             if (!inf.isUnderstood) return;
