@@ -1,10 +1,10 @@
-import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, ModalSubmitInteraction, TextInputStyle } from "discord.js"
-import { ERRORS, Genre, maxLengths, Song, SongReference } from "../../constants"
+import { ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, AttachmentBuilder, AutocompleteInteraction, ButtonComponentData, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, EmbedType, ModalSubmitInteraction, SnowflakeUtil, TextInputStyle } from "discord.js"
+import { ERRORS, Genre, Song, SongReference, maxLengths } from "../../constants"
 import { client, getArguments } from "../../index"
 import { getAllCsvs, getCsv, getFileSizeMiB } from "../../recommendation/interface"
 import { Playlist } from "../../web/playlist"
 import { YTPlaylist } from "../../web/ytplaylist"
-import { isWhitelisted, ITEMS_PER_PAGE, longestGenre } from "../util"
+import { ITEMS_PER_PAGE, isWhitelisted, longestGenre } from "../util"
 import { Command, SubCommand } from "./Commands"
 
 const commandname = "admin"
@@ -326,7 +326,7 @@ const Download: SubCommand = {
                             interaction.editReply(`Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
                         }).on('warn', (cur: number, total: number, id: string, error: Error) => {
                             interaction.editReply(`Downloaded: ${cur}/${total} songs. [Current: \`${id}\`] (${error.message})`)
-                        }).on('finish', (num: number) => {
+                        }).on('finish', (pl: Playlist, num: number) => {
                             interaction.editReply(`Success! Downloaded ${num} songs!`);
                         }).on('error', (e: Error) => interaction.editReply("Error: " + e.message))
                         break;
