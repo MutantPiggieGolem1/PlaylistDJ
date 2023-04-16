@@ -116,14 +116,13 @@ export class YTPlaylist {
                 })
             })).then(async (completion: Array<PromiseSettledResult<void>>) => {
                 if (completion.every(r=>r.status==="rejected")) throw new Error("All downloads failed.");
-                items.forEach(rs=>Playlist.getSong(rs.id) ? null : Playlist.addSong(rs as SongReference)) // add all new songs to indesx
+                const num = items.filter(rs=>Playlist.getSong(rs.id)).map(rs=>Playlist.addSong(rs as SongReference)).length // add all new songs to index
                 await Playlist.save();
                 const playlist = Playlist.getPlaylist(guildid) ?? new Playlist(guildid, []);
                 playlist.addSongs(items.map(sr=>sr.id))
                 await playlist.save()
+                ee.emit("finish", playlist, num)
                 return playlist;
-            }).then((playlist: Playlist)=>{
-                ee.emit("finish",playlist)
             }).catch((e: Error)=>{
                 ee.emit("error",e)
             }).finally(() => {

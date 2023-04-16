@@ -2,6 +2,7 @@ import { Playlist } from "./playlist"
 import ytdl from "ytdl-core"
 import ytpl from "ytpl"
 import { Song, Genre, RatedSong, SongReference, maxLengths } from "../constants"
+import { existsSync } from "fs"
 export const AUDIOFORMAT: string = ".webm"
 
 export function parseVideo(video: ytpl.Item, videoinfo: ytdl.videoInfo): Song {

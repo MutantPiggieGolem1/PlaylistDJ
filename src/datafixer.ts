@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs, { existsSync } from "fs";
 import { Genre, maxLengths, RatedSong, Song } from "./constants";
 import { truncateString } from "./discord/util";
 import { isRatedSong, isSong } from "./web/util";
@@ -25,6 +25,13 @@ export default async () => {
     const indexFile = './resources/music.json';
     const index = !fs.existsSync(indexFile) ? {} :
         Object.fromEntries(Object.entries(JSON.parse(await fs.promises.readFile(indexFile, 'utf8')))
+            .filter(([k, v]: [string, any]) => {
+                if (!v.file || !existsSync(v.file)) {
+                    console.warn("Unlinked Song! "+k)
+                    return false
+                }
+                return true
+            })
             .map(([k, v]: [string, any]) => [k, fixSong(v)])
         )
     await fs.promises.writeFile(indexFile, JSON.stringify(index))
