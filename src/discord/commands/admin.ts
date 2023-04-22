@@ -321,7 +321,7 @@ const Download: SubCommand = {
                         if (!interaction.deferred && !interaction.replied) await interaction.update({components: [], embeds: [], content: "Downloading..."});
                         webpl.download(guildid)
                         .on('start', (songs: SongReference[]) => {
-                            interaction.editReply(`Downloaded: 0/${songs.length} songs.`)
+                            interaction.editReply(`Downloaded: -/${songs.length} songs.`)
                         }).on('progress', (cur: number, total: number, id: string) => {
                             interaction.editReply(`Downloaded: ${cur}/${total} songs. [Current: \`${id}\`]`);
                         }).on('warn', (cur: number, total: number, id: string, error: Error) => {

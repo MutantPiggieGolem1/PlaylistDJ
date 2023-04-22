@@ -116,7 +116,7 @@ export class YTPlaylist {
                 })
             })).then(async (completion: Array<PromiseSettledResult<void>>) => {
                 if (completion.every(r=>r.status==="rejected")) throw new Error("All downloads failed.");
-                const num = items.filter(rs=>Playlist.getSong(rs.id)).map(rs=>Playlist.addSong(rs as SongReference)).length // add all new songs to index
+                const num = items.filter(rs=>!Playlist.getSong(rs.id)).map(rs=>Playlist.addSong(rs as SongReference)).length // add all new songs to index
                 await Playlist.save();
                 const playlist = Playlist.getPlaylist(guildid) ?? new Playlist(guildid, []);
                 playlist.addSongs(items.map(sr=>sr.id))
