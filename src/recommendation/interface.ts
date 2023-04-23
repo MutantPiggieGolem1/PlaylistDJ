@@ -6,7 +6,7 @@ import { Playlist } from '../web/playlist'
 export default function get(gid: string): Promise<SongReference | null> {
     const playlist: Playlist | null = Playlist.getPlaylist(gid)
     if (!playlist) return Promise.reject(ERRORS.NO_PLAYLIST);
-    return run([0,playlist.getSongs.length-1])
+    return run([0,playlist.getSongs.length])
         .then(raw=>playlist.getSongs[Number.parseInt(raw)])
         .then(Playlist.getSong)
 };

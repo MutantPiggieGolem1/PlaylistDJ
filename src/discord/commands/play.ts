@@ -79,10 +79,6 @@ type SongReferenceResolvable = SongReference | null | Promise<SongReference | nu
 async function _play(player: AudioPlayer, song: SongReferenceResolvable, guildid: string) {
     if (song instanceof Promise) song = await song;
     if (!song) return leave(guildid);
-    if (!song.file) {
-        console.log(`No File: ${song.id}`)
-        return leave(guildid);
-    }
     if (history[guildid] !== undefined) history[guildid].unshift(song.id);
     player.stop();
     player.play(createAudioResource<Song>(createReadStream(song.file),{inlineVolume: false, inputType: StreamType.WebmOpus, metadata: song as Song}))
